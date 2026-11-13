@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="dshm-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4f46e5"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#dshm-bg)"/>
+  <g fill="#ffffff">
+    <polygon points="98,78 196,60 196,76 98,94"/>
+    <rect x="98" y="86" width="10" height="88" rx="3"/>
+    <rect x="186" y="68" width="10" height="88" rx="3"/>
+    <ellipse cx="88" cy="174" rx="21" ry="15" transform="rotate(-14 88 174)"/>
+    <ellipse cx="176" cy="156" rx="21" ry="15" transform="rotate(-14 176 156)"/>
+  </g>
+</svg>

@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Musique locale",
+    "description": "Lit la bibliothèque locale, affiche paroles et récits d'artistes, recommande et télécharge de nouveaux titres selon l'historique d'écoute, et synchronise les favoris Spotify en un clic.",
+    "detail": "docs/DETAIL.md"
+  }
+}

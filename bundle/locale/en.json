@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Local music",
+    "description": "Play your local library, show lyrics and artist stories, recommend and download new songs from listening history, and sync Spotify liked songs in one click.",
+    "detail": "docs/DETAIL.md"
+  }
+}

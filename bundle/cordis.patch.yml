@@ -1,0 +1,7 @@
+# dsh-music 插件 Host 行：曲库扫描 / 播放状态 / 音频与封面路由。
+# Client 半（音乐面板 + 迷你播放条）由同一包的 ./client 产物注册。
+# 推荐引擎零 LLM（传统算法 + MusicBrainz 核实），因此不再配置 recoProvider/recoModel。
+- insert:
+    - id: dsh-music
+      name: '@dshbottest/dsh-music'
+      config: {}

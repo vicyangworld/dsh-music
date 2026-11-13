@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Música local",
+    "description": "Reproduce la biblioteca local, muestra letras e historias de artistas, recomienda y descarga canciones según el historial de escucha y sincroniza las favoritas de Spotify con un clic.",
+    "detail": "docs/DETAIL.md"
+  }
+}

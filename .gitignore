@@ -1,0 +1,17 @@
+node_modules/
+dist/
+*.tgz
+.DS_Store
+.memsearch/
+# 内部团队文档（含本机路径与用户指示，不公开）
+GOAL.md
+TEAM.md
+HANDOFF.md
+PRD.md
+CONSTRAINTS.md
+# 验收证据/审计文档（含用户收听数据、截图、本机路径，仅存本地；红线：历史/缓存仅存本地）
+docs/verification-*
+docs/distribution-*
+docs/reco-diversity.md
+# 测试基线（用户真实曲库清单与 token 元数据快照）
+tests/baseline/

@@ -1,0 +1,117 @@
+{
+  "_note": "拾词策展调研笔记：Beyond。每条均注明来源 URL 与日期，事实/传闻用 kind 区分。内容取自 2026-11-12 抓取的维基百科 Beyond 条目、光輝歲月(專輯)条目与 MusicBrainz。intro 由脚本 live 抓取维基摘要，不在此固定。",
+  "_sources": {
+    "wikiBeyond": "https://zh.wikipedia.org/wiki/Beyond",
+    "wikiAlbum": "https://zh.wikipedia.org/wiki/光輝歲月_(專輯)",
+    "musicbrainz": "https://musicbrainz.org/artist/d84d02ad-d74c-4227-8073-6f13a039cfac"
+  },
+  "news": [
+    {
+      "text": "2025年9月，环球唱片发行《MULTIVERSE OF CINEPOLY 40TH ANNIVERSARY - Beyond》精选辑，收录 Beyond 经典作品（据维基百科 Beyond 条目「精选辑」列表，为该条目所载最近一次发行）。",
+      "source": "维基百科 Beyond 条目（2026-11-12 查阅）",
+      "url": "https://zh.wikipedia.org/wiki/Beyond",
+      "date": "2025-09",
+      "kind": "fact"
+    },
+    {
+      "text": "2013年7月发行《Beyond 30th Anniversary》精选辑，纪念乐队成立30周年（1983–2013）。",
+      "source": "维基百科 Beyond 条目（2026-11-12 查阅）",
+      "url": "https://zh.wikipedia.org/wiki/Beyond",
+      "date": "2013-07",
+      "kind": "fact"
+    }
+  ],
+  "trivia": [
+    {
+      "text": "队名「Beyond」意为「超越」，由创队成员兼主音结他手邓炜谦所改。鼓手叶世荣在1998年乐队自传《拥抱Beyond岁月》中解释：是要超越自己、超越一般乐队所涉足的音乐领域，而非超越某位歌手或乐队。",
+      "source": "维基百科 Beyond 条目「名称由来」（2026-11-12 查阅）",
+      "url": "https://zh.wikipedia.org/wiki/Beyond",
+      "date": "1998",
+      "kind": "fact"
+    },
+    {
+      "text": "《光辉岁月》粤语版是一首赞美南非非洲人国民大会主席纳尔逊·曼德拉的歌曲，歌颂他在种族隔离时期为黑人付出的努力；当时曼德拉在监禁28年后刚被释放。国语版则改为激励年轻人努力拼搏而作，种族议题被淡化。",
+      "source": "维基百科《光輝歲月 (專輯)》条目（2026-11-12 查阅）",
+      "url": "https://zh.wikipedia.org/wiki/光輝歲月_(專輯)",
+      "date": "1991",
+      "kind": "fact"
+    },
+    {
+      "text": "1983年，Beyond 以歌曲《脑部侵袭 BRAIN ATTACK》参加《结他杂志》举办的「Players Festival 香港结他/乐队大赛」，获得冠军（Best Group Award），这是乐队组建后的首个奖项。",
+      "source": "维基百科 Beyond 条目「1983年」（2026-11-12 查阅）",
+      "url": "https://zh.wikipedia.org/wiki/Beyond",
+      "date": "1983",
+      "kind": "fact"
+    },
+    {
+      "text": "1988年10月15–16日，Beyond 前往北京首都体育馆举办演唱会，成为最早在中国大陆演唱的香港乐队。当时以粤语歌为主，一般大陆听众并未接受，但演唱会仍成功办完。",
+      "source": "维基百科 Beyond 条目「1988年」（2026-11-12 查阅）",
+      "url": "https://zh.wikipedia.org/wiki/Beyond",
+      "date": "1988-10",
+      "kind": "fact"
+    },
+    {
+      "text": "1989年以歌颂母爱为题的《真的爱你》大举成功，被广大家庭观众欢迎及接受（香港媒体粤语俗称「入屋」），真正推 Beyond 上高峰。",
+      "source": "维基百科 Beyond 条目「1989–1991年」（2026-11-12 查阅）",
+      "url": "https://zh.wikipedia.org/wiki/Beyond",
+      "date": "1989",
+      "kind": "fact"
+    }
+  ],
+  "similarArtists": [
+    {
+      "name": "太极乐队",
+      "reason": "同属1980年代香港「劲Band浪潮」代表乐队，与 Beyond 同期推动粤语原创摇滚。",
+      "source": "维基百科 Beyond 条目「1987年」（2026-11-12 查阅）",
+      "url": "https://zh.wikipedia.org/wiki/Beyond"
+    },
+    {
+      "name": "达明一派",
+      "reason": "同期劲Band浪潮乐队；1986年 Beyond 与达明一派、小岛合录《劲歌金曲》盒带，1988年又合作录制香港摇滚史上第一张混音作品集。",
+      "source": "维基百科 Beyond 条目「1986/1988年」（2026-11-12 查阅）",
+      "url": "https://zh.wikipedia.org/wiki/Beyond"
+    },
+    {
+      "name": "黑豹乐队",
+      "reason": "中国摇滚乐队；据黑豹鼓手赵明义述，1991年黑豹到港发展与 Beyond 签同一家经纪公司，称 Beyond「最摇滚」，两者精神相通。",
+      "source": "维基百科 Beyond 条目「评价·中国大陆」（2026-11-12 查阅）",
+      "url": "https://zh.wikipedia.org/wiki/Beyond"
+    },
+    {
+      "name": "小岛乐队",
+      "reason": "1980年代香港劲Band浪潮乐队，曾与 Beyond、达明一派合录《劲歌金曲》。",
+      "source": "维基百科 Beyond 条目「1986年」（2026-11-12 查阅）",
+      "url": "https://zh.wikipedia.org/wiki/Beyond"
+    }
+  ],
+  "similarSongs": [
+    {
+      "title": "海阔天空",
+      "artist": "Beyond",
+      "reason": "1993年作品，直抒热爱自由的胸怀，被大众推崇为「香港精神」代表曲之一，与《光辉岁月》同属 Beyond 最具影响力的摇滚经典。",
+      "source": "维基百科 Beyond 条目（2026-11-12 查阅）",
+      "url": "https://zh.wikipedia.org/wiki/Beyond"
+    },
+    {
+      "title": "真的爱你",
+      "artist": "Beyond",
+      "reason": "1989年歌颂母爱之作，Beyond 传唱度最高的情歌之一。",
+      "source": "维基百科 Beyond 条目（2026-11-12 查阅）",
+      "url": "https://zh.wikipedia.org/wiki/Beyond"
+    },
+    {
+      "title": "大地",
+      "artist": "Beyond",
+      "reason": "1988年具强烈东方色彩的 Rock，Beyond 第一首经典名曲，获1988年度十大劲歌金曲。",
+      "source": "维基百科 Beyond 条目（2026-11-12 查阅）",
+      "url": "https://zh.wikipedia.org/wiki/Beyond"
+    },
+    {
+      "title": "Amani",
+      "artist": "Beyond",
+      "reason": "1991年作品，指责战火残酷并憧憬和平，与《光辉岁月》同为人文关怀主题的代表作。",
+      "source": "维基百科 Beyond 条目「评价」（2026-11-12 查阅）",
+      "url": "https://zh.wikipedia.org/wiki/Beyond"
+    }
+  ]
+}

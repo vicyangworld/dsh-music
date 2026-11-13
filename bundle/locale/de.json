@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Lokale Musik",
+    "description": "Spielt die lokale Bibliothek, zeigt Liedtexte und Künstlergeschichten, empfiehlt und lädt neue Titel aus dem Hörverlauf und synchronisiert Spotify-Lieblingssongs mit einem Klick.",
+    "detail": "docs/DETAIL.md"
+  }
+}
