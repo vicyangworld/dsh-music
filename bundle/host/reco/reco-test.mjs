@@ -793,5 +793,121 @@ const fakeImages = {
   }
 }
 
+// ---------- P. 八期：新歌语义 / 流派池补全 / 避开不喜欢（离线） ----------
+{
+  const { GENRE_POOLS } = await import('./pools.js')
+  const { NEW_RELEASE_DAYS, newReleaseReason } = await import('./discover.js')
+  const CLIENT_GENRES = ['pop', 'rock', 'electronic', 'hip hop', 'jazz', 'classical', 'folk', 'blues', 'soul', 'funk', 'reggae', 'metal', 'punk', 'country', 'ambient']
+  t('P1 欢迎页 15 流派全部有池键且 ≥3 首', CLIENT_GENRES.every((g) => Array.isArray(GENRE_POOLS[g]) && GENRE_POOLS[g].length >= 3))
+  t('P2 池内条目 artist/title 齐全', Object.values(GENRE_POOLS).flat().every((s) => typeof s.artist === 'string' && s.artist && typeof s.title === 'string' && s.title))
+  t('P3 hip hop 保留空格键（与 MB tag / style.js 口径一致）', Boolean(GENRE_POOLS['hip hop']) && GENRE_POOLS.hiphop === undefined)
+  t('P4 新歌窗口收紧到 180 天', NEW_RELEASE_DAYS === 180)
+  t('P5 新歌理由年份来自真实发行日期', newReleaseReason('A', '2026-03-01', 'X') === '新歌推荐：A 2026 年发行专辑《X》')
+  t('P6 无发行日期时回退「近期发行」', newReleaseReason('A', '', '').includes('近期发行'))
+  t('P7 taste 命中 hip hop 时软偏置到首位', biasKeys(['jazz', 'hip hop', 'rock'], ['hip hop'])[0] === 'hip hop')
+}
+
+{
+  // ④ generate：不喜欢的歌排除 + 同歌手其余曲目软降权 + 不写入防重复名单
+  const tmp = await mkdtemp(join(tmpdir(), 'reco-dislike-'))
+  await writeFile(join(tmp, 'likes.json'), JSON.stringify({
+    v: 2, items: {},
+    dislikes: {
+      'S0::T0': { key: 'S0::T0', artist: 'S0', title: 'T0', dislikedAt: 1 },
+      'S2::T2': { key: 'S2::T2', artist: 'S2', title: 'T2', dislikedAt: 1 },
+    },
+  }))
+  const similar = Array.from({ length: 40 }, (_, i) => ({ category: 'similar', artist: `S${i}`, title: `T${i}`, reason: 'r' }))
+  const hintField = { genre: 'genreHint', language: 'languageHint', era: 'eraHint', scene: 'sceneHint', wildcard: 'sceneHint' }
+  const fakeDiscover = {
+    async buildSimilarCandidates() { return similar.map((c) => ({ ...c })) },
+    async buildExploreCandidates({ slots }) {
+      const cands = []
+      for (const s of slots) {
+        for (let i = 0; i < 4; i++) {
+          cands.push({ category: 'explore', axis: s.axis, artist: `${s.axis}A${i}`, title: `${s.axis}T${i}`, reason: 'r', durationMs: 200000, [hintField[s.axis]]: s.axis === 'wildcard' ? '意外之喜' : `${s.axis}val` })
+        }
+      }
+      return { candidates: cands, cursors: {} }
+    },
+    async findArtist(name) { return { mbid: 'x', name, tags: ['rock'] } },
+  }
+  const history = { read: async () => ({ events: [{ artist: 'Beyond', title: 'X', completion: 1 }, { artist: 'Beyond', title: 'Y', completion: 1 }, { artist: 'Nightwish', title: 'Z', completion: 1 }], total: 3 }) }
+  const library = { snapshot: () => ({ tracks: [], scannedAt: 1 }), ensureScanned: async () => {} }
+  const verifier = { async verify() { return { verification: { source: 'musicbrainz', url: 'https://musicbrainz.org/recording/x', verifiedAt: Date.now() }, matched: {} } } }
+  const reco = createReco({ history, library, storage: { dataDir: tmp }, logger: { warn: () => {} }, verifier, discover: fakeDiscover, images: fakeImages })
+  const b = await reco.generate()
+  t('P8 不喜欢的歌不进批次', b.items.length > 0 && !b.items.some((i) => normKey(i.artist, i.title) === normKey('S0', 'T0')))
+  t('P9 不喜欢歌手的其余曲目软降权（候选充足时不被选中）', !b.items.some((i) => i.artist === 'S2'))
+  const st = JSON.parse(await readFile(join(tmp, 'reco-state.json'), 'utf8'))
+  t('P10 不喜欢的歌不进防重复名单', !st.recentRecommended.includes(normKey('S0', 'T0')))
+  await rm(tmp, { recursive: true, force: true })
+}
+
+{
+  // ①/④ sections：new 走「真新歌」入参（tasteGenres + dislikes），且不喜欢的歌被兜底过滤
+  const tmp = await mkdtemp(join(tmpdir(), 'reco-newsec-'))
+  await writeFile(join(tmp, 'likes.json'), JSON.stringify({ v: 2, items: {}, dislikes: { 'BAD::BADT': { key: 'BAD::BADT', artist: 'BAD', title: 'BADT', dislikedAt: 1 } } }))
+  let captured = null
+  const fakeDiscover = {
+    async buildSimilarCandidates() {
+      return Array.from({ length: 40 }, (_, i) => ({ category: 'similar', artist: `S${i}`, title: `T${i}`, reason: 'r' }))
+    },
+    async buildExploreCandidates({ slots }) {
+      const cands = []
+      const hintField = { genre: 'genreHint', language: 'languageHint', era: 'eraHint', scene: 'sceneHint', wildcard: 'sceneHint' }
+      for (const s of slots) {
+        for (let i = 0; i < 4; i++) {
+          cands.push({ category: 'explore', axis: s.axis, artist: `${s.axis}A${i}`, title: `${s.axis}T${i}`, reason: 'r', durationMs: 200000, [hintField[s.axis]]: s.axis === 'wildcard' ? '意外之喜' : `${s.axis}val` })
+        }
+      }
+      return { candidates: cands, cursors: {} }
+    },
+    async findArtist(name) { return { mbid: 'x', name, tags: ['rock'] } },
+    async buildArtistList({ cursor = 0, limit = 20 }) {
+      const artists = Array.from({ length: limit }, (_, i) => ({
+        id: `mb${i}`, name: `ar${i}`, genreHint: 'rock', similar: [`sib${i}a`],
+        reason: '相似歌手：与您常听的 Beyond 风格相近',
+        verification: { source: 'musicbrainz', url: `https://musicbrainz.org/artist/mb${i}`, verifiedAt: Date.now() },
+      }))
+      return { artists, cursor: cursor + 1 }
+    },
+    async buildNewCandidates(args) {
+      captured = args
+      const cands = Array.from({ length: 24 }, (_, i) => ({ category: 'new', artist: `N${i}`, title: `NT${i}`, album: '新专辑', durationMs: 200000, releaseDate: '2026-05-01', reason: '新歌推荐：近期发行' }))
+      cands.splice(5, 0, { category: 'new', artist: 'BAD', title: 'BADT', reason: '新歌推荐：不应出现' })
+      return cands
+    },
+  }
+  const history = { read: async () => ({ events: [{ artist: 'Beyond', title: 'X', completion: 1 }, { artist: 'Beyond', title: 'Y', completion: 1 }, { artist: 'Nightwish', title: 'Z', completion: 1 }], total: 3 }) }
+  const library = { snapshot: () => ({ tracks: [{ id: 'lib1', artist: 'LIB', title: 'LIBT' }], scannedAt: 1 }), getRecord: () => undefined, ensureScanned: async () => {} }
+  const verifier = { async verify() { return { verification: { source: 'musicbrainz', url: 'https://musicbrainz.org/recording/x', verifiedAt: Date.now() }, matched: {} } } }
+  const reco = createReco({ history, library, storage: { dataDir: tmp }, logger: { warn: () => {} }, verifier, discover: fakeDiscover, images: fakeImages })
+  const s = await reco.sections({ taste: { genres: ['rock'] } })
+  t('P11 new 入参带 tasteGenres（taste 优先）', Array.isArray(captured?.tasteGenres) && captured.tasteGenres.includes('rock'))
+  t('P12 new 入参带不喜欢键，且兜底过滤后不出现', captured?.dislikedKeys?.has(normKey('BAD', 'BADT')) && !s.new.some((i) => normKey(i.artist, i.title) === normKey('BAD', 'BADT')))
+  t('P13 new 不再含「新加入曲库」类本地条目', !s.new.some((i) => String(i.reason).includes('新加入曲库')))
+  await rm(tmp, { recursive: true, force: true })
+}
+
+{
+  // ④ 歌手页：不喜欢的歌不出现在歌手页歌曲列表
+  const { mkdir, writeFile } = await import('node:fs/promises')
+  const tmp = await mkdtemp(join(tmpdir(), 'reco-dislike-artist-'))
+  await mkdir(join(tmp, 'cache', 'artists'), { recursive: true })
+  await writeFile(join(tmp, 'cache', 'artists', 'beyond.json'), JSON.stringify({ version: 1, data: { name: 'Beyond', intro: { text: '香港搖滾樂團', source: '维基百科', url: 'https://zh.wikipedia.org/wiki/Beyond', date: '2026-11-12' }, news: [], trivia: [], similarArtists: [], similarSongs: [] } }))
+  await writeFile(join(tmp, 'likes.json'), JSON.stringify({ v: 2, items: {}, dislikes: { 'Beyond::D1': { key: 'Beyond::D1', artist: 'Beyond', title: 'D1', dislikedAt: 1 } } }))
+  const fakeDiscover = {
+    async findArtist(name) { return name === 'Beyond' ? { mbid: 'mb-beyond', name: 'Beyond', tags: ['rock'] } : null },
+    async browseRecordings() { return [{ artist: 'Beyond', title: 'D1', durationMs: 300000 }, { artist: 'Beyond', title: 'D2', durationMs: 300000 }] },
+  }
+  const verifier = { async verify() { return { verification: { source: 'musicbrainz', url: 'https://musicbrainz.org/recording/x', verifiedAt: Date.now() }, matched: {} } } }
+  const library = { snapshot: () => ({ tracks: [], scannedAt: 1 }), ensureScanned: async () => {} }
+  const reco = createReco({ history: { read: async () => ({ events: [], total: 0 }) }, library, storage: { dataDir: tmp }, logger: { warn: () => {} }, verifier, discover: fakeDiscover, images: fakeImages })
+  const p = await reco.artistPage('Beyond')
+  t('P14 歌手页不显示不喜欢的歌', p.songs.length === 1 && p.songs[0].title === 'D2')
+  await rm(tmp, { recursive: true, force: true })
+}
+
 console.log(`\nreco-test: ${pass} pass, ${fail} fail`)
 process.exit(fail ? 1 : 0)

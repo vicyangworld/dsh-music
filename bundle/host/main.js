@@ -33,7 +33,7 @@ export function apply(ctx, config = {}) {
   const manage = createManage({ library, logger })
   const search = createSearch({ library, storage, logger })
   const preview = createPreview({ storage, config, logger })
-  const likes = createLikes({ storage, library, download, logger })
+  const likes = createLikes({ storage, library, download, logger, history })
   const reco = createReco({ history, library, storage, config, logger })
   const starter = createStarter({ storage, library, config, logger })
   const onboarding = createOnboarding({ storage, library, starter, config, logger })
@@ -42,7 +42,7 @@ export function apply(ctx, config = {}) {
     const disposers = [
       ...registerRoutes(ctx.webServer, { library, playback, storage, logger }),
       ...registerMetadataRoutes(ctx.webServer, { library, storage, logger, config }),
-      ...registerHistoryRoutes(ctx.webServer, { history, logger }),
+      ...registerHistoryRoutes(ctx.webServer, { history, likes, logger }),
       ...registerDownloadRoutes(ctx.webServer, { download, logger }),
       ...registerSyncRoutes(ctx.webServer, { sync, logger }),
       ...registerManageRoutes(ctx.webServer, { manage, logger }),

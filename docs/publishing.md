@@ -140,3 +140,21 @@ Release 说明至少写：七期变更（悬浮标/应用内顶层与跨应用�
 - 发布包不得包含用户数据：`~/.dsh/dsh-music/`、`~/Music/` 下任何文件、测试产物（如 `~/Music/dsh-music/starter/` 下的联调文件）。
 - 试听/下载音源上限 YT Music ~128k AAC，不引入盗版音源；starter 曲目必须逐首核实为 CC0/公有领域并保留署名。
 - 发布是外部动作：仅在用户明确指示、凭据就绪后执行；失败时如实报错，不猜测或绕过凭据。
+
+## 7. 发布结果（2026-11-14 活体复核）
+
+七期 v0.3.0 发布五项活体全绿：
+
+| 项 | 状态 | 链接/标识 |
+| --- | --- | --- |
+| GitHub 公开仓库 | ✅ live（HTTP 200） | https://github.com/vicyangworld/dsh-music |
+| GitHub Release（tgz） | ✅ published 2026-11-14T04:55:21Z | https://github.com/vicyangworld/dsh-music/releases/tag/v0.3.0（release id 445025536，asset id 746344124） |
+| npm 包 | ✅ live | `@vicyangorg/dsh-music@0.3.0`，tarball https://registry.npmjs.org/@vicyangorg/dsh-music/-/dsh-music-0.3.0.tgz |
+| plugin_manager 安装 | ✅ applied（fiberPhase=active） | include:dsh-music，moduleName `@vicyangorg/dsh-music`，enabled=true |
+| README 七期 | ✅ 已补 | README.md 七期表 |
+
+**唯一缺口：awesome-dsh-plugin 目录 PR 未提（外部受阻，按目标「如实记录受阻＋配合项」收尾）。**
+
+- 受阻原因：需 `GITHUB_TOKEN` 才能 fork + 提 PR；当前无已保存凭据（`list_secrets` 为空），`request_secret` 仅能在 Chief 单独对话弹安全卡片。
+- 配合项（一次性）：用户到 Chief 单独对话发「发布凭据」→ 弹 `GITHUB_TOKEN`（classic PAT，repo 权限）安全卡片 → 注入 env var 后由 Chief fork `awesome-dsh-plugin/awesome-dsh-plugin`、按 §5 加 data 条目、提 PR `Add dsh-music plugin`，合并后干净 profile 验收市场一键装。
+- 现状不影响安装：GitHub + npm 已可经 `plugin_manager install_bundle target="@vicyangorg/dsh-music@0.3.0"` 安装；目录 PR 仅关乎市场 Discover 曝光，留作凭据就绪后的后续项。

@@ -407,6 +407,18 @@ const afterClose = uiStore.getSnapshot();
 check('preview close returns to the library view', afterClose.view === 'library' && afterClose.welcomePreview === false,
   'view=' + afterClose.view);
 
+/* 5x) v8 taste plumbing: liked tab, dislike button, POST, history summary */
+const libTabs = walk(realHeader).filter((n) => String(cls(n) || '').includes('dshm-libtabs-btn'));
+check('library shows two tabs (library + liked)', libTabs.length === 2
+  && JSON.stringify(libTabs.map((b) => b.children)).includes('libTabLikes'));
+check('rows carry a dislike button', has(realHeader, (n) => String(cls(n) || '').includes('dshm-dislike-btn')));
+const dislikesBefore = fetchCalls.length;
+await svc.likes.setDislike({ artist: '冒烟歌手', title: '冒烟歌' }, true);
+check('dislike POSTs to the host route', fetchCalls.slice(dislikesBefore).some((u) => u.includes('/library/dislike')));
+historyState = { ...historyState, stats: { ...historyState.stats, dislikes: { count: 1, events: 1, songs: [{ title: '不喜欢歌', artist: '某歌手', dislikedAt: Date.now(), inLibrary: true }] } } };
+const histTree = expand(music({ ...realProps, useUi: (sel) => sel({ ...uiStore.getSnapshot(), view: 'history' }) }));
+check('history stats shows the dislike summary block', has(histTree, (n) => cls(n) === 'dshm-dislike-row'));
+
 /* 6) report */
 const fail = results.filter((r) => !r.ok);
 for (const r of results) console.log((r.ok ? 'PASS' : 'FAIL') + '  ' + r.name + (r.detail ? '  (' + r.detail + ')' : ''));

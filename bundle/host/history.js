@@ -42,27 +42,52 @@ export function createHistory({ storage, library, logger }) {
     return entry
   }
 
-  /** 读取历史（ newest first ）。limit 上限 10000，供推荐引擎一次取全量。 */
-  async function read({ limit = 200, offset = 0 } = {}) {
-    let text
-    try {
-      text = await readFile(file, 'utf8')
-    } catch {
-      return { events: [], total: 0 }
-    }
-    const events = []
-    for (const line of text.split('\n')) {
-      if (!line.trim()) continue
-      try {
-        events.push(JSON.parse(line))
-      } catch {
-        /* 跳过损坏行，不影响其余 */
+  /** 追加一条口味事件（不喜欢/取消不喜欢）。只进历史与统计，不算播放；
+   * reco 等播放画像默认读不到（read 默认过滤），因此不会污染推荐。 */
+  async function appendTaste(event = {}) {
+    const kind = event.kind === 'undislike' ? 'undislike' : event.kind === 'dislike' ? 'dislike' : null
+    if (!kind) throw new Error('kind 必须是 dislike 或 undislike')
+    const artist = typeof event.artist === 'string' ? event.artist.trim() : ''
+    const title = typeof event.title === 'string' ? event.title.trim() : ''
+    if (!artist || !title) throw new Error('缺少歌手名 artist 或歌名 title')
+    let trackId = null
+    if (event.trackId !== undefined && event.trackId !== null) {
+      const rec = library.getRecord(event.trackId)
+      if (!rec) {
+        const err = new Error('trackId 不存在于曲库，请先重新扫描')
+        err.code = 'UNKNOWN_TRACK'
+        throw err
       }
+      trackId = rec.id
     }
+    const entry = {
+      type: kind,
+      trackId,
+      artist,
+      title,
+      timestamp: Number.isFinite(event.timestamp) ? event.timestamp : Date.now(),
+      reason: kind,
+    }
+    const line = JSON.stringify(entry) + '\n'
+    const write = chain.then(() => appendFile(file, line, 'utf8'))
+    chain = write.catch((err) => logger?.warn?.(`dsh-music: 写口味事件失败: ${err.message}`))
+    await write
+    return entry
+  }
+
+  /** 读取历史（ newest first ）。limit 上限 10000，供推荐引擎一次取全量。
+   * 默认只返回播放事件；includeTaste=true 时口味事件也返回（归一 type='play'）。 */
+  async function read({ limit = 200, offset = 0, includeTaste = false } = {}) {
+    let events = await readAll()
+    if (!includeTaste) events = events.filter((e) => e.type === undefined || e.type === 'play')
     const total = events.length
     const lim = Math.min(Math.max(Number(limit) || 200, 1), 10000)
     const off = Math.max(Number(offset) || 0, 0)
-    return { events: events.slice().reverse().slice(off, off + lim), total }
+    const slice = events.slice().reverse().slice(off, off + lim)
+    return {
+      events: includeTaste ? slice.map((e) => ({ ...e, type: e.type ?? 'play' })) : slice,
+      total,
+    }
   }
 
   /** 读取全部事件（坏行跳过，不排序不截断）。 */
@@ -85,9 +110,17 @@ export function createHistory({ storage, library, logger }) {
     return out
   }
 
-  /** 聚合统计（只读本地）：总播放/总时长(估算)/去重歌曲歌手/TOP/近7天/跳过/平均完整度。 */
+  /** 聚合统计（只读本地）：总播放/总时长(估算)/去重歌曲歌手/TOP/近7天/跳过/平均完整度。
+   * 只统计播放事件；口味事件单独计数（dislikeEvents/undislikeEvents）。 */
   async function stats() {
-    const events = await readAll()
+    const all = await readAll()
+    const events = all.filter((e) => e.type === undefined || e.type === 'play')
+    let dislikeEvents = 0
+    let undislikeEvents = 0
+    for (const e of all) {
+      if (e.type === 'dislike') dislikeEvents++
+      else if (e.type === 'undislike') undislikeEvents++
+    }
     const pad = (n) => String(n).padStart(2, '0')
     const localDate = (ts) => {
       const d = new Date(ts)
@@ -149,13 +182,16 @@ export function createHistory({ storage, library, logger }) {
       daily,
       skippedCount,
       avgCompletion: events.length === 0 ? 0 : Math.round((completionSum / events.length) * 1000) / 1000,
+      // 口味信号（八期④）：不喜欢事件计数，与播放统计分离
+      dislikeEvents,
+      undislikeEvents,
     }
   }
 
-  return { file, append, read, readAll, stats }
+  return { file, append, appendTaste, read, readAll, stats }
 }
 
-export function registerHistoryRoutes(webServer, { history, logger }) {
+export function registerHistoryRoutes(webServer, { history, likes, logger }) {
   const warn = (msg) => logger?.warn?.(msg)
   const sendJson = (res, status, value) => {
     const body = JSON.stringify(value)
@@ -187,7 +223,8 @@ export function registerHistoryRoutes(webServer, { history, logger }) {
           const url = new URL(req.url ?? '/', 'http://dsh-music.local')
           const limit = url.searchParams.get('limit') ?? 200
           const offset = url.searchParams.get('offset') ?? 0
-          return sendJson(res, 200, await history.read({ limit, offset }))
+          const includeTaste = url.searchParams.get('includeTaste') === '1' || url.searchParams.get('includeTaste') === 'true'
+          return sendJson(res, 200, await history.read({ limit, offset, includeTaste }))
         }
         if (req.method === 'POST') {
           let event
@@ -219,7 +256,13 @@ export function registerHistoryRoutes(webServer, { history, logger }) {
     handler: async (req, res) => {
       if (req.method !== 'GET') return sendJson(res, 405, { error: '方法不允许' })
       try {
-        return sendJson(res, 200, await history.stats())
+        const value = await history.stats()
+        // 合并当前不喜欢清单摘要（八期④：不喜欢也进统计卡）
+        if (likes && typeof likes.summary === 'function') {
+          const summary = await likes.summary(10)
+          value.dislikes = { count: summary.count, events: value.dislikeEvents ?? 0, songs: summary.songs }
+        }
+        return sendJson(res, 200, value)
       } catch (err) {
         warn(`dsh-music: 历史统计错误: ${err.message}`)
         return sendJson(res, 500, { error: '历史统计内部错误' })

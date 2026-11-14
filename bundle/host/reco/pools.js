@@ -55,6 +55,34 @@ export const GENRE_POOLS = {
   ambient: [
     { artist: 'Brian Eno', title: 'An Ending (Ascent)' },
     { artist: 'Sigur Rós', title: 'Hoppípolla' },
+    { artist: 'Moby', title: 'Porcelain' },
+  ],
+  // 八期②：对齐欢迎页 genreOptions 15 个流派（织音 client 已扩到 15）。
+  // 'hip hop' 保留空格键名，与 style.js / MB tag 口径一致（客户端传 'hip hop'）。
+  rock: [
+    { artist: 'The Rolling Stones', title: 'Paint It Black' },
+    { artist: 'Led Zeppelin', title: 'Stairway to Heaven' },
+    { artist: 'Nirvana', title: 'Smells Like Teen Spirit' },
+  ],
+  pop: [
+    { artist: 'Michael Jackson', title: 'Billie Jean' },
+    { artist: 'Madonna', title: 'Like a Prayer' },
+    { artist: 'Taylor Swift', title: 'Shake It Off' },
+  ],
+  'hip hop': [
+    { artist: 'Kendrick Lamar', title: 'HUMBLE.' },
+    { artist: 'Wu-Tang Clan', title: 'C.R.E.A.M.' },
+    { artist: 'Lauryn Hill', title: 'Doo Wop (That Thing)' },
+  ],
+  punk: [
+    { artist: 'The Clash', title: 'London Calling' },
+    { artist: 'Ramones', title: 'Blitzkrieg Bop' },
+    { artist: 'Sex Pistols', title: 'Anarchy in the U.K.' },
+  ],
+  country: [
+    { artist: 'Johnny Cash', title: 'Ring of Fire' },
+    { artist: 'Dolly Parton', title: 'Jolene' },
+    { artist: 'Willie Nelson', title: 'On the Road Again' },
   ],
 }
 

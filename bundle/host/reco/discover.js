@@ -45,6 +45,16 @@ export function biasKeys(keys, prefer) {
   ]
 }
 
+/** 新歌窗口：近 180 天新发行才算「新歌」（八期①纠偏；Chief 允许自定，取半年）。 */
+export const NEW_RELEASE_DAYS = 180
+
+/** 新歌理由：发行年必须来自真实发行日期（不是入库时间）。 */
+export function newReleaseReason(artist, releaseDate, album, releaseType = 'Album') {
+  const year = String(releaseDate ?? '').slice(0, 4)
+  const rel = releaseType === 'Single' ? '单曲' : releaseType === 'EP' ? 'EP' : album ? `专辑《${album}》` : '单曲'
+  return year ? `新歌推荐：${artist} ${year} 年发行${rel}` : `新歌推荐：${artist} 近期发行${rel}`
+}
+
 export function createDiscover({ storage, logger } = {}) {
   const warn = (msg) => logger?.warn?.(msg)
   const dir = join(storage.dataDir, 'cache', 'reco')
@@ -326,51 +336,80 @@ export function createDiscover({ storage, logger } = {}) {
 
   /** 近期发行曲目（已实测路径：release-group → release → recording，recording 不支持直接按 rg browse）。
    * sinceDays 内的 Album/Single/EP，取最近 maxReleases 张、每张 perRelease 首。 */
+  /** release-group → releases → recordings（各层缓存 7 天；recording 不支持直接按 rg browse）。 */
+  async function recordingsFromReleaseGroup(g, perRelease = 3) {
+    const relKey = `releases-${g.rgid}.json`
+    let releases = (await cacheRead(relKey, RECORDINGS_TTL_MS))?.releases
+    if (!releases) {
+      try {
+        const data = await mbJson(mbUrl('release', { 'release-group': g.rgid, limit: 5 }), { logger })
+        releases = (data?.releases ?? []).map((r) => ({ rid: r.id, title: r.title, date: r.date }))
+        await cacheWrite(relKey, { releases })
+      } catch (err) {
+        warn?.(`dsh-music: browse releases 失败 ${g.rgid}: ${err.message}`)
+        return []
+      }
+    }
+    if (!releases?.[0]) return []
+    const recKey = `recordings-release-${releases[0].rid}.json`
+    let recs = (await cacheRead(recKey, RECORDINGS_TTL_MS))?.recordings
+    if (!recs) {
+      try {
+        const data = await mbJson(mbUrl('recording', { release: releases[0].rid, limit: 10, inc: 'artist-credits' }), { logger })
+        recs = (data?.recordings ?? [])
+          .filter((r) => !r.video && r.title && r['artist-credit']?.[0]?.name)
+          .map((r) => ({
+            artist: r['artist-credit'][0].name,
+            title: r.title,
+            durationMs: Number.isFinite(r.length) ? r.length : undefined,
+          }))
+        await cacheWrite(recKey, { recordings: recs })
+      } catch (err) {
+        warn?.(`dsh-music: browse release recordings 失败 ${releases[0].rid}: ${err.message}`)
+        return []
+      }
+    }
+    return (recs ?? []).slice(0, perRelease).map((r) => ({ ...r, album: g.title, releaseDate: g.date, releaseType: g.type }))
+  }
+
+  /** 近期发行曲目（已实测路径：release-group → release → recording，recording 不支持直接按 rg browse）。
+   * sinceDays 内的 Album/Single/EP，取最近 maxReleases 张、每张 perRelease 首。 */
   async function recentReleaseRecordings(mbid, { sinceDays = 730, maxReleases = 2, perRelease = 3 } = {}) {
     const cutoff = new Date(Date.now() - sinceDays * 24 * 3600 * 1000).toISOString().slice(0, 10)
     const groups = (await browseReleaseGroups(mbid))
       .filter((g) => g.date >= cutoff && ['Album', 'Single', 'EP'].includes(g.type))
       .slice(0, maxReleases)
     const out = []
-    for (const g of groups) {
-      // release-group → releases（缓存）
-      const relKey = `releases-${g.rgid}.json`
-      let releases = (await cacheRead(relKey, RECORDINGS_TTL_MS))?.releases
-      if (!releases) {
-        try {
-          const data = await mbJson(mbUrl('release', { 'release-group': g.rgid, limit: 5 }), { logger })
-          releases = (data?.releases ?? []).map((r) => ({ rid: r.id, title: r.title, date: r.date }))
-          await cacheWrite(relKey, { releases })
-        } catch (err) {
-          warn?.(`dsh-music: browse releases 失败 ${g.rgid}: ${err.message}`)
-          continue
-        }
-      }
-      if (!releases?.[0]) continue
-      // release → recordings（缓存）
-      const recKey = `recordings-release-${releases[0].rid}.json`
-      let recs = (await cacheRead(recKey, RECORDINGS_TTL_MS))?.recordings
-      if (!recs) {
-        try {
-          const data = await mbJson(mbUrl('recording', { release: releases[0].rid, limit: 10, inc: 'artist-credits' }), { logger })
-          recs = (data?.recordings ?? [])
-            .filter((r) => !r.video && r.title && r['artist-credit']?.[0]?.name)
-            .map((r) => ({
-              artist: r['artist-credit'][0].name,
-              title: r.title,
-              durationMs: Number.isFinite(r.length) ? r.length : undefined,
-            }))
-          await cacheWrite(recKey, { recordings: recs })
-        } catch (err) {
-          warn?.(`dsh-music: browse release recordings 失败 ${releases[0].rid}: ${err.message}`)
-          continue
-        }
-      }
-      for (const r of (recs ?? []).slice(0, perRelease)) {
-        out.push({ ...r, album: g.title, releaseDate: g.date })
-      }
-    }
+    for (const g of groups) out.push(...await recordingsFromReleaseGroup(g, perRelease))
     return out
+  }
+
+  /** 按流派标签检索「近 N 天首发」的专辑/单曲/EP（八期①拓宽新歌来源，不限于高频歌手）。
+   * MB release-group search 支持 tag + firstreleasedate；结果按首发日期降序、剔除 Live/精选。 */
+  async function searchRecentReleaseGroups(tag, { sinceDays = NEW_RELEASE_DAYS, limit = 6 } = {}) {
+    const cutoff = new Date(Date.now() - sinceDays * 24 * 3600 * 1000).toISOString().slice(0, 10)
+    const key = `rgsearch-${createHash('sha1').update(`${norm(tag)}|${cutoff}`).digest('hex').slice(0, 16)}.json`
+    const cached = await cacheRead(key, RECORDINGS_TTL_MS)
+    if (cached) return cached.groups ?? []
+    let groups = []
+    try {
+      const query = `tag:"${tag}" AND firstreleasedate:[${cutoff} TO *]`
+      const data = await mbJson(mbUrl('release-group', { query, limit: 25 }), { logger })
+      const skipSecondary = new Set(['Live', 'Compilation', 'Remix', 'Interview', 'Demo'])
+      const today = new Date().toISOString().slice(0, 10)
+      groups = (data?.['release-groups'] ?? [])
+        .filter((g) => g.id && g['first-release-date'] && g['first-release-date'] >= cutoff && g['first-release-date'] <= today
+          && ['Album', 'Single', 'EP'].includes(g['primary-type'])
+          && !(g['secondary-types'] ?? []).some((t) => skipSecondary.has(t)))
+        .sort((a, b) => String(b['first-release-date']).localeCompare(String(a['first-release-date'])))
+        .slice(0, limit)
+        .map((g) => ({ rgid: g.id, title: g.title, date: g['first-release-date'], type: g['primary-type'] }))
+      await cacheWrite(key, { groups })
+    } catch (err) {
+      warn?.(`dsh-music: 近期发行检索失败 ${tag}: ${err.message}`)
+      return [] // 失败不缓存
+    }
+    return groups
   }
 
   /** 歌手栏目候选：高频歌手 → MB artist-rels 相似歌手 → 其作品（不含种子本人）。
@@ -514,54 +553,98 @@ export function createDiscover({ storage, logger } = {}) {
 
   /** 新歌栏目候选：曲库近 30 天新增（本地，优先）+ 高频歌手 MB 近两年新发行（补充）。
    * 全部候选仍须过 verify.js 核实；本地曲核实失败则不输出（守「先核实再输出」红线）。 */
-  async function buildNewCandidates({ tracks, getRecord, seedArtists, libraryKeys, recentKeys, extraKeys, limit = 6 }) {
+  /** 新歌候选（八期①）：新歌 = 真正的新发行（近 NEW_RELEASE_DAYS 天），不再把
+   * 「曲库刚入库」当新歌（刚入库是用户已有的歌，不属于新歌发现）。
+   * 来源顺序：高频歌手 → 相似歌手（artist-rels）→ 口味/画像流派代表歌手；
+   * 每首仍必须经 verify.js 核实；去重曲库/近期播放/已推荐；跳过不喜欢过的曲目与歌手
+   * （只读 dislikes 标记，不把口味事件当播放画像）。 */
+  async function buildNewCandidates({
+    seedArtists = [], libraryKeys = new Set(), recentKeys = new Set(), extraKeys = new Set(),
+    tasteGenres = [], dislikedKeys = new Set(), dislikedArtists = new Set(), limit = 20,
+  }) {
     const seen = new Set([...recentKeys, ...(extraKeys ?? [])])
+    const artistSeen = new Set()
     const baseKey = (artist, title) => normKey(artist, String(title).replace(/[（(].*?[)）]/g, ''))
+    const dislikedArtist = (name) => dislikedArtists.has(String(name ?? '').trim().toLowerCase())
     const out = []
+    const albumCount = new Map() // 同一专辑最多进 2 首，防一张专辑刷屏
     const push = (c) => {
       const key = baseKey(c.artist, c.title)
-      if (!key || seen.has(key)) return
+      if (!key || seen.has(key) || libraryKeys.has(key)) return
+      if (dislikedKeys.has(normKey(c.artist, c.title)) || dislikedArtist(c.artist)) return
+      const ak = c.album ? baseKey(c.artist, c.album) : null
+      if (ak && (albumCount.get(ak) ?? 0) >= 2) return
       seen.add(key)
+      if (ak) albumCount.set(ak, (albumCount.get(ak) ?? 0) + 1)
       out.push(c)
     }
-    // 1) 曲库近期新增（按文件 mtime 降序，30 天内）
-    const cutoff = Date.now() - 30 * 24 * 3600 * 1000
-    const local = []
-    for (const t of tracks ?? []) {
-      const rec = getRecord?.(t.id)
-      const mtime = rec?.meta?.mtimeMs
-      if (!Number.isFinite(mtime) || mtime < cutoff) continue
-      local.push({ t, mtime })
+    const takeArtist = (mbid, name) => {
+      if (!mbid || artistSeen.has(mbid) || dislikedArtist(name)) return false
+      artistSeen.add(mbid)
+      return true
     }
-    local.sort((a, b) => b.mtime - a.mtime)
-    for (const { t, mtime } of local.slice(0, limit + 4)) {
-      const rec = getRecord?.(t.id)
-      const date = new Date(mtime).toISOString().slice(0, 10)
-      push({
-        category: 'new', artist: t.artist, title: t.title,
-        album: t.album ?? undefined,
-        durationMs: Number.isFinite(rec?.meta?.duration) ? Math.round(rec.meta.duration * 1000) : undefined,
-        local: true, trackId: t.id,
-        coverUrl: t.coverUrl || undefined,
-        reason: `新歌推荐：${date} 新加入曲库`,
-      })
-    }
-    // 2) MB 近期发行（高频歌手，best-effort 补充）
-    for (const name of seedArtists.slice(0, 4)) {
-      if (out.length >= limit + 10) break
-      const a = await findArtist(name)
-      if (!a) continue
-      const recs = await recentReleaseRecordings(a.mbid, { sinceDays: 1095, maxReleases: 4, perRelease: 6 })
+    const enough = () => out.length >= limit + 4
+    const take = async (mbid, { maxReleases = 1, perRelease = 6 } = {}) => {
+      const recs = await recentReleaseRecordings(mbid, { sinceDays: NEW_RELEASE_DAYS, maxReleases, perRelease })
+      const today = new Date().toISOString().slice(0, 10)
+      const cutoff = new Date(Date.now() - NEW_RELEASE_DAYS * 24 * 3600 * 1000).toISOString().slice(0, 10)
       for (const r of recs) {
-        if (out.length >= limit + 8) break
-        if (libraryKeys.has(baseKey(r.artist, r.title))) continue
+        if (!r?.releaseDate || r.releaseDate < cutoff || r.releaseDate > today) continue
         push({
-          category: 'new', artist: r.artist, title: r.title, album: r.album, durationMs: r.durationMs,
-          reason: `新歌推荐：${r.artist} ${String(r.releaseDate).slice(0, 4)} 年新发行《${r.album}》`,
+          category: 'new', artist: r.artist, title: r.title, album: r.album,
+          durationMs: r.durationMs, releaseDate: r.releaseDate,
+          reason: newReleaseReason(r.artist, r.releaseDate, r.album, r.releaseType),
         })
       }
     }
-    return out
+    // 1) 高频歌手（画像种子）：每位取最近 2 张发行
+    for (const name of seedArtists.slice(0, 3)) {
+      if (enough()) break
+      const a = await findArtist(name)
+      if (!a || !takeArtist(a.mbid, a.name)) continue
+      await take(a.mbid, { maxReleases: 2 })
+    }
+    // 2) 相似歌手（artist-rels）：最多 2 位种子 × 2 位关系歌手
+    if (!enough()) {
+      for (const name of seedArtists.slice(0, 2)) {
+        if (enough()) break
+        const a = await findArtist(name)
+        if (!a) continue
+        const rels = await relatedArtists(a.mbid)
+        let n = 0
+        for (const rel of rels) {
+          if (n >= 2 || enough()) break
+          if (!takeArtist(rel.mbid, rel.name)) continue
+          await take(rel.mbid, { maxReleases: 1 })
+          n++
+        }
+      }
+    }
+    // 3) 口味/画像流派：按 tag + 首发日期直查近期发行（不限高频歌手），每流派最多取 3 张
+    if (!enough()) {
+      for (const tag of tasteGenres.slice(0, 3)) {
+        if (enough()) break
+        const groups = await searchRecentReleaseGroups(tag, { limit: 6 })
+        let n = 0
+        for (const g of groups) {
+          if (n >= 3 || enough()) break
+          const today = new Date().toISOString().slice(0, 10)
+          if (!g.date || g.date > today) continue
+          const recs = await recordingsFromReleaseGroup(g, 6)
+          for (const r of recs) {
+            push({
+              category: 'new', artist: r.artist, title: r.title, album: r.album ?? g.title,
+              durationMs: r.durationMs, releaseDate: r.releaseDate ?? g.date,
+              reason: newReleaseReason(r.artist, r.releaseDate ?? g.date, r.album ?? g.title, r.releaseType ?? g.type),
+            })
+          }
+          n++
+        }
+      }
+    }
+    // 真实发行日期降序（最新在前）
+    out.sort((a, b) => String(b.releaseDate ?? '').localeCompare(String(a.releaseDate ?? '')))
+    return out.slice(0, limit + 8)
   }
 
   return { findArtist, artistInfo, searchArtistsByTag, buildArtistList, browseRecordings, relatedArtists, searchByTag, searchRecordings, buildSimilarCandidates, buildExploreCandidates, browseReleaseGroups, recentReleaseRecordings, buildArtistCandidates, buildNewCandidates }

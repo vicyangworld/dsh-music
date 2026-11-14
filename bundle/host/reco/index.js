@@ -51,6 +51,24 @@ export function createReco({ history, library, storage, config = {}, logger, ver
     await rename(tmp, file)
   }
 
+  /** 不喜欢标记（八期④）：只读 likes.json v2 的 dislikes，不进播放画像（口味事件不参与历史统计）。
+   * 返回归一后的「歌手::歌名」集合 + 小写歌手集合（歌手级软降权用）。文件不存在视为零。 */
+  async function readDislikes() {
+    const saved = await readJson(join(storage.dataDir, 'likes.json'), null)
+    const dislikes = saved && typeof saved.dislikes === 'object' && saved.dislikes !== null ? saved.dislikes : {}
+    const keys = new Set()
+    const artists = new Set()
+    for (const d of Object.values(dislikes)) {
+      if (!d || typeof d !== 'object') continue
+      const artist = typeof d.artist === 'string' ? d.artist : ''
+      const title = typeof d.title === 'string' ? d.title : ''
+      if (!artist || !title) continue
+      keys.add(normKey(artist, title))
+      artists.add(artist.trim().toLowerCase())
+    }
+    return { keys, artists }
+  }
+
   /** 生成一批推荐（10 首 = 7 相近 + 3 探索，逐首已核实）。纯算法 + MusicBrainz，无 LLM。
    * 可选 options.taste（v7 批2：客户端首启偏好 {genres[],languages[]}）仅软偏置探索轴，不传时行为不变。 */
   async function generate(options = {}) {
@@ -301,12 +319,14 @@ export function createReco({ history, library, storage, config = {}, logger, ver
     const recs = await discover.browseRecordings(a.mbid, a.name)
     const songs = []
     const seen = new Set()
+    const { keys: dislikedKeys } = await readDislikes()
     // 去括号版本后缀去重（Live/Remix 版不重复占位）
     const baseKey = (artist, title) => normKey(artist, String(title).replace(/[（(].*?[)）]/g, ''))
     for (const r of recs) {
       if (songs.length >= 20) break
       const key = baseKey(r.artist, r.title)
       if (!key || seen.has(key)) continue
+      if (dislikedKeys.has(normKey(r.artist, r.title))) continue
       seen.add(key)
       const v = await verifier.verify({ artist: r.artist, title: r.title, durationMs: r.durationMs })
       if (!v) continue
@@ -339,6 +359,7 @@ export function createReco({ history, library, storage, config = {}, logger, ver
     }
     const tracks = snap?.tracks ?? []
     const { seedArtists, topArtistSet, profileValues, profile, libraryKeys, recentKeys } = await buildProfile(events, tracks)
+    const { keys: dislikedKeys, artists: dislikedArtists } = await readDislikes()
 
     // ---- 探索轴轮换（quota.js，批间轮转 + 固定意外之喜位）----
     const state = await readJson(stateFile, {})
@@ -352,9 +373,15 @@ export function createReco({ history, library, storage, config = {}, logger, ver
     const exploreResult = await discover.buildExploreCandidates({
       slots: plan.slots, profileValues, cursors: state.cursors ?? {}, taste,
     })
-    const candidates = [
+    const deduped = [
       ...similar,
       ...exploreResult.candidates.filter((c) => !recentRecommended.has(normKey(c.artist, c.title))),
+    ].filter((c) => !dislikedKeys.has(normKey(c.artist, c.title)))
+    // ④ 避开不喜欢：标记过的歌直接排除；同歌手的其余曲目软降权（排到最后，仅在候选不足时补位）
+    const isDislikedArtist = (c) => dislikedArtists.has(String(c.artist ?? '').trim().toLowerCase())
+    const candidates = [
+      ...deduped.filter((c) => !isDislikedArtist(c)),
+      ...deduped.filter((c) => isDislikedArtist(c)),
     ]
     const needSimilar = bootstrap ? 0 : SIMILAR_SLOTS
     if (candidates.length < needSimilar + EXPLORE_SLOTS) {
@@ -475,7 +502,7 @@ export function createReco({ history, library, storage, config = {}, logger, ver
       if (typeof library.ensureScanned === 'function') await library.ensureScanned()
       const snap = library.snapshot()
       const tracks = snap?.tracks ?? []
-      const { seedArtists, libraryKeys, recentKeys } = await buildProfile(events, tracks)
+      const { seedArtists, libraryKeys, recentKeys, profile } = await buildProfile(events, tracks)
 
       // today：同一自然日「且数量达标（>= 14+6）」才复用最近一批；否则生成新批次（推进探索轴轮换）。
       // 旧版本（二期 10 首/批）的当日批次不足 20，必须重生成，否则活体会显示 10 首。
@@ -534,11 +561,14 @@ export function createReco({ history, library, storage, config = {}, logger, ver
       const imgMap = await images.artistImages(artistResult.artists.map((a) => a.name))
       const artist = artistResult.artists.map((a) => ({ ...a, imageUrl: imgMap.get(a.name)?.thumbnail ?? null }))
 
-      // new：曲库近 30 天新增（本地）+ MB 近两年新发行（补充）
+      // new：真正的新发行（近 180 天，八期①）——高频歌手/相似歌手/口味流派来源；本地刚入库不算新歌
+      const disliked = await readDislikes()
+      const tasteGenres = (taste?.genres?.length ? taste.genres : profile.genres).slice(0, 4)
       const usedForNew = new Set(usedKeys)
-      const newCands = await discover.buildNewCandidates({
-        tracks, getRecord: (id) => library.getRecord(id), seedArtists, libraryKeys, recentKeys, extraKeys: usedForNew, limit: 20,
-      })
+      const newCands = (await discover.buildNewCandidates({
+        tracks, getRecord: (id) => library.getRecord(id), seedArtists, libraryKeys, recentKeys, extraKeys: usedForNew,
+        tasteGenres, dislikedKeys: disliked.keys, dislikedArtists: disliked.artists, limit: 20,
+      })).filter((c) => !disliked.keys.has(normKey(c.artist, c.title)))
       const fresh = await verifyToItems(newCands, { limit: 20, category: 'new', usedKeys: usedForNew })
 
       // 持久化歌手轮换游标（merge 现有 state，不覆盖其余字段）

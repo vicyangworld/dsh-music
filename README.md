@@ -4,10 +4,10 @@
 
 DeepSeek Harness Desktop 的音乐插件：播放本地曲库、同步歌词与歌手故事、基于收听历史的反信息茧房推荐、推荐歌曲试听/喜欢才入库、Spotify 收藏同步。界面简约、中文、跟随明暗主题。
 
-- npm 包名：`@vicyangorg/dsh-music`（v0.3.0）；品牌名与 GitHub 仓库仍为 `dsh-music`（原名 `dsh-music` 在 npm 被占位包占用，故用 scoped 名，见 `docs/publishing.md`）
+- npm 包名：`@vicyangorg/dsh-music`（v0.4.0）；品牌名与 GitHub 仓库仍为 `dsh-music`（原名 `dsh-music` 在 npm 被占位包占用，故用 scoped 名，见 `docs/publishing.md`）
 - 形态：DSH bundle（Host 服务 + Web 客户端面板）
-- 验证状态：一期 S1–S4、二期四批、三期、四期、五期、六期均已验收通过；七期验收中（验收证据为内部文档，含本机数据，不随公开仓库发布）
-- 分发状态：`@vicyangorg/dsh-music@0.3.0` publish-ready（MIT/engines.dsh/8 语 meta/DETAIL+截图/README，打包守门+冷装冒烟通过）；GitHub/npm/插件目录收录待发布凭据
+- 验证状态：一期 S1–S4、二期四批、三期、四期、五期、六期、七期、八期均已验收通过（验收证据为内部文档，含本机数据，不随公开仓库发布）
+- 分发状态：`@vicyangorg/dsh-music@0.4.0` 已发布 GitHub Release + npm（MIT/engines.dsh/8 语 meta/DETAIL+截图/README，打包守门+冷装冒烟通过）；插件目录 PR #15213 审核中（仓库满 1 天门槛自动转绿）
 
 ## 功能
 | 模块 | 说明 |
@@ -76,10 +76,20 @@ DeepSeek Harness Desktop 的音乐插件：播放本地曲库、同步歌词与�
 | taste 软偏置 | 偏好被推荐消费：探索批按偏好流派/语言软偏置，不锁死多样性 |
 | 社区设计稿 | `docs/community-design.md`：分享卡片/分享码/GitHub Discussions 广场，opt-in、无后端、数据不出机（本期仅设计） |
 
+## 八期新增（真新歌/全流派/喜欢与不喜欢/品牌 logo）
+| 模块 | 说明 |
+|---|---|
+| 新歌真发行 | 新歌推荐只推真正新发行（180 天内、MusicBrainz 真实首发日期，区分专辑/单曲/EP），不再把「刚入库的歌」当新歌；来源拓宽到高频歌手→相似歌手→口味流派直查，过滤库内/近期已荐/不喜欢，按真实发行日降序 |
+| 流派全覆盖 | 欢迎页流派 10→15（补 pop/rock/hip hop/punk/country），推荐池 `GENRE_POOLS` 同步补全（逐首 MusicBrainz 核实），taste 软偏置生效 |
+| 我喜欢列表 | 曲库「曲库 / 我喜欢(N)」双 Tab，喜欢的歌独立成列，行点击立即切播，不在库行置灰 |
+| 不喜欢 | 每首歌（曲库/推荐/新歌/歌手页）可「不喜欢」👎；与喜欢互斥（二值口味信号）；不喜欢不下载、不删文件；推荐避开不喜欢的歌与歌手 |
+| 不喜欢进统计 | 不喜欢计入收听统计历史（独立口味事件，默认不污染播放画像）；历史页统计卡新增不喜欢计数 +「不喜欢的歌」列表（可取消不喜欢） |
+| 品牌 logo | 用户提供的蓝肥鱼戴耳机图设为插件 logo（Plugin Manager 清单页 / 插件目录 / README） |
+
 ## 安装
 插件以 bundle 形式安装在 desktop profile，**只用 `plugin_manager install_bundle`**（不手写 profile 配置）：
 ```
-plugin_manager install_bundle  target=@vicyangorg/dsh-music@0.3.0
+plugin_manager install_bundle  target=@vicyangorg/dsh-music@0.4.0
 # 或本地源码：target=<项目>/bundle
 ```
 以返回 `application: applied` 为准。安装后刷新现有 GUI 页面，左侧栏出现「音乐」面板。

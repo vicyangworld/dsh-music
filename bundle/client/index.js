@@ -96,6 +96,23 @@ window.__ModuleLoader__.load({
       lang_pt: '葡萄牙语',
       lang_it: '意大利语',
       welcomeTasteNote: '偏好只用于微调探索批次，不会锁死你的推荐；之后随时能改。',
+      libTabsLabel: '曲库视图',
+      libTabLibrary: '曲库',
+      libTabLikes: '我喜欢',
+      playLikes: '播放我喜欢',
+      likesEmptyTitle: '还没有喜欢的歌',
+      likesEmptyBody: '在曲库里点 ♥，歌曲会自动入库并出现在这里。',
+      dislikeBtn: '不喜欢',
+      undislikeBtn: '取消不喜欢',
+      undislikedBtn: '已标记不喜欢，点击取消',
+      statDislikes: '不喜欢',
+      dislikesTitle: '不喜欢的歌',
+      dislikesEmpty: '还没有标记不喜欢的歌',
+      genre_pop: '流行',
+      genre_rock: '摇滚',
+      genre_hiphop: '说唱',
+      genre_punk: '朋克',
+      genre_country: '乡村',
       welcomePathLabel: '音乐目录（可选）',
       welcomePathPlaceholder: '~/Music/我的音乐',
       welcomePathHint: '留空则使用已经扫描到的曲库；填了会自动挂载并重新扫描。',
@@ -338,6 +355,23 @@ window.__ModuleLoader__.load({
       lang_pt: 'Portuguese',
       lang_it: 'Italian',
       welcomeTasteNote: 'Preferences only bias the discovery batch - nothing is locked, and you can change them any time.',
+      libTabsLabel: 'Library views',
+      libTabLibrary: 'Library',
+      libTabLikes: 'Liked',
+      playLikes: 'Play liked',
+      likesEmptyTitle: 'No liked songs yet',
+      likesEmptyBody: 'Hit the heart on any song to add it to your library and to this list.',
+      dislikeBtn: 'Dislike',
+      undislikeBtn: 'Undo dislike',
+      undislikedBtn: 'Marked as disliked — click to undo',
+      statDislikes: 'Disliked',
+      dislikesTitle: 'Disliked songs',
+      dislikesEmpty: 'Nothing disliked yet',
+      genre_pop: 'Pop',
+      genre_rock: 'Rock',
+      genre_hiphop: 'Hip-hop',
+      genre_punk: 'Punk',
+      genre_country: 'Country',
       welcomePathLabel: 'Music folder (optional)',
       welcomePathPlaceholder: '~/Music/My Music',
       welcomePathHint: 'Leave empty to use the library already scanned; a folder is mounted and rescanned.',
@@ -715,6 +749,12 @@ window.__ModuleLoader__.load({
       ['path', { d: 'M12 20s-7.4-4.6-9.3-9C1.4 7.6 3.4 4.5 6.6 4.5c2 0 3.4 1.1 4.2 2.4l1.2 2 1.2-2c.8-1.3 2.2-2.4 4.2-2.4 3.2 0 5.2 3.1 3.9 6.5-1.9 4.4-9.3 9-9.3 9z' }],
     ], { 'data-heart': 1 });
 
+    /* Thumbs-down: an outline hand, drawn for the dislike (taste) button. */
+    const IconThumbDown = makeIcon([
+      ['path', { d: 'M10.5 14.5V4.2c0-.7.6-1.2 1.3-1.2h4.4c.6 0 1.1.4 1.3 1l2.4 6.6c.2.5.1 1.1-.2 1.5-.3.4-.8.7-1.3.7h-4.1l.8 3.9c.2.9-.3 1.8-1.1 2.2-.5.3-1.1.3-1.6 0-.3-.2-.6-.5-.8-.9l-1.1-2.9z' }],
+      ['path', { d: 'M6.8 14.5H4.9c-.7 0-1.2-.5-1.2-1.2V4.2c0-.7.5-1.2 1.2-1.2h1.9c.7 0 1.2.5 1.2 1.2v9.1c0 .7-.5 1.2-1.2 1.2z' }],
+    ], { 'data-thumbdown': 1 });
+
     /* ================================================================
      * 4. Styles — every color is a host theme token (--dsw-alias-*)
      * ================================================================ */
@@ -786,6 +826,11 @@ window.__ModuleLoader__.load({
 .dshm-tab-dot{width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-brand-primary);animation:dshm-pulse 1.6s ease-in-out infinite;}
 .dshm-body{flex:1;min-height:0;display:flex;flex-direction:column;container-type:inline-size;}
 .dshm-toolbar{flex:none;display:flex;align-items:center;gap:8px;padding:10px 20px;border-bottom:1px solid var(--dsw-alias-border-l1);flex-wrap:wrap;width:100%;max-width:1120px;margin:0 auto;}
+.dshm-libtabs{display:flex;align-items:center;gap:4px;padding:8px 20px 0;width:100%;max-width:1120px;margin:0 auto;flex:none;}
+.dshm-libtabs-btn{appearance:none;border:1px solid transparent;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12.5px;padding:5px 12px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .12s,color .12s,border-color .12s;white-space:nowrap;}
+.dshm-libtabs-btn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary);}
+.dshm-libtabs-on{background:var(--dsw-alias-interactive-bg-active);color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-border-l2);font-weight:600;}
+.dshm-libtabs-count{font-size:10.5px;color:var(--dsw-alias-label-tertiary);background:var(--dsw-alias-bg-layer-1);border-radius:999px;padding:0 6px;line-height:16px;}
 .dshm-search{display:flex;align-items:center;gap:8px;flex:1;min-width:180px;max-width:340px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:9px;padding:6px 10px;color:var(--dsw-alias-label-tertiary);transition:border-color .15s;}
 .dshm-search:focus-within{border-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-label-secondary);}
 .dshm-search input{flex:1;min-width:0;border:0;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;outline:none;}
@@ -805,7 +850,7 @@ window.__ModuleLoader__.load({
 .dshm-list::-webkit-scrollbar-thumb:hover{background:var(--dsw-alias-scrollbar-hover-l2);}
 .dshm-group-head{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:6px;padding:10px 8px 6px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-secondary);font-size:12px;font-weight:600;}
 .dshm-group-head .dshm-group-count{color:var(--dsw-alias-label-tertiary);font-weight:400;}
-.dshm-row{display:grid;grid-template-columns:40px minmax(0,1fr) auto auto auto 26px;align-items:center;gap:12px;padding:7px 8px;border-radius:10px;cursor:pointer;transition:background .12s;outline:none;}
+.dshm-row{display:grid;grid-template-columns:40px minmax(0,1fr) auto auto auto auto 26px;align-items:center;gap:12px;padding:7px 8px;border-radius:10px;cursor:pointer;transition:background .12s;outline:none;}
 .dshm-row-actions{display:flex;gap:2px;opacity:0;}
 .dshm-row:hover .dshm-row-actions,.dshm-row:focus-within .dshm-row-actions{opacity:1;}
 .dshm-row:hover{background:var(--dsw-alias-interactive-bg-hover);}
@@ -972,7 +1017,7 @@ window.__ModuleLoader__.load({
 .dshm-col-count{font-size:11px;color:var(--dsw-alias-label-tertiary);}
 .dshm-col-play{margin-left:auto;}
 .dshm-col-list{flex:1;min-height:0;overflow-y:auto;padding:2px 8px 16px;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2) transparent;}
-.dshm-srow{display:grid;grid-template-columns:38px minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:6px;border-radius:10px;transition:background .12s;}
+.dshm-srow{display:grid;grid-template-columns:38px minmax(0,1fr) auto auto auto;align-items:center;gap:10px;padding:6px;border-radius:10px;transition:background .12s;}
 .dshm-srow:hover{background:var(--dsw-alias-interactive-bg-hover);}
 .dshm-srow-main{min-width:0;display:flex;flex-direction:column;gap:1px;border:0;background:transparent;font:inherit;color:inherit;text-align:left;padding:0;cursor:pointer;}
 .dshm-srow-title{font-size:12.5px;font-weight:560;color:var(--dsw-alias-label-primary);}
@@ -985,6 +1030,13 @@ window.__ModuleLoader__.load({
 .dshm-like-btn:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover);}
 .dshm-like-btn:active{transform:scale(1.18);}
 .dshm-like-btn-on{color:var(--dsw-alias-state-error-primary);}
+.dshm-row-off{opacity:.55;cursor:not-allowed;}
+.dshm-row-off:hover{background:transparent;}
+.dshm-dislike-btn-on{color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-interactive-bg-hover);}
+.dshm-dislikes{margin-top:14px;}
+.dshm-dislike-row{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:9px;font-size:12.5px;color:var(--dsw-alias-label-secondary);}
+.dshm-dislike-row:hover{background:var(--dsw-alias-interactive-bg-hover);}
+.dshm-dislike-undo{flex:none;}
 .dshm-playround{appearance:none;border:0;width:30px;height:30px;border-radius:50%;background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex:none;transition:background .13s,transform .1s;}
 .dshm-playround:hover{background:var(--dsw-alias-button-primary-hover);transform:scale(1.06);}
 .dshm-playround:disabled{opacity:.45;cursor:default;transform:none;}
@@ -1176,6 +1228,13 @@ window.__ModuleLoader__.load({
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
         }),
         likes: () => request('/dsh-music/api/library/likes'),
+        dislike: (body) => request('/dsh-music/api/library/dislike', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+        }),
+        dislikes: () => request('/dsh-music/api/library/dislikes'),
+        taste: (trackId, artist, title) => request('/dsh-music/api/library/taste' + (trackId
+          ? '?trackId=' + encodeURIComponent(trackId)
+          : '?artist=' + encodeURIComponent(artist || '') + '&title=' + encodeURIComponent(title || ''))),
         preview: (body) => request('/dsh-music/api/library/preview', {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
         }),
@@ -1575,16 +1634,24 @@ window.__ModuleLoader__.load({
     }
 
     function createLikesService(api, onAutoDownload) {
-      const store = createStore({ keys: {}, loaded: false, error: null });
+      /* keys/dislikes are mutually exclusive on the host: a dislike clears the
+       * like and vice versa, so both maps are refreshed after every action. */
+      const store = createStore({ keys: {}, dislikes: {}, items: [], dislikeItems: [], loaded: false, error: null });
       async function load() {
         try {
           const data = await api.likes();
           const keys = {};
           for (const it of (data && data.items) || []) if (it.liked !== false) keys[likeKey(it)] = it;
-          store.set({ keys, loaded: true, error: null });
+          store.set({ keys, items: (data && data.items) || [], loaded: true, error: null });
         } catch (err) {
           store.set({ loaded: true, error: (err && err.message) || String(err) });
         }
+        try {
+          const d = await api.dislikes();
+          const dislikes = {};
+          for (const it of (d && d.items) || []) dislikes[likeKey(it)] = it;
+          store.set({ dislikes, dislikeItems: (d && d.items) || [] });
+        } catch { /* dislikes are optional: an older host just has no such route */ }
       }
       async function toggle(item, liked) {
         const body = item.id
@@ -1594,17 +1661,39 @@ window.__ModuleLoader__.load({
         try { res = await api.like(body); } catch (err) { return { error: (err && err.message) || String(err) }; }
         const key = likeKey(res && res.key ? { artist: res.key.split('::')[0], title: res.key.split('::')[1] } : item);
         const keys = { ...store.getSnapshot().keys };
+        const dislikes = { ...store.getSnapshot().dislikes };
         if (liked) keys[key] = { artist: item.artist, title: item.title, trackId: res && res.trackId, inLibrary: res && res.inLibrary };
         else delete keys[key];
-        store.set({ keys });
+        /* Host keeps taste binary: liking clears a dislike. */
+        if (liked && res && res.disliked === false) delete dislikes[key];
+        store.set({ keys, dislikes });
         if (res && res.downloading && onAutoDownload) onAutoDownload();
+        return res || {};
+      }
+      async function setDislike(item, disliked) {
+        const body = item.id
+          ? { trackId: item.id, disliked }
+          : { artist: item.artist, title: item.title, album: item.album, durationMs: item.durationMs, disliked };
+        let res = null;
+        try { res = await api.dislike(body); } catch (err) { return { error: (err && err.message) || String(err) }; }
+        const key = res && res.key ? res.key : likeKey(item);
+        const keys = { ...store.getSnapshot().keys };
+        const dislikes = { ...store.getSnapshot().dislikes };
+        if (res && res.clearedLike) delete keys[key];
+        if (res && res.disliked) dislikes[key] = { artist: item.artist, title: item.title, trackId: res.trackId, inLibrary: res.inLibrary, dislikedAt: Date.now() };
+        else delete dislikes[key];
+        store.set({ keys, dislikes });
+        load();
         return res || {};
       }
       function isLiked(item) {
         return !!store.getSnapshot().keys[likeKey(item)];
       }
+      function isDisliked(item) {
+        return !!store.getSnapshot().dislikes[likeKey(item)];
+      }
       load();
-      return { source: store, toggle, isLiked, load };
+      return { source: store, toggle, setDislike, isLiked, isDisliked, load };
     }
 
     function createPreviewService(api) {
@@ -2079,7 +2168,8 @@ window.__ModuleLoader__.load({
       const [busy, setBusy] = useState(false);
       const [failed, setFailed] = useState(false);
 
-      const genreOptions = ['jazz', 'classical', 'electronic', 'blues', 'reggae', 'soul', 'folk', 'metal', 'funk', 'ambient'];
+      const genreOptions = ['pop', 'rock', 'electronic', 'hip hop', 'jazz', 'classical', 'folk', 'blues', 'soul', 'funk', 'reggae', 'metal', 'punk', 'country', 'ambient'];
+      const genreLabel = (g) => 'genre_' + g.replace(/[^a-z]/g, '');
       const langOptions = [
         { value: '中文', key: 'lang_zh' }, { value: '英语', key: 'lang_en' }, { value: '粤语', key: 'lang_yue' },
         { value: '日语', key: 'lang_ja' }, { value: '韩语', key: 'lang_ko' }, { value: '法语', key: 'lang_fr' },
@@ -2153,7 +2243,7 @@ window.__ModuleLoader__.load({
         h('p', { className: 'dshm-wstep-sub' }, t('welcomeTasteSub')),
         h('div', { className: 'dshm-wgroup' },
           h('div', { className: 'dshm-wlabel' }, t('welcomeGenres')),
-          h('div', { className: 'dshm-wchips' }, genreOptions.map((g) => tasteChip(g, t('genre_' + g), genres, setGenres)))),
+          h('div', { className: 'dshm-wchips' }, genreOptions.map((g) => tasteChip(g, t(genreLabel(g)), genres, setGenres)))),
         h('div', { className: 'dshm-wgroup' },
           h('div', { className: 'dshm-wlabel' }, t('welcomeLanguages')),
           h('div', { className: 'dshm-wchips' }, langOptions.map((o) => tasteChip(o.value, t(o.key), langs, setLangs)))),
@@ -2309,9 +2399,21 @@ window.__ModuleLoader__.load({
       }, h(IconHeart, { size: 15, style: liked ? { fill: 'currentColor' } : undefined }));
     }
 
-    function TrackRow({ track, index, isCurrent, playing, onPlay, onDelete, onReveal, onOpenArtist, likes, useLikes, t }) {
+    function DislikeButton({ t, item, likes, useLikes }) {
+      const disliked = useLikes((st) => !!((st.dislikes || {})[likeKey(item)]));
+      return h('button', {
+        type: 'button',
+        className: cx('dshm-like-btn', 'dshm-dislike-btn', disliked && 'dshm-dislike-btn-on'),
+        'aria-label': disliked ? t('undislikeBtn') : t('dislikeBtn'),
+        'aria-pressed': !!disliked,
+        title: disliked ? t('undislikedBtn') : t('dislikeBtn'),
+        onClick: (e) => { e.stopPropagation(); likes.setDislike(item, !disliked); },
+      }, h(IconThumbDown, { size: 15, style: disliked ? { fill: 'currentColor' } : undefined }));
+    }
+
+    function TrackRow({ track, index, isCurrent, playing, onPlay, onDelete, onReveal, onOpenArtist, likes, useLikes, t, muted }) {
       return h('div', {
-        className: cx('dshm-row', isCurrent && 'dshm-row-current'),
+        className: cx('dshm-row', isCurrent && 'dshm-row-current', muted && 'dshm-row-off'),
         role: 'button', tabIndex: 0,
         'aria-label': t('playTrack') + ': ' + track.title,
         onClick: () => onPlay(track, index),
@@ -2335,6 +2437,7 @@ window.__ModuleLoader__.load({
             track.album ? ' · ' + track.album : '')),
         h('span', { className: 'dshm-row-dur' }, formatTime(track.duration)),
         likes ? h(LikeButton, { t, item: track, likes, useLikes }) : null,
+        likes ? h(DislikeButton, { t, item: track, likes, useLikes }) : null,
         onDelete ? h('span', { className: 'dshm-row-actions', onClick: (e) => e.stopPropagation() },
           h(IconButton, { label: t('revealTrack'), onClick: (e) => { e.stopPropagation(); onReveal(track); } }, h(IconDisc, { size: 14 })),
           h(IconButton, { label: t('deleteTrack'), onClick: (e) => { e.stopPropagation(); onDelete(track); } }, h(IconClose, { size: 14 }))) : null,
@@ -2353,6 +2456,7 @@ window.__ModuleLoader__.load({
       const [query, setQuery] = useState('');
       const [searchState, setSearchState] = useState({ status: 'idle', local: [], remote: [] });
       const [groupBy, setGroupBy] = useState('none');
+      const [libTab, setLibTab] = useState('library');
       const [rowError, setRowError] = useState('');
       const [playNotice, setPlayNotice] = useState('');
       const searchRef = useRef(null);
@@ -2363,6 +2467,17 @@ window.__ModuleLoader__.load({
       const syncHint = useSync ? useSync((st) => st.hint) : null;
       const syncUsable = syncAvail !== false;
       const syncState = useSync ? useSync((st) => st.phase) : 'idle';
+      const likeItems = useLikes((st) => st.items || []);
+      /* Liked rows reuse the library row layout; host resolves trackId/audioUrl
+       * for everything inside the library, so those rows are directly playable. */
+      const likedTracks = useMemo(() => likeItems.map((it) => ({
+        id: it.trackId || ('liked::' + it.key),
+        title: it.title, artist: it.artist, album: it.album,
+        duration: it.durationMs ? Math.round(it.durationMs / 1000) : (it.duration || 0),
+        audioUrl: it.audioUrl || null, coverUrl: it.coverUrl || null,
+        muted: !it.audioUrl,
+      })), [likeItems]);
+      const likedPlayable = useMemo(() => likedTracks.filter((tr) => !!tr.audioUrl), [likedTracks]);
 
       /* Backend search (local filter + MusicBrainz completion), debounced.
        * Empty query keeps the pure client-side browse below. */
@@ -2399,6 +2514,14 @@ window.__ModuleLoader__.load({
       }, [tracks, query]);
       /* While the backend search is ready, its local list wins (it shares the
        * same normalization); otherwise fall back to instant client filtering. */
+      const likedFiltered = useMemo(() => {
+        const q = normalizeZh(query.trim());
+        if (!q) return likedTracks;
+        return likedTracks.filter((tr) =>
+          normalizeZh(tr.title).includes(q) ||
+          normalizeZh(tr.artist).includes(q) ||
+          normalizeZh(tr.album).includes(q));
+      }, [likedTracks, query]);
       const searching = !!query.trim();
       const shownList = searching && searchState.status === 'ready' ? searchState.local : filtered;
 
@@ -2437,6 +2560,13 @@ window.__ModuleLoader__.load({
         try { setRowError(''); await library.reveal(track.id); }
         catch (err) { setRowError((err && err.message) || t('deleteFailed')); }
       }
+      function playLiked(track) {
+        if (!track.audioUrl) { setPlayNotice(t('topUnplayable')); return; }
+        setPlayNotice('');
+        const idx = likedPlayable.indexOf(track);
+        player.playTracks(likedPlayable, idx >= 0 ? idx : 0);
+      }
+
       const renderRow = (tr, i) => h(TrackRow, {
         key: tr.id || i, track: tr, index: i,
         isCurrent: currentId === tr.id, playing,
@@ -2481,7 +2611,27 @@ window.__ModuleLoader__.load({
 
       let content;
       const remoteList = searching && searchState.status === 'ready' ? searchState.remote : [];
-      if (status === 'loading' && tracks.length === 0) {
+      if (libTab === 'likes') {
+        content = likeItems.length === 0
+          ? h(EmptyState, {
+              icon: h(IconHeart, { size: 28 }),
+              title: t('likesEmptyTitle'), body: t('likesEmptyBody'),
+            }, h('button', {
+              type: 'button', className: 'dshm-chipbtn dshm-chipbtn-primary',
+              onClick: () => setLibTab('library'),
+            }, h(IconNote, { size: 14 }), t('goLibrary')))
+          : likedFiltered.length === 0
+            ? h(EmptyState, {
+                icon: h(IconSearch, { size: 28 }),
+                title: '“' + query.trim() + '”', body: t('searchNoLocal'),
+              })
+            : h('div', { className: 'dshm-list' },
+                likedFiltered.map((tr, i) => h(TrackRow, {
+                  key: tr.id || ('liked' + i), track: tr, index: i,
+                  isCurrent: currentId === tr.id, playing, muted: tr.muted,
+                  onPlay: playLiked, onOpenArtist: openArtistPage, likes, useLikes, t,
+                })));
+      } else if (status === 'loading' && tracks.length === 0) {
         content = h('div', { className: 'dshm-list' }, h(SkeletonRows));
       } else if (status === 'error' && tracks.length === 0) {
         content = h(EmptyState, {
@@ -2552,6 +2702,18 @@ window.__ModuleLoader__.load({
       return h(React.Fragment, null,
         sync ? h(SyncPanel, { t, sync, useSync }) : null,
         rowError ? h('div', { className: 'dshm-errorline', role: 'alert', style: { margin: '8px 24px 0' } }, rowError) : null,
+        h('div', { className: 'dshm-libtabs', role: 'tablist', 'aria-label': t('libTabsLabel') },
+          h('button', {
+            type: 'button', role: 'tab', 'aria-selected': libTab === 'library',
+            className: cx('dshm-libtabs-btn', libTab === 'library' && 'dshm-libtabs-on'),
+            onClick: () => setLibTab('library'),
+          }, t('libTabLibrary')),
+          h('button', {
+            type: 'button', role: 'tab', 'aria-selected': libTab === 'likes',
+            className: cx('dshm-libtabs-btn', libTab === 'likes' && 'dshm-libtabs-on'),
+            onClick: () => setLibTab('likes'),
+          }, h(IconHeart, { size: 13 }), t('libTabLikes'),
+            likeItems.length > 0 ? h('span', { className: 'dshm-libtabs-count' }, likeItems.length) : null)),
         h('div', { className: 'dshm-toolbar' },
           h('label', { className: 'dshm-search' },
             h(IconSearch, { size: 15 }),
@@ -2564,14 +2726,15 @@ window.__ModuleLoader__.load({
             className: 'dshm-select', value: groupBy, 'aria-label': t('groupLabel'),
             onChange: (e) => setGroupBy(e.target.value),
           },
-            h('option', { value: 'none' }, t('groupNone')),
-            h('option', { value: 'artist' }, t('groupArtist')),
-            h('option', { value: 'album' }, t('groupAlbum'))),
+            libTab === 'library' ? h(React.Fragment, null,
+              h('option', { value: 'none' }, t('groupNone')),
+              h('option', { value: 'artist' }, t('groupArtist')),
+              h('option', { value: 'album' }, t('groupAlbum'))) : null),
           h('button', {
             type: 'button', className: 'dshm-chipbtn dshm-chipbtn-primary',
-            disabled: busy || shownList.length === 0,
-            onClick: () => player.playAll(shownList),
-          }, h(IconPlay, { size: 13 }), t('playAll')),
+            disabled: busy || (libTab === 'likes' ? likedPlayable.length === 0 : shownList.length === 0),
+            onClick: () => player.playAll(libTab === 'likes' ? likedPlayable : shownList),
+          }, h(IconPlay, { size: 13 }), libTab === 'likes' ? t('playLikes') : t('playAll')),
           h('button', {
             type: 'button', className: cx('dshm-chipbtn', 'dshm-mode-cycle'),
             'aria-label': mode.label, title: mode.hint + ' · ' + t('modeCycleHint'),
@@ -2585,7 +2748,8 @@ window.__ModuleLoader__.load({
           }, h(IconRefresh, { size: 13, className: syncState === 'running' ? 'dshm-spin' : undefined }),
             syncState === 'running' ? t('syncing') : t('syncBtn')) : null,
           h('span', { className: 'dshm-count', style: { marginLeft: 'auto' } },
-            busy && tracks.length === 0 ? t('rescanning') : shownList.length + ' ' + t('tracksUnit'))),
+            busy && tracks.length === 0 ? t('rescanning')
+              : (libTab === 'likes' ? likedFiltered.length : shownList.length) + ' ' + t('tracksUnit'))),
         playNotice
           ? h('div', { className: 'dshm-mode-hint', style: { margin: '0 20px 6px', textAlign: 'right' }, role: 'status' }, playNotice)
           : null,
@@ -2792,6 +2956,7 @@ window.__ModuleLoader__.load({
           title: liked ? t('likedBtn') : t('likeBtn'),
           onClick: () => likes.toggle(item, !liked),
         }, h(IconHeart, { size: 15, style: liked ? { fill: 'currentColor' } : undefined })),
+        likes ? h(DislikeButton, { t, item, likes, useLikes }) : null,
         h('button', {
           type: 'button', className: 'dshm-playround',
           'aria-label': isCurrent && playing ? t('pause') : t('play'),
@@ -3186,7 +3351,7 @@ window.__ModuleLoader__.load({
       return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
     }
 
-    function HistoryView({ t, history, player, openArtistPage, artistImages, useHistory, useLibrary, useArtistImages }) {
+    function HistoryView({ t, history, player, openArtistPage, artistImages, likes, useHistory, useLibrary, useArtistImages, useLikes }) {
       const s = useHistory((st) => st);
       const [notice, setNotice] = useState('');
       const tracks = useLibrary ? useLibrary((st) => st.tracks) : [];
@@ -3221,7 +3386,8 @@ window.__ModuleLoader__.load({
               statCard(t('statSongs'), String(stats.uniqueSongs || 0)),
               statCard(t('statArtists'), String(stats.uniqueArtists || 0)),
               statCard(t('statSkipped'), String(stats.skippedCount || 0)),
-              statCard(t('statCompletion'), Math.round((stats.avgCompletion || 0) * 100) + '%')),
+              statCard(t('statCompletion'), Math.round((stats.avgCompletion || 0) * 100) + '%'),
+              statCard(t('statDislikes'), String((stats.dislikes && stats.dislikes.count) || 0))),
             h('div', { className: 'dshm-trend' },
               h('div', { className: 'dshm-asec-title' }, h(IconQueue, { size: 13 }), t('trendTitle')),
               h('div', { className: 'dshm-bars' }, daily.map((d, i) => h('div', { className: 'dshm-bar-col', key: i },
@@ -3263,7 +3429,20 @@ window.__ModuleLoader__.load({
                       h('span', { className: 'dshm-top-rank' }, String(i + 1)),
                       h('span', { className: 'dshm-ellipsis', style: { flex: 1 } }, it.name || ''),
                       h('span', { className: 'dshm-count' }, (it.plays || 0) + ' ' + t('playsUnit'))))
-                  : h('div', { className: 'dshm-lyrics-hint' }, t('noSection'))))))
+                  : h('div', { className: 'dshm-lyrics-hint' }, t('noSection')))),
+            h('div', { className: 'dshm-dislikes' },
+              h('div', { className: 'dshm-asec-title' }, h(IconThumbDown, { size: 13 }), t('dislikesTitle')),
+              ((stats.dislikes && stats.dislikes.songs) || []).length
+                ? stats.dislikes.songs.map((it, i) => h('div', { className: 'dshm-dislike-row', key: i },
+                    h('span', { className: 'dshm-ellipsis', style: { flex: 1 } },
+                      (it.title || '') + (it.artist ? ' · ' + it.artist : '')),
+                    h('span', { className: 'dshm-count' }, it.dislikedAt ? new Date(it.dislikedAt).toISOString().slice(0, 10) : ''),
+                    likes ? h('button', {
+                      type: 'button', className: 'dshm-chipbtn dshm-dislike-undo',
+                      title: t('undislikeBtn'),
+                      onClick: () => likes.setDislike({ artist: it.artist, title: it.title }, false),
+                    }, t('undislikeBtn')) : null))
+                : h('div', { className: 'dshm-lyrics-hint' }, t('dislikesEmpty')))))
         : null;
 
       let list;
@@ -3474,7 +3653,7 @@ window.__ModuleLoader__.load({
           : view === 'artist'
             ? h(ArtistPageView, { t, reco, player, likes, preview, library, openView, openArtistPage, artistImages, useUi, useLikes, useLibrary, usePlayer, useArtistImages })
             : view === 'history'
-              ? h(HistoryView, { t, history, player, openArtistPage, artistImages, useHistory, useLibrary, useArtistImages })
+              ? h(HistoryView, { t, history, player, openArtistPage, artistImages, likes, useHistory, useLibrary, useArtistImages, useLikes })
               : h(NowPlayingView, { t, player, lyrics, usePlayer, useLyrics, openView, openArtistPage, artistImages, useArtistImages });
 
       return h(React.Fragment, null,
