@@ -175,3 +175,16 @@ Release 说明至少写：七期变更（悬浮标/应用内顶层与跨应用�
 
 - 教训沉淀：npm 发布包须 granular token 且勾选 Bypass two-factor authentication，经典令牌一律 E403；`npm view` 有本地缓存滞后，验新版本用 registry packument 直查（curl + Accept: application/json）。
 - 现状：四渠道全绿——GitHub Release v0.4.0 tgz / npm latest 0.4.0 / 目录 PR #15213 钉 v0.4.0（仓库满 1 天门槛 2026-11-15T01:20:25Z 自动转绿）/ 本机链接目录开发装。
+
+## 9. 九期 v0.5.0 发布（2026-11-14）
+
+| 环节 | 结果 | 证据 |
+|---|---|---|
+| git | ✅ | commit e8f1142 push main（九期功能+0.5.0+README 九期表+v9 实拍 webp×3+测试版本断言改动态） |
+| 测试 | ✅ 全绿 | reco 148 / persistent-cache 13 / selftest 24 / render 74 / packaging 14 / cold-install 20（修复 N1：cold-install:37 版本断言钉死 0.3.0 → 动态读 bundle/package.json；packaging-check:47 同改动态）；verification-v9 0 阻塞 |
+| 重启后活体 | ✅ | host 持久缓存端到端：Coldplay 冷调 45s+（维基兜底回写 cache/artists/coldplay.json fetchedAt=21:37:19），二调 8.1s 文件 mtime/fetchedAt 不变=零维基重拉 ✅；无维基资料歌手（sottovoce/Vulfpeck）不写缓存（失败不写）且 MB 缓存吸收重复（23.7s→0.89s、33.4s→1.3s）✅ |
+| npm | ✅ | `npm publish` → `+ @vicyangorg/dsh-music@0.5.0`；packument 直查 dist-tags.latest=0.5.0（CDN 复制约 1 分钟，官方 tarball sha1 b90ef8f8d16c00135c1e3c06c64e40701416e480 与发布 tgz 一致） |
+| GitHub Release | ✅ | https://github.com/vicyangworld/dsh-music/releases/tag/v0.5.0 资产 vicyangorg-dsh-music-0.5.0.tgz 活体 200（415665B） |
+| 目录 PR #15213 | ✅ 已钉 | commit 51d1104 tarball → v0.5.0；PR OPEN head=51d1104；仓库满 1 天门槛 2026-11-15T01:20:25Z（本地 09:20）CI 自动转绿，余候维护者审核 |
+
+- dshmarket 检索机制（已核 dshmarket 1.73.17 源码）：发现页只读官方目录（全球 awesome-dsh-plugin.com/plugins.json / 中国区 npm 包 dsh-plugin-catalog，每日 build），不做全网 npm 搜索；PR 合并+目录重建后 dshmarket 自动可见，无需用户任何操作。
