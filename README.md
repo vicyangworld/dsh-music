@@ -1,5 +1,7 @@
 # dsh-music · 本地音乐插件
 
+<p align="center"><img src="bundle/icon.png" alt="dsh-music logo — 戴耳机的蓝肥鱼" width="140"></p>
+
 DeepSeek Harness Desktop 的音乐插件：播放本地曲库、同步歌词与歌手故事、基于收听历史的反信息茧房推荐、推荐歌曲试听/喜欢才入库、Spotify 收藏同步。界面简约、中文、跟随明暗主题。
 
 - npm 包名：`@vicyangorg/dsh-music`（v0.3.0）；品牌名与 GitHub 仓库仍为 `dsh-music`（原名 `dsh-music` 在 npm 被占位包占用，故用 scoped 名，见 `docs/publishing.md`）
