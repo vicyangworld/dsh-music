@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto'
 import { mbJson, mbUrl } from './mb.js'
 
 const CACHE_TTL_MS = 30 * 24 * 3600 * 1000
+const NEG_TTL_MS = 3 * 24 * 3600 * 1000 // 未命中负缓存 3 天（与 images.js 无图负缓存一致）
 
 function norm(s) {
   return String(s ?? '').toLowerCase().replace(/[\s'"’·・\-—–,，.。!！?？:：;；()（）\[\]【】]/g, '')
@@ -26,6 +27,26 @@ export function createVerifier({ storage, logger } = {}) {
       if (saved?.verification?.verifiedAt && Date.now() - saved.verification.verifiedAt < CACHE_TTL_MS) return saved
     } catch { /* 无缓存 */ }
     return null
+  }
+
+  /** 未命中负缓存：只挡重查，绝不构成「核实通过」——下载前仍以 verify 返回记录为准。 */
+  async function readNegative(key) {
+    try {
+      const saved = JSON.parse(await readFile(join(dir, `${key}.json`), 'utf8'))
+      if (saved?.miss === true && Number.isFinite(saved.missedAt) && Date.now() - saved.missedAt < NEG_TTL_MS) return true
+    } catch { /* 无缓存 */ }
+    return false
+  }
+
+  async function writeNegative(key, artist, title) {
+    try {
+      await mkdir(dir, { recursive: true })
+      const tmp = join(dir, `${key}.tmp-${process.pid}`)
+      await writeFile(tmp, JSON.stringify({ miss: true, missedAt: Date.now(), artist, title }), 'utf8')
+      await rename(tmp, join(dir, `${key}.json`))
+    } catch (err) {
+      warn?.(`dsh-music: 写核实负缓存失败: ${err.message}`)
+    }
   }
 
   async function writeCache(key, record) {
@@ -62,6 +83,7 @@ export function createVerifier({ storage, logger } = {}) {
     const key = cacheKey(artist, title)
     const cached = await readCache(key)
     if (cached) return cached
+    if (await readNegative(key)) return null // 3 天内已确认未命中，不重复打 MusicBrainz
 
     const query = `artist:"${artist}" AND recording:"${title}"`
     const url = mbUrl('recording', { query, limit: 8 })
@@ -76,7 +98,10 @@ export function createVerifier({ storage, logger } = {}) {
     const target = Number(durationMs) > 0 ? Number(durationMs) : null
     const recordings = Array.isArray(data?.recordings) ? data.recordings : []
     const hits = recordings.filter((r) => artistMatches(r['artist-credit'] ?? [], artist) && titleMatches(r.title, title))
-    if (hits.length === 0) return null
+    if (hits.length === 0) {
+      await writeNegative(key, artist, title) // 网络失败不落负缓存（仅确定性未命中）
+      return null
+    }
     let best = hits[0]
     if (target !== null) {
       const withDur = hits.filter((r) => Number.isFinite(r.length))

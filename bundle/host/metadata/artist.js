@@ -3,6 +3,8 @@
 import { slugify } from './cache.js'
 
 const UA = 'dsh-music/0.1 (local music plugin; artist content)'
+/** 九期点4：简介/资料缓存 TTL 30 天（Chief 建议 7–30 天取上限），过期后下次打开刷新。 */
+const PROFILE_TTL_MS = 30 * 24 * 3600 * 1000
 
 function today() {
   return new Date().toISOString().slice(0, 10)
@@ -50,7 +52,8 @@ export function createArtistContent({ cache, logger }) {
     async get(name) {
       const slug = slugify(name)
       const hit = await cache.readJson(cache.artistFile(slug))
-      if (hit && hit.version === 1 && hit.data) {
+      const fresh = hit && hit.version === 1 && hit.data && Date.now() - (hit.fetchedAt ?? 0) < PROFILE_TTL_MS
+      if (fresh) {
         const d = hit.data
         return {
           name: d.name ?? name,
@@ -66,13 +69,30 @@ export function createArtistContent({ cache, logger }) {
       }
       const intro = await wikiIntro(name)
       if (intro) {
+        // 九期点4：live 兜底成功即持久化（TTL 内重开零网络拉取）；写失败只警告不影响返回。
+        // 过期刷新时合并保留原有调研字段（news/trivia/similar 不被空数组覆盖）。
+        const old = hit?.data ?? {}
+        const keep = (cur, prev) => (Array.isArray(cur) && cur.length > 0 ? cur : Array.isArray(prev) ? prev : [])
+        const data = {
+          name,
+          intro,
+          news: keep([], old.news),
+          trivia: keep([], old.trivia),
+          similarArtists: keep([], old.similarArtists),
+          similarSongs: keep([], old.similarSongs),
+        }
+        try {
+          await cache.writeJson(cache.artistFile(slug), { version: 1, data, fetchedAt: Date.now() })
+        } catch (err) {
+          warn(`dsh-music: 回写歌手缓存失败 ${name}: ${err.message}`)
+        }
         return {
           name,
           intro,
-          news: [],
-          trivia: [],
-          similarArtists: [],
-          similarSongs: [],
+          news: data.news,
+          trivia: data.trivia,
+          similarArtists: data.similarArtists,
+          similarSongs: data.similarSongs,
           cached: false,
           fetchedAt: Date.now(),
           message: '动态/逸闻/相似内容由调研补齐',

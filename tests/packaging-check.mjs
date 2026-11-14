@@ -44,7 +44,7 @@ console.log(`包：${info.name}@${info.version} · ${files.length} 文件 · ${(
 // ---- ⓪ 发布元数据（七期批3）----
 const pkg = JSON.parse(readFileSync(join(pkgRoot, 'package.json'), 'utf8'))
 check(info.name === '@vicyangorg/dsh-music', '包名 @vicyangorg/dsh-music（scoped）', info.name)
-check(info.version === '0.4.0', '发布版本 0.4.0', info.version)
+check(info.version === pkg.version, '发布版本与 bundle/package.json 一致', `${info.version} vs ${pkg.version}`)
 check(/github\.com\/vicyangworld\/dsh-music/.test(pkg.repository?.url || ''), 'repository 指向 vicyangworld/dsh-music', pkg.repository?.url || '(缺失)')
 check(/github\.com\/vicyangworld\/dsh-music/.test(pkg.homepage || ''), 'homepage 指向仓库', pkg.homepage || '(缺失)')
 check(/github\.com\/vicyangworld\/dsh-music\/issues/.test(pkg.bugs?.url || ''), 'bugs 指向仓库 issues', pkg.bugs?.url || '(缺失)')

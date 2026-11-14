@@ -42,6 +42,8 @@ function check(name, cond, extra = '') {
 }
 
 console.log('曲目 id（光輝歲月）:', id)
+// 九期：清掉本曲历史歌词缓存，保证「首次打开」用例不受此前运行影响（会重新拉 LRCLIB）
+await rm(cache.lyricsFile(id), { force: true })
 
 console.log('\n[1] LRC 解析单元')
 const sample = '[00:28.64] 鐘聲響起歸家的訊號\n[00:33.07] 在他生命裡彷彿帶點唏噓\n[ar:Beyond]\n[01:07.38] 今天只有殘留的軀殼'

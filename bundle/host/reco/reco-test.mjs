@@ -2,7 +2,7 @@
  * 覆盖：7+3 装配、3 轴严格匹配与放宽兜底、探索轴轮换、避开高频歌手、曲库去重、
  *       自动补位（未核实绝不输出）、防重复推荐、多样性度量、browse 解析与失败不缓存。
  * .mjs 不在 package.json files（host 双星 *.js）内，不会被打进 bundle。 */
-import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises'
+import { mkdtemp, rm, readFile, writeFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { planExploreSlots, assembleBatch, normKey, topArtists, exploreCandidateOk } from './quota.js'
@@ -906,6 +906,62 @@ const fakeImages = {
   const reco = createReco({ history: { read: async () => ({ events: [], total: 0 }) }, library, storage: { dataDir: tmp }, logger: { warn: () => {} }, verifier, discover: fakeDiscover, images: fakeImages })
   const p = await reco.artistPage('Beyond')
   t('P14 歌手页不显示不喜欢的歌', p.songs.length === 1 && p.songs[0].title === 'D2')
+  await rm(tmp, { recursive: true, force: true })
+}
+
+// ---------- Q. 九期点4：歌手页维基兜底回写 + 核实未命中负缓存 ----------
+{
+  const { createVerifier } = await import('./verify.js')
+  const tmp = await mkdtemp(join(tmpdir(), 'reco-neg-'))
+  const origFetch = globalThis.fetch
+  let calls = 0
+  globalThis.fetch = async () => {
+    calls++
+    return { ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => ({ recordings: [] }) }
+  }
+  const verifier = createVerifier({ storage: { dataDir: tmp }, logger: { warn: () => {} } })
+  const a = await verifier.verify({ artist: 'NegA', title: 'NegT' })
+  const b = await verifier.verify({ artist: 'NegA', title: 'NegT' })
+  t('Q1 核实未命中写入负缓存，二次调用零网络', a === null && b === null && calls === 1)
+  const files = (await readdir(join(tmp, 'cache', 'verifications'))).filter((f) => f.endsWith('.json'))
+  const rec = JSON.parse(await readFile(join(tmp, 'cache', 'verifications', files[0]), 'utf8'))
+  rec.missedAt = Date.now() - 4 * 24 * 3600 * 1000
+  await writeFile(join(tmp, 'cache', 'verifications', files[0]), JSON.stringify(rec))
+  const c = await verifier.verify({ artist: 'NegA', title: 'NegT' })
+  t('Q2 负缓存 3 天过期后重新核实', c === null && calls === 2)
+  globalThis.fetch = async () => { calls++; throw new Error('network down') }
+  const d1 = await verifier.verify({ artist: 'NetFail', title: 'X' })
+  const d2 = await verifier.verify({ artist: 'NetFail', title: 'X' })
+  t('Q3 网络失败不写负缓存（每次可重试）', d1 === null && d2 === null && calls === 4)
+  globalThis.fetch = origFetch
+  await rm(tmp, { recursive: true, force: true })
+}
+
+{
+  // artistPage：无预填缓存时 live 维基成功 → 落 cache/artists/<slug>.json（与 metadata 同格式，共享）
+  const tmp = await mkdtemp(join(tmpdir(), 'reco-wikicache-'))
+  const origFetch = globalThis.fetch
+  let wikiCalls = 0
+  globalThis.fetch = async (url) => {
+    if (String(url).includes('w/api.php')) {
+      wikiCalls++
+      return { ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => ({ query: { pages: { '1': { extract: '维基简介文本' } } } }) }
+    }
+    return { ok: false, status: 404, headers: { get: () => 'text/html' } }
+  }
+  const fakeDiscover = {
+    async findArtist(name) { return name === 'Wikitest' ? { mbid: 'mb-w', name, tags: ['rock'] } : null },
+    async browseRecordings() { return [] },
+  }
+  const library = { snapshot: () => ({ tracks: [], scannedAt: 1 }), ensureScanned: async () => {} }
+  const reco = createReco({ history: { read: async () => ({ events: [], total: 0 }) }, library, storage: { dataDir: tmp }, logger: { warn: () => {} }, verifier: { async verify() { return null } }, discover: fakeDiscover, images: fakeImages })
+  const p = await reco.artistPage('Wikitest')
+  const saved = JSON.parse(await readFile(join(tmp, 'cache', 'artists', 'wikitest.json'), 'utf8'))
+  t('Q4 维基兜底成功回写共享缓存', p.profile?.intro?.text === '维基简介文本' && saved?.version === 1 && saved?.data?.name === 'Wikitest' && saved?.data?.intro?.text === '维基简介文本' && Number.isFinite(saved?.fetchedAt))
+  const before = wikiCalls
+  const p2 = await reco.artistPage('Wikitest')
+  t('Q5 回写后再次打开不再请求维基（跨会话共享）', wikiCalls === before && p2.profile?.intro?.text === '维基简介文本')
+  globalThis.fetch = origFetch
   await rm(tmp, { recursive: true, force: true })
 }
 

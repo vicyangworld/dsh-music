@@ -10,8 +10,8 @@
  *   const reco = createReco({ history, library, storage, config, logger })
  *   ctx.effect 内：...registerRecoRoutes(ctx.webServer, { reco, logger })；清理 reco.dispose()
  *   打包：package.json files 需含 host/reco 下全部 js（host 双星 glob 已覆盖）。 */
-import { join } from 'node:path'
-import { readFile, writeFile, rename } from 'node:fs/promises'
+import { join, dirname } from 'node:path'
+import { readFile, writeFile, rename, mkdir } from 'node:fs/promises'
 import { createVerifier } from './verify.js'
 import { createDiscover } from './discover.js'
 import { detectLanguage } from './diversity.js'
@@ -46,6 +46,7 @@ export function createReco({ history, library, storage, config = {}, logger, ver
   }
 
   async function writeJson(file, value) {
+    await mkdir(dirname(file), { recursive: true })
     const tmp = `${file}.tmp-${process.pid}`
     await writeFile(tmp, JSON.stringify(value), 'utf8')
     await rename(tmp, file)
@@ -303,8 +304,20 @@ export function createReco({ history, library, storage, config = {}, logger, ver
     let profile = cached?.data ?? null
     let message = null
     if (!profile) {
-      profile = await liveWikiProfile(a.name)
-      if (!profile) message = '暂无该歌手资料'
+      const live = await liveWikiProfile(a.name)
+      if (live) {
+        // 九期点4：live 维基兜底成功即持久化（与 metadata/artist.js 同一缓存格式/路径，两条路径共享，
+        // TTL 内重开零网络拉取）；写失败只告警，不影响本次返回。
+        const data = { name: a.name, ...live }
+        try {
+          await writeJson(cacheFile, { version: 1, data, fetchedAt: Date.now() })
+        } catch (err) {
+          warn?.(`dsh-music: 回写歌手缓存失败 ${a.name}: ${err.message}`)
+        }
+        profile = data
+      } else {
+        message = '暂无该歌手资料'
+      }
     }
     if (typeof library.ensureScanned === 'function') await library.ensureScanned()
     const tracks = library.snapshot()?.tracks ?? []

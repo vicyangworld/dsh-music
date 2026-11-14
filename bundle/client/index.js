@@ -96,6 +96,13 @@ window.__ModuleLoader__.load({
       lang_pt: '葡萄牙语',
       lang_it: '意大利语',
       welcomeTasteNote: '偏好只用于微调探索批次，不会锁死你的推荐；之后随时能改。',
+      favsTitle: '我喜欢',
+      favsViewAll: '查看全部',
+      favsBack: '返回曲库',
+      favsEmpty: '还没有喜欢的歌——点任意歌曲的 ♥，它就会进入这里。',
+      artistReadyToast: '歌手页已就绪',
+      pageReadyToast: '页面已加载完成',
+      closeNotice: '关闭提示',
       libTabsLabel: '曲库视图',
       libTabLibrary: '曲库',
       libTabLikes: '我喜欢',
@@ -261,7 +268,7 @@ window.__ModuleLoader__.load({
       modeCycleHint: '点击切换播放模式',
       modeHintShuffle: '随机播放：每轮打乱不重复',
       artistPageBack: '返回推荐',
-      artistSongs: '的歌曲',
+      artistSongs: '歌曲',
       artistLoading: '正在打开歌手页…',
       artistError: '歌手页加载失败',
       artistNoSongs: '这位歌手暂时没有已核实的歌曲。',
@@ -355,6 +362,13 @@ window.__ModuleLoader__.load({
       lang_pt: 'Portuguese',
       lang_it: 'Italian',
       welcomeTasteNote: 'Preferences only bias the discovery batch - nothing is locked, and you can change them any time.',
+      favsTitle: 'Liked',
+      favsViewAll: 'View all',
+      favsBack: 'Back to library',
+      favsEmpty: 'No liked songs yet — hit the heart on any song and it lands here.',
+      artistReadyToast: 'Artist page ready',
+      pageReadyToast: 'Page ready',
+      closeNotice: 'Dismiss',
       libTabsLabel: 'Library views',
       libTabLibrary: 'Library',
       libTabLikes: 'Liked',
@@ -520,7 +534,7 @@ window.__ModuleLoader__.load({
       modeCycleHint: 'Click to switch play mode',
       modeHintShuffle: 'Shuffle: random each pass, no repeats',
       artistPageBack: 'Back to recommendations',
-      artistSongs: 'songs',
+      artistSongs: 'Songs',
       artistLoading: 'Opening artist page…',
       artistError: 'Artist page failed to load',
       artistNoSongs: 'No verified songs for this artist yet.',
@@ -831,6 +845,26 @@ window.__ModuleLoader__.load({
 .dshm-libtabs-btn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary);}
 .dshm-libtabs-on{background:var(--dsw-alias-interactive-bg-active);color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-border-l2);font-weight:600;}
 .dshm-libtabs-count{font-size:10.5px;color:var(--dsw-alias-label-tertiary);background:var(--dsw-alias-bg-layer-1);border-radius:999px;padding:0 6px;line-height:16px;}
+.dshm-favs{padding:10px 20px 2px;width:100%;max-width:1120px;margin:0 auto;flex:none;box-sizing:border-box;}
+.dshm-favs-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.dshm-favs-title{font-size:12.5px;font-weight:600;color:var(--dsw-alias-label-primary);}
+.dshm-favs-all{margin-left:auto;}
+.dshm-favs-empty{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dsw-alias-label-tertiary);padding:10px 12px;border:1px dashed var(--dsw-alias-border-l1);border-radius:10px;}
+.dshm-favs-rail{display:flex;gap:10px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:thin;}
+.dshm-favcard{appearance:none;border:0;background:transparent;padding:0;width:104px;flex:none;display:flex;flex-direction:column;gap:6px;cursor:pointer;text-align:left;color:inherit;font:inherit;}
+.dshm-favcard-cover{position:relative;display:block;width:104px;height:104px;border-radius:12px;overflow:hidden;background:var(--dsw-alias-bg-layer-2);}
+.dshm-favcard-heart{position:absolute;top:6px;right:6px;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-state-error-primary);}
+.dshm-favcard-title{font-size:12px;font-weight:600;color:var(--dsw-alias-label-primary);}
+.dshm-favcard-sub{font-size:11px;color:var(--dsw-alias-label-tertiary);}
+.dshm-favcard:hover .dshm-favcard-cover{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px;}
+.dshm-favcard-off{opacity:.5;cursor:not-allowed;}
+.dshm-favcard-more{height:104px;justify-content:center;align-items:center;gap:6px;border-radius:12px;border:1px dashed var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-secondary);}
+.dshm-favcard-more-label{font-size:11.5px;}
+.dshm-toast{position:fixed;right:20px;bottom:96px;z-index:1000;display:flex;align-items:center;gap:8px;padding:8px 10px 8px 12px;border-radius:10px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);box-shadow:0 6px 20px var(--dsw-alias-border-l2);font-size:12.5px;color:var(--dsw-alias-label-primary);animation:dshm-fade-in .18s ease-out;}
+.dshm-toast-icon{display:inline-flex;color:var(--dsw-alias-state-success-primary);}
+.dshm-toast-main{appearance:none;border:0;background:transparent;color:var(--dsw-alias-brand-text);font:inherit;cursor:pointer;padding:2px 4px;border-radius:6px;}
+.dshm-toast-main:hover{background:var(--dsw-alias-interactive-bg-hover);}
+.dshm-toast-x{appearance:none;border:0;background:transparent;color:var(--dsw-alias-label-tertiary);cursor:pointer;padding:4px;border-radius:6px;display:inline-flex;}
 .dshm-search{display:flex;align-items:center;gap:8px;flex:1;min-width:180px;max-width:340px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:9px;padding:6px 10px;color:var(--dsw-alias-label-tertiary);transition:border-color .15s;}
 .dshm-search:focus-within{border-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-label-secondary);}
 .dshm-search input{flex:1;min-width:0;border:0;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;outline:none;}
@@ -1345,6 +1379,44 @@ window.__ModuleLoader__.load({
       return { source: store, load };
     }
 
+    /* Artist page loader (v9): loads run to completion even when the user
+     * navigates away, results are cached for the whole session (reopening is
+     * instant) and every finished load is announced through lastReady so the
+     * panel can toast "artist page ready" with a one-click shortcut. */
+    function createArtistPageService(api) {
+      const store = createStore({ pages: {}, loading: {}, lastReady: null, error: null });
+      const pending = new Map();
+      const keyOf = (name) => normalizeZh(name || '').trim();
+      function load(name) {
+        if (!name) return Promise.resolve(null);
+        const key = keyOf(name);
+        const snap = store.getSnapshot();
+        if (snap.pages[key]) return Promise.resolve(snap.pages[key]);
+        if (pending.has(key)) return pending.get(key);
+        store.set({ loading: { ...store.getSnapshot().loading, [key]: true } });
+        const p = api.recoArtist(name)
+          .then((data) => {
+            const cur = store.getSnapshot();
+            store.set({
+              pages: { ...cur.pages, [key]: data },
+              loading: { ...cur.loading, [key]: false },
+              error: null,
+              lastReady: { name, key, at: Date.now() },
+            });
+            return data;
+          })
+          .catch((err) => {
+            const cur = store.getSnapshot();
+            store.set({ loading: { ...cur.loading, [key]: false }, error: (err && err.message) || String(err) });
+            throw err;
+          })
+          .finally(() => { pending.delete(key); });
+        pending.set(key, p);
+        return p;
+      }
+      return { source: store, load, keyOf };
+    }
+
     /* Artist portraits (batch 2, v6): one lightweight image lookup per name.
      * Requests are coalesced in a 150ms window and limited to 3 in flight, so a
      * page that renders 20 artist rows does not fire 20 parallel lookups.
@@ -1668,6 +1740,9 @@ window.__ModuleLoader__.load({
         if (liked && res && res.disliked === false) delete dislikes[key];
         store.set({ keys, dislikes });
         if (res && res.downloading && onAutoDownload) onAutoDownload();
+        /* Refresh the cached lists so the library card rail reflects the new
+         * heart immediately (host is the source of truth, call is local). */
+        load();
         return res || {};
       }
       async function setDislike(item, disliked) {
@@ -2702,18 +2777,46 @@ window.__ModuleLoader__.load({
       return h(React.Fragment, null,
         sync ? h(SyncPanel, { t, sync, useSync }) : null,
         rowError ? h('div', { className: 'dshm-errorline', role: 'alert', style: { margin: '8px 24px 0' } }, rowError) : null,
-        h('div', { className: 'dshm-libtabs', role: 'tablist', 'aria-label': t('libTabsLabel') },
-          h('button', {
-            type: 'button', role: 'tab', 'aria-selected': libTab === 'library',
-            className: cx('dshm-libtabs-btn', libTab === 'library' && 'dshm-libtabs-on'),
-            onClick: () => setLibTab('library'),
-          }, t('libTabLibrary')),
-          h('button', {
-            type: 'button', role: 'tab', 'aria-selected': libTab === 'likes',
-            className: cx('dshm-libtabs-btn', libTab === 'likes' && 'dshm-libtabs-on'),
-            onClick: () => setLibTab('likes'),
-          }, h(IconHeart, { size: 13 }), t('libTabLikes'),
-            likeItems.length > 0 ? h('span', { className: 'dshm-libtabs-count' }, likeItems.length) : null)),
+        libTab === 'likes'
+          ? h('div', { className: 'dshm-libtabs' },
+              h('button', {
+                type: 'button', className: 'dshm-chipbtn',
+                onClick: () => setLibTab('library'),
+              }, '← ' + t('favsBack')),
+              h('span', { className: 'dshm-favs-title', style: { marginLeft: '4px' } }, t('libTabLikes')),
+              h('span', { className: 'dshm-count' }, likeItems.length + ' ' + t('tracksUnit')))
+          : h('div', { className: 'dshm-favs' },
+              h('div', { className: 'dshm-favs-head' },
+                h(IconHeart, { size: 14, style: { color: 'var(--dsw-alias-state-error-primary)' } }),
+                h('span', { className: 'dshm-favs-title' }, t('favsTitle')),
+                likeItems.length ? h('span', { className: 'dshm-count' }, likeItems.length + ' ' + t('tracksUnit')) : null,
+                likeItems.length
+                  ? h('button', {
+                      type: 'button', className: 'dshm-chipbtn dshm-favs-all',
+                      onClick: () => setLibTab('likes'),
+                    }, t('favsViewAll'), ' ›')
+                  : null),
+              likeItems.length === 0
+                ? h('div', { className: 'dshm-favs-empty' }, h(IconHeart, { size: 16 }), t('favsEmpty'))
+                : h('div', { className: 'dshm-favs-rail' },
+                    likedTracks.slice(0, 12).map((tr, i) => h('button', {
+                      key: tr.id || ('fav' + i), type: 'button',
+                      className: cx('dshm-favcard', tr.muted && 'dshm-favcard-off'),
+                      title: tr.muted ? t('topUnplayable') : (tr.title || '') + (tr.artist ? ' · ' + tr.artist : ''),
+                      onClick: () => playLiked(tr),
+                    },
+                      h('span', { className: 'dshm-favcard-cover' },
+                        h(Thumb, { src: tr.coverUrl, size: 96 }),
+                        h('span', { className: 'dshm-favcard-heart' }, h(IconHeart, { size: 11, style: { fill: 'currentColor' } }))),
+                      h('span', { className: 'dshm-favcard-title dshm-ellipsis' }, tr.title || t('untitled')),
+                      h('span', { className: 'dshm-favcard-sub dshm-ellipsis' }, tr.artist || t('unknownArtist')))),
+                    h('button', {
+                      type: 'button', className: 'dshm-favcard dshm-favcard-more',
+                      onClick: () => setLibTab('likes'),
+                    },
+                      h(IconQueue, { size: 18 }),
+                      h('span', { className: 'dshm-favcard-more-label' }, t('favsViewAll')),
+                      h('span', { className: 'dshm-count' }, likeItems.length)))),
         h('div', { className: 'dshm-toolbar' },
           h('label', { className: 'dshm-search' },
             h(IconSearch, { size: 15 }),
@@ -3215,22 +3318,27 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 11a2. Artist page (V3): profile + songs, play/preview + like
      * ================================================================ */
-    function ArtistPageView({ t, reco, player, likes, preview, library, openView, openArtistPage, artistImages, useUi, useLikes, useLibrary, usePlayer, useArtistImages }) {
+    function ArtistPageView({ t, reco, player, likes, preview, library, openView, openArtistPage, artistImages, artistPage, useUi, useLikes, useLibrary, usePlayer, useArtistImages, useArtistPage }) {
       const name = useUi((s) => s.artistName);
       const tracks = useLibrary((st) => st.tracks);
       const currentId = usePlayer((st) => (st.track ? st.track.id : null));
       const playing = usePlayer((st) => st.playing);
-      const [st, setSt] = useState({ status: 'loading', data: null, error: null });
+      /* Loading lives in the shared session-cache service, not in this view:
+       * navigating away does not abort it, reopening the same artist is instant,
+       * and the panel toasts when a background load finishes. */
+      const pageKey = name ? normalizeZh(name).trim() : '';
+      const cachedPage = useArtistPage ? useArtistPage((snap) => snap.pages[pageKey] || null) : null;
+      const pageBusy = useArtistPage ? useArtistPage((snap) => !!snap.loading[pageKey]) : false;
+      const [pageError, setPageError] = useState('');
       const [notice, setNotice] = useState('');
       useEffect(() => {
-        if (!name) return undefined;
+        if (!name || cachedPage || !artistPage) return undefined;
         let dead = false;
-        setSt({ status: 'loading', data: null, error: null });
-        reco.artistPage(name)
-          .then((data) => { if (!dead) setSt({ status: 'ready', data, error: null }); })
-          .catch((err) => { if (!dead) setSt({ status: 'error', data: null, error: (err && err.message) || String(err) }); });
+        setPageError('');
+        artistPage.load(name).catch((err) => { if (!dead) setPageError((err && err.message) || String(err)); });
         return () => { dead = true; };
-      }, [name]);
+      }, [name, cachedPage]);
+      const st = { status: cachedPage ? 'ready' : (pageError ? 'error' : 'loading'), data: cachedPage, error: pageError };
       function onPlaySong(item) {
         playSong(item, player, tracks, preview, setNotice, t);
       }
@@ -3612,7 +3720,7 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 12. Music panel (main slot): header + tabs + per-view body
      * ================================================================ */
-    function MusicPanel({ t, player, library, lyrics, reco, download, sync, history, likes, preview, openView, openArtistPage, setMiniHidden, ui, artistImages, onboarding, useUi, useLibrary, usePlayer, useLyrics, useReco, useDownload, useSync, useHistory, useLikes, usePreview, useArtistImages, useOnboarding }) {
+    function MusicPanel({ t, player, library, lyrics, reco, download, sync, history, likes, preview, openView, openArtistPage, setMiniHidden, ui, artistImages, artistPage, onboarding, useUi, useLibrary, usePlayer, useLyrics, useReco, useDownload, useSync, useHistory, useLikes, usePreview, useArtistImages, useArtistPage, useOnboarding }) {
       const view = useUi((s) => s.view);
       const welcomePreview = useUi((s) => s.welcomePreview);
       const onboardingSnap = useOnboarding((st) => st);
@@ -3622,6 +3730,24 @@ window.__ModuleLoader__.load({
       const count = useLibrary((s) => s.tracks.length);
       const playing = usePlayer((s) => s.playing);
       const busy = status === 'loading';
+
+      /* Background loads (v9): when an artist page finishes while the user is
+       * looking at another view, surface a toast that jumps straight there. */
+      const pageReady = useArtistPage ? useArtistPage((snap) => snap.lastReady) : null;
+      const toast = useUi((s) => s.toast);
+      const [seenReadyAt, setSeenReadyAt] = useState(0);
+      useEffect(() => {
+        if (!pageReady || pageReady.at === seenReadyAt) return;
+        setSeenReadyAt(pageReady.at);
+        const cur = ui.getSnapshot();
+        if (cur.view === 'artist' && normalizeZh(cur.artistName || '').trim() === pageReady.key) return;
+        ui.set({ toast: { kind: 'artist', name: pageReady.name, at: pageReady.at } });
+      }, [pageReady]);
+      useEffect(() => {
+        if (!toast) return undefined;
+        const timer = setTimeout(() => ui.set({ toast: null }), 9000);
+        return () => clearTimeout(timer);
+      }, [toast]);
 
       if (view === 'welcome') {
         return h(WelcomeView, {
@@ -3651,7 +3777,7 @@ window.__ModuleLoader__.load({
         : view === 'reco'
           ? h(RecoView, { t, reco, download, player, library, likes, preview, history, openArtistPage, useReco, useDownload, useLibrary, useLikes, usePlayer, useHistory })
           : view === 'artist'
-            ? h(ArtistPageView, { t, reco, player, likes, preview, library, openView, openArtistPage, artistImages, useUi, useLikes, useLibrary, usePlayer, useArtistImages })
+            ? h(ArtistPageView, { t, reco, player, likes, preview, library, openView, openArtistPage, artistImages, artistPage, useUi, useLikes, useLibrary, usePlayer, useArtistImages, useArtistPage })
             : view === 'history'
               ? h(HistoryView, { t, history, player, openArtistPage, artistImages, likes, useHistory, useLibrary, useArtistImages, useLikes })
               : h(NowPlayingView, { t, player, lyrics, usePlayer, useLyrics, openView, openArtistPage, artistImages, useArtistImages });
@@ -3685,7 +3811,20 @@ window.__ModuleLoader__.load({
                 className: 'dshm-tab', 'aria-selected': view === tab.id,
                 onClick: () => openView(tab.id),
               }, tab.label, tab.dot ? h('span', { className: 'dshm-tab-dot', 'aria-hidden': true }) : null)))),
-          h('div', { className: 'dshm-body', role: 'tabpanel' }, body)));
+          h('div', { className: 'dshm-body', role: 'tabpanel' }, body)),
+        toast
+          ? h('div', { className: 'dshm-toast', role: 'status' },
+              h('span', { className: 'dshm-toast-icon' }, h(IconCheck, { size: 14 })),
+              h('button', {
+                type: 'button', className: 'dshm-toast-main',
+                onClick: () => { ui.set({ toast: null }); openArtistPage(toast.name); },
+              },
+                toast.kind === 'artist' ? t('artistReadyToast') + ' · ' + toast.name : t('pageReadyToast')),
+              h('button', {
+                type: 'button', className: 'dshm-toast-x', 'aria-label': t('closeNotice'),
+                onClick: () => ui.set({ toast: null }),
+              }, h(IconClose, { size: 12 })))
+          : null);
     }
 
     /* ================================================================
@@ -3938,6 +4077,7 @@ window.__ModuleLoader__.load({
       const library = createLibrary(api);
       const lyricsService = createLyricsService(api);
       const artistService = createArtistService(api);
+      const artistPageService = createArtistPageService(api);
       const artistImageService = createArtistImageService(api);
       const onboardingService = createOnboardingService(api);
       const recoService = createRecoService(api);
@@ -4014,10 +4154,10 @@ window.__ModuleLoader__.load({
           player, library, lyrics: lyricsService, artist: artistService, artistImages: artistImageService, onboarding: onboardingService,
           reco: recoService, download: downloadService, sync: syncService, history: historyService,
           likes: likesService, preview: previewService,
-          openView, openArtistPage, setMiniHidden, ui,
+          openView, openArtistPage, setMiniHidden, ui, artistPage: artistPageService,
           hooks: {
             player: player.source, library: library.source, ui,
-            lyrics: lyricsService.source, artist: artistService.source, artistImages: artistImageService.source, onboarding: onboardingService.source,
+            lyrics: lyricsService.source, artist: artistService.source, artistPage: artistPageService.source, artistImages: artistImageService.source, onboarding: onboardingService.source,
             reco: recoService.source, download: downloadService.source,
             sync: syncService.source, history: historyService.source,
             likes: likesService.source, preview: previewService.source,

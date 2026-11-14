@@ -407,10 +407,29 @@ const afterClose = uiStore.getSnapshot();
 check('preview close returns to the library view', afterClose.view === 'library' && afterClose.welcomePreview === false,
   'view=' + afterClose.view);
 
-/* 5x) v8 taste plumbing: liked tab, dislike button, POST, history summary */
-const libTabs = walk(realHeader).filter((n) => String(cls(n) || '').includes('dshm-libtabs-btn'));
-check('library shows two tabs (library + liked)', libTabs.length === 2
-  && JSON.stringify(libTabs.map((b) => b.children)).includes('libTabLikes'));
+/* 5x) v8 taste plumbing + v9 card rail / background loads */
+check('library renders the liked card rail', has(realHeader, (n) => cls(n) === 'dshm-favs'));
+check('empty likes show the rail guidance', has(realHeader, (n) => cls(n) === 'dshm-favs-empty'));
+const likedItemsState = (sel) => sel({
+  keys: {}, dislikes: {}, loaded: true, error: null,
+  items: [{ key: 'k1', artist: '甲', title: '乙', trackId: 't1', audioUrl: '/a.mp3', coverUrl: null, inLibrary: true, durationMs: 1000 }],
+});
+const railTree = expand(music({ ...baseProps, useUi: (sel) => sel({ ...state, view: 'library' }), useLikes: likedItemsState }));
+check('liked rail renders a card + view-all card', has(railTree, (n) => String(cls(n) || '').includes('dshm-favcard'))
+  && has(railTree, (n) => String(cls(n) || '').includes('dshm-favcard-more')));
+uiStore.set({ toast: { kind: 'artist', name: '测试歌手', at: Date.now() } });
+const toastTree = expand(music({ ...realProps, useUi: useUiReal }));
+check('background-complete toast renders', has(toastTree, (n) => cls(n) === 'dshm-toast'));
+const toastMain = walk(toastTree).find((n) => cls(n) === 'dshm-toast-main');
+toastMain.props.onClick();
+check('toast click opens the cached artist page', uiStore.getSnapshot().view === 'artist'
+  && uiStore.getSnapshot().artistName === '测试歌手', 'view=' + uiStore.getSnapshot().view);
+const artistFetchesBefore = fetchCalls.filter((u) => u.includes('/reco/artist')).length;
+await svc.artistPage.load('缓存歌手');
+await svc.artistPage.load('缓存歌手');
+const artistFetchesAfter = fetchCalls.filter((u) => u.includes('/reco/artist')).length;
+check('artist page session cache: one request per name', artistFetchesAfter - artistFetchesBefore === 1);
+check('artist page load records lastReady', (svc.artistPage.source.getSnapshot().lastReady || {}).name === '缓存歌手');
 check('rows carry a dislike button', has(realHeader, (n) => String(cls(n) || '').includes('dshm-dislike-btn')));
 const dislikesBefore = fetchCalls.length;
 await svc.likes.setDislike({ artist: '冒烟歌手', title: '冒烟歌' }, true);
