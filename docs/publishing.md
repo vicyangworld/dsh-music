@@ -168,10 +168,10 @@ Release 说明至少写：七期变更（悬浮标/应用内顶层与跨应用�
 | git 提交 | ✅ push main | commit `5d8443a` feat(v0.4.0) |
 | GitHub Release（tgz） | ✅ published | https://github.com/vicyangworld/dsh-music/releases/tag/v0.4.0 ，asset `vicyangorg-dsh-music-0.4.0.tgz`（311528 B，gzip 校验通过，HTTP 206） |
 | 目录 PR #15213 | ✅ tarball 改钉 v0.4.0 | commit `f2d2d12` push add-dsh-music；唯一红=仓库满 1 天门槛（2026-11-15T01:20:25Z 自动转绿） |
-| npm 包 0.4.0 | ⏳ 受阻 E403（2FA） | npm latest 仍 0.3.0；见下 |
+| npm 包 0.4.0 | ✅ live（latest） | `@vicyangorg/dsh-music@0.4.0`，tarball https://registry.npmjs.org/@vicyangorg/dsh-music/-/dsh-music-0.4.0.tgz ，shasum `5033bab3…` 与发布输出一致；registry packument 直查 `dist-tags.latest=0.4.0`；包内含 icon.png/八期代码 |
 | 测试 | ✅ 全绿 | reco 143 / taste 39 / render 68 / packaging 14；红线 7 绿 |
 
-**npm publish 受阻（外部凭据，不绕过）：** `npm publish` 返回 `E403 ... Two-factor authentication or granular access token with bypass 2fa enabled is required to publish packages.`。现有 `NPM_TOKEN`（经典令牌，len 40）与 `~/.npmrc` 令牌均无「绕过 2FA」发布权限。
+**npm publish 凭据经过（已解决）：** 首次 `npm publish` 返回 `E403 ... Two-factor authentication or granular access token with bypass 2fa enabled is required to publish packages.`（经典令牌无「绕过 2FA」权限）。用户更新本机 `~/.npmrc` 为带 Bypass 2FA 的 granular token 后，`npm publish` 成功发布 0.4.0（`+ @vicyangorg/dsh-music@0.4.0`）。
 
-- 配合项（一次性）：用户在 npmjs.com → Access Tokens → Generate New Token → **Granular Access Token**，勾选 **Bypass two-factor authentication**，Packages 权限 **Read and write**；到 **Chief 单独对话**发「npm 凭据」→ 弹安全卡片收 `NPM_PUBLISH_TOKEN`（安全卡片仅能在单独对话弹，群里不支持）→ Chief 用该令牌 `npm publish` 0.4.0。
-- 现状不影响安装：GitHub Release v0.4.0 tgz + 目录 PR 已可装；npm 0.4.0 待凭据就绪即发。
+- 教训沉淀：npm 发布包须 granular token 且勾选 Bypass two-factor authentication，经典令牌一律 E403；`npm view` 有本地缓存滞后，验新版本用 registry packument 直查（curl + Accept: application/json）。
+- 现状：四渠道全绿——GitHub Release v0.4.0 tgz / npm latest 0.4.0 / 目录 PR #15213 钉 v0.4.0（仓库满 1 天门槛 2026-11-15T01:20:25Z 自动转绿）/ 本机链接目录开发装。
