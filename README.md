@@ -4,6 +4,12 @@
 
 DeepSeek Harness Desktop 的音乐插件：播放本地曲库、同步歌词与歌手故事、基于收听历史的反信息茧房推荐、推荐歌曲试听/喜欢才入库、Spotify 收藏同步。界面简约、中文、跟随明暗主题。
 
+## 预览
+
+| 曲库 | 推荐三栏 | 歌手页 |
+| :---: | :---: | :---: |
+| <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/library-toolbar.webp" width="280" alt="曲库"> | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/reco-columns.webp" width="280" alt="推荐三栏"> | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/artist-page.webp" width="280" alt="歌手页"> |
+
 - npm 包名：`@vicyangorg/dsh-music`（v0.4.0）；品牌名与 GitHub 仓库仍为 `dsh-music`（原名 `dsh-music` 在 npm 被占位包占用，故用 scoped 名，见 `docs/publishing.md`）
 - 形态：DSH bundle（Host 服务 + Web 客户端面板）
 - 验证状态：一期 S1–S4、二期四批、三期、四期、五期、六期、七期、八期均已验收通过（验收证据为内部文档，含本机数据，不随公开仓库发布）
