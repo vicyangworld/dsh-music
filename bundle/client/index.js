@@ -3433,7 +3433,7 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 12. Music panel (main slot): header + tabs + per-view body
      * ================================================================ */
-    function MusicPanel({ t, player, library, lyrics, reco, download, sync, history, likes, preview, openView, openArtistPage, setMiniHidden, artistImages, onboarding, useUi, useLibrary, usePlayer, useLyrics, useReco, useDownload, useSync, useHistory, useLikes, usePreview, useArtistImages, useOnboarding }) {
+    function MusicPanel({ t, player, library, lyrics, reco, download, sync, history, likes, preview, openView, openArtistPage, setMiniHidden, ui, artistImages, onboarding, useUi, useLibrary, usePlayer, useLyrics, useReco, useDownload, useSync, useHistory, useLikes, usePreview, useArtistImages, useOnboarding }) {
       const view = useUi((s) => s.view);
       const welcomePreview = useUi((s) => s.welcomePreview);
       const onboardingSnap = useOnboarding((st) => st);
@@ -3835,7 +3835,7 @@ window.__ModuleLoader__.load({
           player, library, lyrics: lyricsService, artist: artistService, artistImages: artistImageService, onboarding: onboardingService,
           reco: recoService, download: downloadService, sync: syncService, history: historyService,
           likes: likesService, preview: previewService,
-          openView, openArtistPage, setMiniHidden,
+          openView, openArtistPage, setMiniHidden, ui,
           hooks: {
             player: player.source, library: library.source, ui,
             lyrics: lyricsService.source, artist: artistService.source, artistImages: artistImageService.source, onboarding: onboardingService.source,

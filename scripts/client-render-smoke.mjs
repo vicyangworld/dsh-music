@@ -384,6 +384,29 @@ check('zh locale has no duplicate keys (no shadowing)', !!zhBlock.text && zhBloc
 check('en locale has no duplicate keys (no shadowing)', !!enBlock.text && enBlock.dup.length === 0, 'dups=' + JSON.stringify(enBlock.dup));
 check('no stale "stage 3" copy in zh/en', !/阶段 ?3|stage ?3/i.test(zhBlock.text) && !/阶段 ?3|stage ?3/i.test(enBlock.text));
 
+/* 5y) integration: the real preview chipbtn writes the REAL ui store and the
+ *     panel re-renders into the welcome view (closes the GUI-only gap). */
+const uiStore = svc.hooks && svc.hooks.ui;
+uiStore.set({ view: 'library', welcomePreview: false, lyricsOpen: false });
+const useUiReal = (sel) => sel(uiStore.getSnapshot());
+const realProps = { ...baseProps, useUi: useUiReal };
+const realHeader = expand(music(realProps));
+const previewBtn = walk(realHeader).find((n) => cls(n) === 'dshm-chipbtn'
+  && (n.children || []).includes('welcomePreview'));
+check('preview button is rendered and enabled', !!previewBtn && !(previewBtn.props || {}).disabled);
+previewBtn.props.onClick();
+const afterClick = uiStore.getSnapshot();
+check('preview click writes the real ui store', afterClick.view === 'welcome' && afterClick.welcomePreview === true,
+  'view=' + afterClick.view + ' preview=' + afterClick.welcomePreview);
+const realPreviewTree = expand(music(realProps));
+check('preview view renders mascot + close button', has(realPreviewTree, (n) => cls(n) === 'dshm-fish')
+  && has(realPreviewTree, (n) => cls(n) === 'dshm-wclose'));
+const closeBtn = walk(realPreviewTree).find((n) => cls(n) === 'dshm-wclose');
+closeBtn.props.onClick();
+const afterClose = uiStore.getSnapshot();
+check('preview close returns to the library view', afterClose.view === 'library' && afterClose.welcomePreview === false,
+  'view=' + afterClose.view);
+
 /* 6) report */
 const fail = results.filter((r) => !r.ok);
 for (const r of results) console.log((r.ok ? 'PASS' : 'FAIL') + '  ' + r.name + (r.detail ? '  (' + r.detail + ')' : ''));
