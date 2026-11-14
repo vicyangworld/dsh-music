@@ -158,3 +158,20 @@ Release 说明至少写：七期变更（悬浮标/应用内顶层与跨应用�
 - 受阻原因：需 `GITHUB_TOKEN` 才能 fork + 提 PR；当前无已保存凭据（`list_secrets` 为空），`request_secret` 仅能在 Chief 单独对话弹安全卡片。
 - 配合项（一次性）：用户到 Chief 单独对话发「发布凭据」→ 弹 `GITHUB_TOKEN`（classic PAT，repo 权限）安全卡片 → 注入 env var 后由 Chief fork `awesome-dsh-plugin/awesome-dsh-plugin`、按 §5 加 data 条目、提 PR `Add dsh-music plugin`，合并后干净 profile 验收市场一键装。
 - 现状不影响安装：GitHub + npm 已可经 `plugin_manager install_bundle target="@vicyangorg/dsh-music@0.3.0"` 安装；目录 PR 仅关乎市场 Discover 曝光，留作凭据就绪后的后续项。
+
+## 8. 八期 v0.4.0 发布（2026-11-14）
+
+八期四点（真新歌推荐 / 全流派 / 我喜欢与不喜欢 / 品牌 logo）开发＋活体验证完成，推 v0.4.0：
+
+| 项 | 状态 | 链接/标识 |
+| --- | --- | --- |
+| git 提交 | ✅ push main | commit `5d8443a` feat(v0.4.0) |
+| GitHub Release（tgz） | ✅ published | https://github.com/vicyangworld/dsh-music/releases/tag/v0.4.0 ，asset `vicyangorg-dsh-music-0.4.0.tgz`（311528 B，gzip 校验通过，HTTP 206） |
+| 目录 PR #15213 | ✅ tarball 改钉 v0.4.0 | commit `f2d2d12` push add-dsh-music；唯一红=仓库满 1 天门槛（2026-11-15T01:20:25Z 自动转绿） |
+| npm 包 0.4.0 | ⏳ 受阻 E403（2FA） | npm latest 仍 0.3.0；见下 |
+| 测试 | ✅ 全绿 | reco 143 / taste 39 / render 68 / packaging 14；红线 7 绿 |
+
+**npm publish 受阻（外部凭据，不绕过）：** `npm publish` 返回 `E403 ... Two-factor authentication or granular access token with bypass 2fa enabled is required to publish packages.`。现有 `NPM_TOKEN`（经典令牌，len 40）与 `~/.npmrc` 令牌均无「绕过 2FA」发布权限。
+
+- 配合项（一次性）：用户在 npmjs.com → Access Tokens → Generate New Token → **Granular Access Token**，勾选 **Bypass two-factor authentication**，Packages 权限 **Read and write**；到 **Chief 单独对话**发「npm 凭据」→ 弹安全卡片收 `NPM_PUBLISH_TOKEN`（安全卡片仅能在单独对话弹，群里不支持）→ Chief 用该令牌 `npm publish` 0.4.0。
+- 现状不影响安装：GitHub Release v0.4.0 tgz + 目录 PR 已可装；npm 0.4.0 待凭据就绪即发。
