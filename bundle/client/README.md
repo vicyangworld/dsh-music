@@ -1,7 +1,7 @@
 # dsh-music Client 半（织音）
 
 单文件浏览器产物 `index.js`，无构建步骤。通过 `window.__ModuleLoader__.load` 注册懒工厂，
-id = `@dshbottest/dsh-music`（须与 bundle 包名 `name` 完全一致）。React 来自浏览器模块表，不安装重复 React，
+id = `@vicyangorg/dsh-music`（须与 bundle 包名 `name` 完全一致）。React 来自浏览器模块表，不安装重复 React，
 不 import 任何 Harness Client 包（遵守 cordis-plugin-development 的 ui-plugin/practices 规范）。
 
 ## 渲染面（已对照真实源码契约核实）

@@ -15,13 +15,13 @@
 
 ## 安装
 
-插件品牌名是 **dsh-music**，npm 包名是 **`@dshbottest/dsh-music`**（原名 `dsh-music` 被 2026-08-19 的占位包占用；GitHub 仓库仍是 vicyangworld/dsh-music）。client 工厂 id 与包名一致，安装后插件行/面板照常出现。
+插件品牌名是 **dsh-music**，npm 包名是 **`@vicyangorg/dsh-music`**（原名 `dsh-music` 被 2026-08-19 的占位包占用；GitHub 仓库仍是 vicyangworld/dsh-music）。client 工厂 id 与包名一致，安装后插件行/面板照常出现。
 
 1. 安装插件包：在 DSH 插件市场安装，或用 `plugin_manager` 安装本包（目录、`.tgz` 或 `link:` 源码目录）。
    ```text
-   plugin_manager(install_bundle, target: "@dshbottest/dsh-music@0.3.0")
+   plugin_manager(install_bundle, target: "@vicyangorg/dsh-music@0.3.0")
    ```
-   也支持本地 tgz：`target: "/path/to/dshbottest-dsh-music-0.3.0.tgz"`。
+   也支持本地 tgz：`target: "/path/to/vicyangorg-dsh-music-0.3.0.tgz"`。
 2. 刷新 DSH 页面，左侧栏出现「音乐」面板图标，点开即用。
 3. 可选：安装 `yt-dlp` 与 `ffmpeg`（macOS: `brew install yt-dlp ffmpeg`），用于在线试听与「喜欢才入库」；不装也能播放本地曲库。
 

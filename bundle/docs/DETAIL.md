@@ -13,7 +13,7 @@
 在 DSH 里用插件管理器安装本包（bundle 形式）：
 
 ```
-plugin_manager install_bundle  target=@dshbottest/dsh-music
+plugin_manager install_bundle  target=@vicyangorg/dsh-music
 ```
 
 看到返回 `application: applied` 即安装成功。刷新当前页面，左侧栏就会出现 **「音乐」** 入口。
@@ -162,7 +162,7 @@ plugin_manager install_bundle  target=@dshbottest/dsh-music
 ## 卸载
 
 ```
-plugin_manager remove_bundle  target=@dshbottest/dsh-music
+plugin_manager remove_bundle  target=@vicyangorg/dsh-music
 ```
 
 卸载不会自动删你的文件。想清理数据，手动删除 `~/Music/dsh-music/` 与 `~/.dsh/dsh-music/`；

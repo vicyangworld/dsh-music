@@ -29,7 +29,7 @@ const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
 console.log(`包根：${root}\n包：${pkg.name}@${pkg.version}\n`)
 
 // ---- ③ 清单 ----
-check(pkg.name === '@dshbottest/dsh-music', '包名 @dshbottest/dsh-music（scoped）', pkg.name)
+check(pkg.name === '@vicyangorg/dsh-music', '包名 @vicyangorg/dsh-music（scoped）', pkg.name)
 check(pkg.private === false, 'private=false（可发布）', String(pkg.private))
 check(Boolean(pkg.engines?.dsh), 'engines.dsh 已声明', pkg.engines?.dsh)
 check(Boolean(pkg.license), 'license 已声明', pkg.license)

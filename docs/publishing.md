@@ -7,9 +7,9 @@
 ## 包名约定（批5 改名）
 
 - **品牌名**保持 `dsh-music`（面板、文档、GitHub 仓库名不变）。
-- **npm 包名**是 **`@dshbottest/dsh-music`**：原名 `dsh-music` 已被 2026-08-19 注册的占位包占用（维护者 dushaobindoudou，`dsh-music@0.0.1`，描述 "name reserved"，无实质代码），无法以原名发布。
-- npm 账号 `dshbottest`；scoped 包默认 restricted，`package.json` 已设 `publishConfig: {"access":"public"}`，发布时也可显式 `--access public`。
-- DSH 硬性规则：**client 工厂 id 必须等于完整包名**（先例 `@zilliz/memsearch-dsh`），因此 client 工厂 id 也是 `@dshbottest/dsh-music`。
+- **npm 包名**是 **`@vicyangorg/dsh-music`**：原名 `dsh-music` 已被 2026-08-19 注册的占位包占用（维护者 dushaobindoudou，`dsh-music@0.0.1`，描述 "name reserved"，无实质代码），无法以原名发布。**批5 实际发布时又发现 `@dshbottest` scope 在 npm 不存在（PUT 报 E404 Scope not found），遂改用发布凭据账号 `vicyangorg` 自己的 scope，最终 npm 包名定为 `@vicyangorg/dsh-music`；品牌名 / GitHub 仓库 / 数据目录 / HTTP 路径均不变。**
+- npm 账号 `vicyangorg`；scoped 包默认 restricted，`package.json` 已设 `publishConfig: {"access":"public"}`，发布时也可显式 `--access public`。
+- DSH 硬性规则：**client 工厂 id 必须等于完整包名**（先例 `@zilliz/memsearch-dsh`），因此 client 工厂 id 也是 `@vicyangorg/dsh-music`。
 - `cordis.patch.yml` 的插件行 `name` 同步为新包名，`id` 仍为 `dsh-music`。
 - 数据目录 `~/.dsh/dsh-music/` 与 HTTP 路径 `/dsh-music/api/*` 是硬编码内部标识，**不随改名变化**，老用户数据零迁移。
 
@@ -74,20 +74,20 @@ node scripts/import-smoke.mjs         # 期望 OK
 
 # 3) 冷装：对真实 tgz 解包目录做完整校验
 npm pack ./bundle --pack-destination /tmp/dshm-pack
-mkdir -p /tmp/dshm-cold && tar -xzf /tmp/dshm-pack/dshbottest-dsh-music-0.3.0.tgz -C /tmp/dshm-cold
+mkdir -p /tmp/dshm-cold && tar -xzf /tmp/dshm-pack/vicyangorg-dsh-music-0.3.0.tgz -C /tmp/dshm-cold
 node tests/cold-install-smoke.mjs /tmp/dshm-cold/package   # 期望 ALL PASS
 
 # 4) 包内容确认（DETAIL + 4 图 + README + client）
 npm pack --dry-run --json ./bundle | head -40
 ```
 
-同时确认：`name=@dshbottest/dsh-music` 且 `publishConfig.access=public`；版本号只在 `bundle/package.json`（`cordis.patch.yml` 不写版本）；`repository/homepage/bugs` 指向 `github.com/vicyangworld/dsh-music`；`private:false`、`license: MIT`、`engines.dsh` 仍与当前 DSH 兼容。
+同时确认：`name=@vicyangorg/dsh-music` 且 `publishConfig.access=public`；版本号只在 `bundle/package.json`（`cordis.patch.yml` 不写版本）；`repository/homepage/bugs` 指向 `github.com/vicyangworld/dsh-music`；`private:false`、`license: MIT`、`engines.dsh` 仍与当前 DSH 兼容。
 
 **截图隐私检查（push/publish 前必做）**：`bundle/docs/assets/*` 随包公开，必须是**音乐面板裁剪版**——不得含 DSH 侧栏（用户名/其他会话标题）、用户真实收听历史或真实曲库行。历史统计类截图禁止发布（内容即用户历史，无法脱敏）；曲库截图只允许工具栏区域。首次建仓的初始提交也必须在截图整改完成后进行，避免用户数据进入 git 历史。
 
 ## 3. npm 发布
 
-前提：使用 npm 账号 `dshbottest`（本机 `npm login` 或设置 `NPM_TOKEN`）。包名 `@dshbottest/dsh-music` 归属该账号；发布前可 `npm view @dshbottest/dsh-music` 确认版本未占用。
+前提：使用 npm 账号 `vicyangorg`（本机 `npm login` 或设置 `NPM_TOKEN`）。包名 `@vicyangorg/dsh-music` 归属该账号；发布前可 `npm view @vicyangorg/dsh-music` 确认版本未占用。
 
 ```bash
 cd bundle
@@ -99,9 +99,9 @@ npm publish --access public     # scoped 包必须显式公开（publishConfig �
 发布后验证：
 
 ```bash
-npm view @dshbottest/dsh-music version dist.tarball
+npm view @vicyangorg/dsh-music version dist.tarball
 # 他人安装（DSH 内）：
-# plugin_manager(install_bundle, target: "@dshbottest/dsh-music@0.3.0")
+# plugin_manager(install_bundle, target: "@vicyangorg/dsh-music@0.3.0")
 ```
 
 注意：`files` 已排除测试与仓库 docs；无 `prepare`/`postinstall` 等 build scripts，安装不会触发脚本审批。
@@ -115,7 +115,7 @@ git push origin main --tags
 
 # 产出发布附件（tgz 来自 npm pack，与 npm 同一份）
 npm pack ./bundle --pack-destination dist
-gh release create v0.3.0 dist/dshbottest-dsh-music-0.3.0.tgz \
+gh release create v0.3.0 dist/vicyangorg-dsh-music-0.3.0.tgz \
   --title "dsh-music 0.3.0" \
   --notes-file <(sed -n '1,40p' bundle/README.md)
 ```
@@ -127,7 +127,7 @@ Release 说明至少写：七期变更（悬浮标/应用内顶层与跨应用�
 市场「Discover 一键装」只认策展注册表 `awesome-dsh-plugin` 内的条目：
 
 1. Fork `awesome-dsh-plugin` 仓库，按 README 的条目格式新增一行/一条：
-   - 名称 `dsh-music`（展示名）、仓库 `https://github.com/vicyangworld/dsh-music`、npm 包 `@dshbottest/dsh-music`、版本 `0.3.0`；
+   - 名称 `dsh-music`（展示名）、仓库 `https://github.com/vicyangworld/dsh-music`、npm 包 `@vicyangorg/dsh-music`、版本 `0.3.0`；
    - 一句话中文 + 英文描述、分类（音乐/媒体）、平台 `web`、图标/截图（`bundle/icon.svg`、`bundle/docs/assets/*`）。
 2. 确认其索引（format-1，例如 `cdn.jsdelivr.net/npm/dsh-plugin-catalog/index.json`）能解析到本包，且 `engines.dsh` 兼容声明与当前 DSH 一致。
 3. 提 PR，标题 `Add dsh-music plugin`，说明里附 npm 包链接、Release 链接、安装命令与截图；按维护者模板补齐字段。

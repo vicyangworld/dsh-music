@@ -21,7 +21,7 @@
  * prefix cover/. See bundle/host and docs for the Host half.
  */
 window.__ModuleLoader__.load({
-  id: '@dshbottest/dsh-music',
+  id: '@vicyangorg/dsh-music',
   factory(require) {
     const React = require('react');
     const h = React.createElement;
