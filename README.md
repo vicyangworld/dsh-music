@@ -13,10 +13,10 @@ DeepSeek Harness Desktop 的音乐插件：播放本地曲库、同步歌词与�
 | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/library-shelf.webp" width="280" alt="曲库卡片架"> | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/reco-columns.webp" width="280" alt="推荐三栏"> | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/artist-page.webp" width="280" alt="歌手页"> |
 | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/liked-full.webp" width="280" alt="我喜欢完整列表"> | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/shelf-synced.webp" width="280" alt="跨页喜欢同步"> | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/library-toolbar.webp" width="280" alt="曲库工具栏"> |
 
-- npm 包名：`@vicyangorg/dsh-music`（v0.5.0）；品牌名与 GitHub 仓库仍为 `dsh-music`（原名 `dsh-music` 在 npm 被占位包占用，故用 scoped 名，见 `docs/publishing.md`）
+- npm 包名：`@vicyangorg/dsh-music`（v0.6.0）；品牌名与 GitHub 仓库仍为 `dsh-music`（原名 `dsh-music` 在 npm 被占位包占用，故用 scoped 名，见 `docs/publishing.md`）
 - 形态：DSH bundle（Host 服务 + Web 客户端面板）
-- 验证状态：一期 S1–S4、二期四批、三期、四期、五期、六期、七期、八期、九期均已验收通过（验收证据为内部文档，含本机数据，不随公开仓库发布）
-- 分发状态：`@vicyangorg/dsh-music@0.5.0` 已发布 GitHub Release + npm（MIT/engines.dsh/8 语 meta/DETAIL+截图/README，打包守门+冷装冒烟通过）；插件目录 PR #15213 审核中
+- 验证状态：一期 S1–S4、二期四批、三期、四期、五期、六期、七期、八期、九期、十期均已验收通过（验收证据为内部文档，含本机数据，不随公开仓库发布）
+- 分发状态：`@vicyangorg/dsh-music@0.6.0` 已发布 GitHub Release + npm（MIT/engines.dsh/8 语 meta/DETAIL+截图/README，打包守门+冷装冒烟通过）；插件目录 PR #15213 审核中
 
 ## 功能
 | 模块 | 说明 |
@@ -104,10 +104,17 @@ DeepSeek Harness Desktop 的音乐插件：播放本地曲库、同步歌词与�
 | 双层缓存 | 歌手页等内容客户端会话缓存（同会话重开秒开、pending 去重、失败不缓存可重试）+ Host 持久缓存（歌手资料/维基兜底回写/相似/图 30 天、核验 30 天、确定性未命中负缓存 3 天，重复打开零重复网络拉取），重启后仍命中 |
 | 歌手页文案 | 歌手页歌曲区标题「的歌曲」改为「歌曲」（8 语同步） |
 
+## 十期新增（推荐按天固化/每栏重新推荐/播放转圈反馈）
+| 模块 | 说明 |
+|---|---|
+| 推荐按天固化 | 三栏（今日/歌手/新歌）按本地自然日缓存：当天首次进推荐页生成一次，之后切换进来零重算秒开；跨天首次进入自动生成新批 |
+| 每栏重新推荐 | 每栏标题行「重新推荐」按钮只重算本栏，其余两栏不受影响；重算期间该栏独立显示进度 |
+| 播放转圈反馈 | 点行播放 ▶ 变转圈（试听准备中），就绪恢复播放态；「播放本栏」整栏转圈、逐首就绪逐首恢复；转圈期间防重复点击 |
+
 ## 安装
 插件以 bundle 形式安装在 desktop profile，**只用 `plugin_manager install_bundle`**（不手写 profile 配置）：
 ```
-plugin_manager install_bundle  target=@vicyangorg/dsh-music@0.5.0
+plugin_manager install_bundle  target=@vicyangorg/dsh-music@0.6.0
 # 或本地源码：target=<项目>/bundle
 ```
 以返回 `application: applied` 为准。安装后刷新现有 GUI 页面，左侧栏出现「音乐」面板。

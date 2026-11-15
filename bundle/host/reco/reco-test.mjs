@@ -965,5 +965,172 @@ const fakeImages = {
   await rm(tmp, { recursive: true, force: true })
 }
 
+// ---------- R. 十期：三栏当日固化 + 单栏重推接口 ----------
+{
+  const dayKey = (ts) => {
+    const d = new Date(ts)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+  let clock = new Date('2026-05-20T10:00:00+08:00').getTime()
+  const nowFn = () => clock
+  const counts = { read: 0, similar: 0, explore: 0, artist: 0, nw: 0, verify: 0 }
+  const fakeVerifier = {
+    async verify(c) {
+      counts.verify++
+      return {
+        verification: { source: 'musicbrainz', url: `https://musicbrainz.org/recording/${encodeURIComponent(c.artist)}`, verifiedAt: nowFn() },
+        matched: { title: c.title, durationMs: 200000, album: c.album },
+      }
+    },
+  }
+  const fakeDiscover = {
+    async findArtist(name) { return name ? { mbid: `mb-${name}`, name, tags: ['rock'] } : null },
+    async buildSimilarCandidates({ limit = 14 }) {
+      counts.similar++
+      return Array.from({ length: limit + 6 }, (_, i) => ({ category: 'similar', artist: `S${counts.similar}-${i}`, title: `ST${counts.similar}-${i}`, durationMs: 1, reason: '相似' }))
+    },
+    async buildExploreCandidates({ slots }) {
+      counts.explore++
+      return { candidates: (slots ?? []).map((s, i) => ({ category: 'explore', axis: s.axis, artist: `E${counts.explore}-${i}`, title: `ET${counts.explore}-${i}`, durationMs: 1, genreHint: 'proto-jazz-2099', reason: '探索' })), cursors: { genre: counts.explore, language: 0, era: 0, scene: 0 } }
+    },
+    async buildArtistList({ limit = 20, cursor = 0 }) {
+      counts.artist++
+      return {
+        artists: Array.from({ length: limit }, (_, i) => ({
+          id: `a${cursor}-${i}`, name: `A${cursor}-${i}`, genreHint: 'rock', reason: '相似歌手',
+          verification: { source: 'musicbrainz', url: 'https://musicbrainz.org/artist/x', verifiedAt: nowFn() },
+        })),
+        cursor: cursor + 1,
+      }
+    },
+    async buildNewCandidates({ limit = 20, extraKeys }) {
+      counts.nw++
+      return Array.from({ length: limit }, (_, i) => ({
+        category: 'new', artist: `N${counts.nw}-${i}`, title: `NT${counts.nw}-${i}`, album: '新专辑',
+        releaseDate: '2026-05-01', durationMs: 1, reason: '新歌推荐',
+      })).filter((c) => !(extraKeys ?? new Set()).has(normKey(c.artist, c.title)))
+    },
+  }
+  const images = {
+    async coverUrl() { return 'https://img.test/c.jpg' },
+    async artistImages(names) { const m = new Map(); for (const n of names) m.set(n, { thumbnail: 'https://img.test/t.jpg' }); return m },
+  }
+  const history = {
+    async read() {
+      counts.read++
+      return { events: [{ artist: 'Beyond', title: 'X', completion: 1, skipped: false }, { artist: 'Beyond', title: 'Y', completion: 1, skipped: false }, { artist: 'Nightwish', title: 'Z', completion: 1, skipped: false }], total: 3 }
+    },
+  }
+  const library = { snapshot: () => ({ tracks: [{ id: 'lib1', artist: 'LIB', title: 'LIBT' }], scannedAt: 1 }), ensureScanned: async () => {}, getRecord: () => ({ meta: { hasCover: true } }) }
+  const tmp = await mkdtemp(join(tmpdir(), 'reco-daily-'))
+  const reco = createReco({ history, library, storage: { dataDir: tmp }, logger: { warn: () => {} }, verifier: fakeVerifier, discover: fakeDiscover, images, now: nowFn })
+  const dailyPath = join(tmp, 'cache', 'reco', 'sections-daily.json')
+
+  const s1 = await reco.sections()
+  const afterFirst = { ...counts }
+  const daily1 = JSON.parse(await readFile(dailyPath, 'utf8'))
+  t('R1 首次生成三栏且 fromCache 全 false', s1.today.length === 20 && s1.artist.length === 20 && s1.new.length === 20 && !s1.fromCache.today && !s1.fromCache.artist && !s1.fromCache.new)
+  t('R2 当日快照落 cache/reco/sections-daily.json（日期=本地自然日）', daily1.date === dayKey(clock) && daily1.today.items.length === 20 && daily1.artist.items.length === 20 && daily1.new.items.length === 20)
+
+  const s2 = await reco.sections()
+  t('R3 同日二次调用零重算（history/discover/verify 全未再调）',
+    counts.read === afterFirst.read && counts.similar === afterFirst.similar && counts.explore === afterFirst.explore
+    && counts.artist === afterFirst.artist && counts.nw === afterFirst.nw && counts.verify === afterFirst.verify)
+  t('R4 二次调用三栏 fromCache 全 true 且内容与首调一致', s2.fromCache.today && s2.fromCache.artist && s2.fromCache.new
+    && s2.todayGeneratedAt === s1.todayGeneratedAt
+    && JSON.stringify(s2.today) === JSON.stringify(s1.today) && JSON.stringify(s2.artist) === JSON.stringify(s1.artist) && JSON.stringify(s2.new) === JSON.stringify(s1.new))
+
+  const rArtist = await reco.refreshSections('artist')
+  t('R5 refresh artist 只重算歌手栏（今日/新歌原位保留）', rArtist.refreshed === 'artist'
+    && JSON.stringify(rArtist.today) === JSON.stringify(s1.today) && JSON.stringify(rArtist.new) === JSON.stringify(s1.new)
+    && rArtist.artist[0].id !== s1.artist[0].id)
+  t('R6 refresh 响应 fromCache: today/new=true、artist=false', rArtist.fromCache.today === true && rArtist.fromCache.new === true && rArtist.fromCache.artist === false)
+  const daily2 = JSON.parse(await readFile(dailyPath, 'utf8'))
+  t('R7 refresh 写回当日快照（歌手栏更新）', daily2.artist.items[0].id === rArtist.artist[0].id && daily2.today.items[0].artist === s1.today[0].artist)
+
+  const rNew = await reco.refreshSections('new')
+  t('R8 refresh new 只换新歌栏（今日/歌手与上次一致）', rNew.refreshed === 'new'
+    && JSON.stringify(rNew.today) === JSON.stringify(s1.today) && JSON.stringify(rNew.artist) === JSON.stringify(rArtist.artist)
+    && rNew.new[0].title !== s1.new[0].title)
+
+  const rToday = await reco.refreshSections('today')
+  t('R9 refresh today 生成新批次（其余两栏取当日快照）', rToday.refreshed === 'today'
+    && rToday.fromCache.today === false && rToday.fromCache.artist === true && rToday.fromCache.new === true
+    && rToday.today[0].artist !== s1.today[0].artist)
+
+  // 跨天：注入时钟 +1 天，当快照失效、三栏重算
+  clock += 24 * 3600 * 1000
+  const beforeDay = { ...counts }
+  const d1 = await reco.sections()
+  t('R10 跨天自动失效并重算三栏', d1.fromCache.today === false && d1.fromCache.artist === false && d1.fromCache.new === false
+    && counts.read > beforeDay.read && counts.similar > beforeDay.similar && counts.artist > beforeDay.artist && counts.nw > beforeDay.nw)
+  const daily3 = JSON.parse(await readFile(dailyPath, 'utf8'))
+  t('R11 跨天快照日期更新', daily3.date === dayKey(clock))
+
+  // 单栏重推接口（POST body {axis}）
+  const routes = {}
+  const webServer = { register: (r) => { routes[r.path] = r; return () => {} } }
+  const { registerRecoRoutes } = await import('./index.js')
+  registerRecoRoutes(webServer, { reco, logger: { warn: () => {} } })
+  const call = (method, path, body) => new Promise((resolve) => {
+    const res = { code: null, writeHead(code) { this.code = code }, end(text) { resolve({ code: this.code, body: JSON.parse(text) }) } }
+    const req = { method, url: path }
+    const routePath = path.split('?')[0]
+    if (body !== undefined) {
+      req.on = (ev, cb) => {
+        if (ev === 'data' && body !== null) cb(JSON.stringify(body))
+        if (ev === 'end') cb()
+      }
+    }
+    routes[routePath].handler(req, res)
+  })
+  const rp1 = await call('POST', '/dsh-music/api/reco/sections/refresh', { axis: 'new' })
+  t('R12 POST refresh {axis:new} → 200 且只刷新新歌栏', rp1.code === 200 && rp1.body.refreshed === 'new' && rp1.body.fromCache.new === false && rp1.body.fromCache.today === true)
+  const rp2 = await call('POST', '/dsh-music/api/reco/sections/refresh', {})
+  t('R13 POST refresh 缺 axis → 400', rp2.code === 400)
+  const rp3 = await call('POST', '/dsh-music/api/reco/sections/refresh', { axis: 'bad' })
+  t('R14 POST refresh 非法 axis → 400', rp3.code === 400)
+  const rp4 = await call('GET', '/dsh-music/api/reco/sections/refresh')
+  t('R15 GET refresh → 405', rp4.code === 405)
+  const rp5 = await call('POST', '/dsh-music/api/reco/sections/refresh?axis=today', null)
+  t('R16 无 body 时兼容 ?axis= → 200', rp5.code === 200 && rp5.body.refreshed === 'today')
+
+  await rm(tmp, { recursive: true, force: true })
+}
+
+// ---------- R2. 生成失败不写当日快照（失败当日可重试） ----------
+{
+  const tmp = await mkdtemp(join(tmpdir(), 'reco-daily-fail-'))
+  let failArtist = true
+  let artistCalls = 0
+  const fakeDiscover = {
+    async findArtist(name) { return name ? { mbid: `mb-${name}`, name, tags: ['rock'] } : null },
+    async buildSimilarCandidates({ limit = 14 }) { return Array.from({ length: limit + 6 }, (_, i) => ({ category: 'similar', artist: `S${i}`, title: `ST${i}`, durationMs: 1, reason: '相似' })) },
+    async buildExploreCandidates({ slots }) { return { candidates: (slots ?? []).map((s, i) => ({ category: 'explore', axis: s.axis, artist: `E${i}`, title: `ET${i}`, durationMs: 1, genreHint: 'proto-jazz-2099', reason: '探索' })), cursors: { genre: 1, language: 0, era: 0, scene: 0 } } },
+    async buildArtistList({ limit = 20 }) {
+      artistCalls++
+      if (failArtist) throw new Error('MB 暂时不可用')
+      return { artists: Array.from({ length: limit }, (_, i) => ({ id: `a${i}`, name: `A${i}`, genreHint: 'rock', reason: '相似歌手', verification: { source: 'musicbrainz', url: 'https://musicbrainz.org/artist/a', verifiedAt: Date.now() } })), cursor: 1 }
+    },
+    async buildNewCandidates({ limit = 20 }) { return Array.from({ length: limit }, (_, i) => ({ category: 'new', artist: `N${i}`, title: `NT${i}`, album: '新专辑', durationMs: 1, reason: '新歌推荐' })) },
+  }
+  const verifier = { async verify(c) { return { verification: { source: 'musicbrainz', url: `https://musicbrainz.org/recording/${c.artist}`, verifiedAt: Date.now() }, matched: { title: c.title, durationMs: 1 } } } }
+  const history = { async read() { return { events: [{ artist: 'Beyond', title: 'X', completion: 1, skipped: false }, { artist: 'Beyond', title: 'Y', completion: 1, skipped: false }, { artist: 'Beyond', title: 'Z', completion: 1, skipped: false }], total: 3 } } }
+  const library = { snapshot: () => ({ tracks: [], scannedAt: 1 }), ensureScanned: async () => {}, getRecord: () => undefined }
+  const reco = createReco({ history, library, storage: { dataDir: tmp }, logger: { warn: () => {} }, verifier, discover: fakeDiscover, images: fakeImages })
+  let err = null
+  try { await reco.sections() } catch (e) { err = e }
+  const dailyPath = join(tmp, 'cache', 'reco', 'sections-daily.json')
+  let daily = null
+  try { daily = JSON.parse(await readFile(dailyPath, 'utf8')) } catch { daily = null }
+  t('R17 生成失败抛错且不写当日快照', Boolean(err) && err.message.includes('MB') && daily === null && artistCalls === 1)
+  failArtist = false
+  const retry = await reco.sections()
+  t('R18 失败当日重试成功（今日批次复用，歌手/新歌重算）', retry.today.length === 20 && retry.artist.length === 20 && retry.new.length === 20
+    && retry.fromCache.today === true && retry.fromCache.artist === false && retry.fromCache.new === false)
+  t('R19 重试成功后写入当日快照', JSON.parse(await readFile(dailyPath, 'utf8')).date === (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })())
+  await rm(tmp, { recursive: true, force: true })
+}
+
 console.log(`\nreco-test: ${pass} pass, ${fail} fail`)
 process.exit(fail ? 1 : 0)

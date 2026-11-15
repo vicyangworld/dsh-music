@@ -13,7 +13,7 @@
 import { join, dirname } from 'node:path'
 import { readFile, writeFile, rename, mkdir } from 'node:fs/promises'
 import { createVerifier } from './verify.js'
-import { createDiscover } from './discover.js'
+import { createDiscover, normalizeTaste } from './discover.js'
 import { detectLanguage } from './diversity.js'
 import { topArtists, planExploreSlots, normKey, assembleBatch, exploreCandidateOk } from './quota.js'
 import { interpretStyle, styleQueryPlan, fallbackPlan, FALLBACK_GENRES } from './style.js'
@@ -26,8 +26,10 @@ const RECENT_RECOMMENDED_MAX = 40 // 防重复：最近 2 批（20 首/批）推
 const STYLE_LIMIT = 8 // 风格搜索结果上限
 const BOOTSTRAP_HISTORY_EVENTS = 3 // 播放事件少于此值视为历史不足（D3 冷启动探索批次）
 
-export function createReco({ history, library, storage, config = {}, logger, verifier: verifierOverride, discover: discoverOverride, images: imagesOverride } = {}) {
+export function createReco({ history, library, storage, config = {}, logger, verifier: verifierOverride, discover: discoverOverride, images: imagesOverride, now: nowOverride } = {}) {
   const warn = (msg) => logger?.warn?.(msg)
+  // 十期：可注入时钟（单测模拟跨天/当日复用）；默认真实时间
+  const now = typeof nowOverride === 'function' ? nowOverride : () => Date.now()
   // verifier/discover/images 可注入（单测用假实现离线跑全流程）；生产缺省即真实模块
   const verifier = verifierOverride ?? createVerifier({ storage, logger })
   const discover = discoverOverride ?? createDiscover({ storage, logger })
@@ -36,6 +38,22 @@ export function createReco({ history, library, storage, config = {}, logger, ver
   const historyFile = join(storage.dataDir, 'reco-history.json')
   let generating = false
   let sectionsBusy = false
+  // 十期：三栏当日快照（只落本地 cache/，不进 history 数据）
+  const dailyFile = join(storage.dataDir, 'cache', 'reco', 'sections-daily.json')
+
+  function localDateKey(ts) {
+    const d = new Date(ts)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+
+  async function readDailySections() {
+    const saved = await readJson(dailyFile, null)
+    return saved && saved.date === localDateKey(now()) ? saved : null
+  }
+
+  async function writeDailySections(value) {
+    await writeJson(dailyFile, value)
+  }
 
   async function readJson(file, fallback) {
     try {
@@ -406,7 +424,7 @@ export function createReco({ history, library, storage, config = {}, logger, ver
       libraryKeys, topArtistSet, profileValues, exploreSlots: plan.slots, similarCount: needSimilar,
     })
     if (picked.length < needSimilar + EXPLORE_SLOTS) {
-      throw new Error(`合格候选不足（装配 ${picked.length}/10），请稍后重试生成`)
+      throw new Error(`合格候选不足（装配 ${picked.length}/${needSimilar + EXPLORE_SLOTS}），请稍后重试生成`)
     }
 
     // ---- 逐首联网核实；失败用同类替补（保证输出全部核实过）----
@@ -467,7 +485,7 @@ export function createReco({ history, library, storage, config = {}, logger, ver
     }
 
     const batch = {
-      generatedAt: Date.now(),
+      generatedAt: now(),
       engine: 'traditional-musicbrainz',
       bootstrap,
       note: bootstrap ? '探索批次：基于公众热门流派与场景生成，收听增长后会逐步个性化' : null,
@@ -491,7 +509,7 @@ export function createReco({ history, library, storage, config = {}, logger, ver
         ...(Array.isArray(state.recentRecommended) ? state.recentRecommended : []),
         ...finalItems.map((i) => normKey(i.artist, i.title)),
       ].slice(-RECENT_RECOMMENDED_MAX),
-      updatedAt: Date.now(),
+      updatedAt: now(),
     })
     const batches = await readJson(historyFile, [])
     batches.push(batch)
@@ -502,6 +520,128 @@ export function createReco({ history, library, storage, config = {}, logger, ver
   /** 三栏目入口：today(7+3 当日批次) + artist(高频歌手扩相似) + new(新增/近期发行)。
    * 当日已有批次则复用（todayFromCache=true），否则生成新批次（推进轮换）。
    * 全部候选逐首 MB 核实；item 结构同 /api/reco，可直接传 POST /api/download。 */
+  /** today 栏：同自然日且数量达标（>=14+6，冷启动探索批次>=6）复用最近批次；否则生成新批次。 */
+  async function computeTodayColumn({ taste, force = false }) {
+    const batches = await readJson(historyFile, [])
+    const lastBatch = Array.isArray(batches) && batches.length > 0 ? batches[batches.length - 1] : null
+    // D3：探索批次只有 ≥6 首，但同日内仍应复用（否则每次进推荐页都重新生成）
+    const sizeOk = (lastBatch?.items ?? []).length >= SIMILAR_SLOTS + EXPLORE_SLOTS || lastBatch?.bootstrap === true
+    if (!force && lastBatch && sameLocalDay(lastBatch.generatedAt, now()) && sizeOk) {
+      const today = lastBatch.items ?? []
+      // 旧批次（三期生成，无 coverUrl）：复用时就地回填并写回批次
+      if (today.some((i) => !i.coverUrl)) {
+        let changed = false
+        for (const it of today) {
+          if (it.coverUrl) continue
+          let coverUrl = null
+          if (it.trackId) {
+            const rec = library.getRecord?.(it.trackId)
+            if (rec?.meta?.hasCover) coverUrl = `/dsh-music/cover/${it.trackId}`
+          }
+          if (!coverUrl) coverUrl = await images.coverUrl({ artist: it.artist, title: it.title })
+          if (coverUrl) {
+            it.coverUrl = coverUrl
+            changed = true
+          }
+        }
+        if (changed) {
+          lastBatch.items = today
+          await writeJson(historyFile, batches)
+        }
+      }
+      return { items: today, generatedAt: lastBatch.generatedAt, bootstrap: Boolean(lastBatch.bootstrap), note: lastBatch.note ?? null, reused: true }
+    }
+    const batch = await generate(taste ? { taste } : {})
+    return { items: batch.items, generatedAt: batch.generatedAt, bootstrap: Boolean(batch.bootstrap), note: batch.note ?? null, reused: false }
+  }
+
+  /** artist 栏：20 位歌手对象 + 真实图；推进歌手轮换游标。 */
+  async function computeArtistColumn({ seedArtists, state }) {
+    const artistResult = await discover.buildArtistList({
+      seedArtists, exclude: new Set(seedArtists), cursor: Number(state.cursors?.artist) || 0, limit: 20,
+    })
+    const imgMap = await images.artistImages(artistResult.artists.map((a) => a.name))
+    const items = artistResult.artists.map((a) => ({ ...a, imageUrl: imgMap.get(a.name)?.thumbnail ?? null }))
+    await writeJson(stateFile, {
+      ...state,
+      cursors: { ...(state.cursors ?? {}), artist: artistResult.cursor },
+      updatedAt: now(),
+    })
+    return { items, generatedAt: now() }
+  }
+
+  /** new 栏：近 180 天真新发行，逐首核实；排除防重复名单与不喜欢。 */
+  async function computeNewColumn({ taste, profile, seedArtists, libraryKeys, recentKeys, tracks, todayItems, state }) {
+    const recentRecommended = new Set(Array.isArray(state.recentRecommended) ? state.recentRecommended : [])
+    const used = new Set([...recentRecommended, ...todayItems.map((i) => normKey(i.artist, i.title))])
+    const disliked = await readDislikes()
+    const tasteGenres = (taste?.genres?.length ? taste.genres : profile.genres).slice(0, 4)
+    const newCands = (await discover.buildNewCandidates({
+      tracks, getRecord: (id) => library.getRecord(id), seedArtists, libraryKeys, recentKeys,
+      extraKeys: used, tasteGenres, dislikedKeys: disliked.keys, dislikedArtists: disliked.artists, limit: 20,
+    })).filter((c) => !disliked.keys.has(normKey(c.artist, c.title)))
+    const items = await verifyToItems(newCands, { limit: 20, category: 'new', usedKeys: used })
+    return { items, generatedAt: now() }
+  }
+
+  function sectionsPayload({ today, artist, newColumn, fromCache, generatedAt, refreshed }) {
+    return {
+      today: today.items,
+      artist: artist.items,
+      new: newColumn.items,
+      generatedAt: generatedAt ?? now(),
+      todayGeneratedAt: today.generatedAt,
+      todayFromCache: Boolean(fromCache.today),
+      // 十期：每栏是否来自当日缓存（前端据此判断是否需要请求新数据）
+      fromCache: { today: Boolean(fromCache.today), artist: Boolean(fromCache.artist), new: Boolean(fromCache.new) },
+      exploreOnly: Boolean(today.bootstrap),
+      note: today.note ?? null,
+      ...(refreshed ? { refreshed } : {}),
+    }
+  }
+
+  /** 计算三栏（sections 首调与 refresh 共用）；force=指定栏强制重算，其余取当日快照。
+   * 任一步抛错都不会写当日快照——失败当日可重试。 */
+  async function computeSections({ taste, daily = null, force = null } = {}) {
+    const { events } = await history.read({ limit: HISTORY_LIMIT })
+    if (typeof library.ensureScanned === 'function') await library.ensureScanned()
+    const snap = library.snapshot()
+    const tracks = snap?.tracks ?? []
+    const { seedArtists, libraryKeys, recentKeys, profile } = await buildProfile(events, tracks)
+
+    const fromCache = {
+      today: Array.isArray(daily?.today?.items),
+      artist: Array.isArray(daily?.artist?.items),
+      new: Array.isArray(daily?.new?.items),
+    }
+
+    let today = daily?.today
+    if (force === 'today' || !fromCache.today) {
+      fromCache.today = false
+      today = await computeTodayColumn({ taste, force: force === 'today' })
+      fromCache.today = Boolean(today.reused)
+    }
+
+    // generate() 会写轮换游标/防重复名单，必须在其后重读 state
+    let state = await readJson(stateFile, {})
+    let artist = daily?.artist
+    if (force === 'artist' || !fromCache.artist) {
+      fromCache.artist = false
+      artist = await computeArtistColumn({ seedArtists, state })
+      state = await readJson(stateFile, {})
+    }
+
+    let newColumn = daily?.new
+    if (force === 'new' || !fromCache.new) {
+      fromCache.new = false
+      newColumn = await computeNewColumn({ taste, profile, seedArtists, libraryKeys, recentKeys, tracks, todayItems: today.items, state })
+    }
+
+    const saved = { date: localDateKey(now()), generatedAt: now(), today, artist, new: newColumn }
+    await writeDailySections(saved)
+    return sectionsPayload({ today, artist, newColumn, fromCache, generatedAt: saved.generatedAt, refreshed: force ?? undefined })
+  }
+
   async function sections(options = {}) {
     const taste = options?.taste ?? undefined
     if (sectionsBusy) {
@@ -511,91 +651,36 @@ export function createReco({ history, library, storage, config = {}, logger, ver
     }
     sectionsBusy = true
     try {
-      const { events } = await history.read({ limit: HISTORY_LIMIT })
-      if (typeof library.ensureScanned === 'function') await library.ensureScanned()
-      const snap = library.snapshot()
-      const tracks = snap?.tracks ?? []
-      const { seedArtists, libraryKeys, recentKeys, profile } = await buildProfile(events, tracks)
-
-      // today：同一自然日「且数量达标（>= 14+6）」才复用最近一批；否则生成新批次（推进探索轴轮换）。
-      // 旧版本（二期 10 首/批）的当日批次不足 20，必须重生成，否则活体会显示 10 首。
-      const batches = await readJson(historyFile, [])
-      const lastBatch = Array.isArray(batches) && batches.length > 0 ? batches[batches.length - 1] : null
-      let today
-      let todayBatch = null
-      let todayGeneratedAt
-      let todayFromCache = false
-      // D3：探索批次只有 ≥6 首，但同日内仍应复用（否则每次进推荐页都重新生成）
-      const sizeOk = (lastBatch?.items ?? []).length >= SIMILAR_SLOTS + EXPLORE_SLOTS || lastBatch?.bootstrap === true
-      if (lastBatch && sameLocalDay(lastBatch.generatedAt, Date.now()) && sizeOk) {
-        today = lastBatch.items ?? []
-        todayBatch = lastBatch
-        todayGeneratedAt = lastBatch.generatedAt
-        todayFromCache = true
-        // 旧批次（三期生成，无 coverUrl）：复用时就地回填并写回批次——
-        // 本地曲走曲库封面路由，其余走图片模块（有 30 天缓存），失败保持 null 由前端兜底。
-        if (today.some((i) => !i.coverUrl)) {
-          let changed = false
-          for (const it of today) {
-            if (it.coverUrl) continue
-            let coverUrl = null
-            if (it.trackId) {
-              const rec = library.getRecord?.(it.trackId)
-              if (rec?.meta?.hasCover) coverUrl = `/dsh-music/cover/${it.trackId}`
-            }
-            if (!coverUrl) coverUrl = await images.coverUrl({ artist: it.artist, title: it.title })
-            if (coverUrl) {
-              it.coverUrl = coverUrl
-              changed = true
-            }
-          }
-          if (changed) {
-            lastBatch.items = today
-            await writeJson(historyFile, batches)
-          }
-        }
-      } else {
-        const batch = await generate(taste ? { taste } : {})
-        today = batch.items
-        todayBatch = batch
-        todayGeneratedAt = batch.generatedAt
+      const daily = await readDailySections()
+      // 当日快照完整 → 零重算直接返回（不读历史、不调 discover/verify）
+      if (daily && Array.isArray(daily.today?.items) && Array.isArray(daily.artist?.items) && Array.isArray(daily.new?.items)) {
+        return sectionsPayload({
+          today: daily.today, artist: daily.artist, newColumn: daily.new,
+          fromCache: { today: true, artist: true, new: true }, generatedAt: daily.generatedAt,
+        })
       }
+      return await computeSections({ taste, daily })
+    } finally {
+      sectionsBusy = false
+    }
+  }
 
-      // 状态在 generate() 之后重读，避免覆盖其写入的轮换游标/防重复名单
-      const state = await readJson(stateFile, {})
-      const recentRecommended = new Set(Array.isArray(state.recentRecommended) ? state.recentRecommended : [])
-      const usedKeys = new Set([...recentRecommended, ...today.map((i) => normKey(i.artist, i.title))])
-
-      // artist：20 位歌手对象（高频歌手的关系歌手 + 同标签热门歌手补充，含歌手页核实记录）
-      const artistResult = await discover.buildArtistList({
-        seedArtists, exclude: new Set(seedArtists), cursor: Number(state.cursors?.artist) || 0, limit: 20,
-      })
-      // 歌手真实图（维基 action API 批量一次请求，失败 null 由前端兜底）
-      const imgMap = await images.artistImages(artistResult.artists.map((a) => a.name))
-      const artist = artistResult.artists.map((a) => ({ ...a, imageUrl: imgMap.get(a.name)?.thumbnail ?? null }))
-
-      // new：真正的新发行（近 180 天，八期①）——高频歌手/相似歌手/口味流派来源；本地刚入库不算新歌
-      const disliked = await readDislikes()
-      const tasteGenres = (taste?.genres?.length ? taste.genres : profile.genres).slice(0, 4)
-      const usedForNew = new Set(usedKeys)
-      const newCands = (await discover.buildNewCandidates({
-        tracks, getRecord: (id) => library.getRecord(id), seedArtists, libraryKeys, recentKeys, extraKeys: usedForNew,
-        tasteGenres, dislikedKeys: disliked.keys, dislikedArtists: disliked.artists, limit: 20,
-      })).filter((c) => !disliked.keys.has(normKey(c.artist, c.title)))
-      const fresh = await verifyToItems(newCands, { limit: 20, category: 'new', usedKeys: usedForNew })
-
-      // 持久化歌手轮换游标（merge 现有 state，不覆盖其余字段）
-      await writeJson(stateFile, {
-        ...state,
-        cursors: { ...(state.cursors ?? {}), artist: artistResult.cursor },
-        updatedAt: Date.now(),
-      })
-      return {
-        today, artist, new: fresh, generatedAt: Date.now(), todayGeneratedAt, todayFromCache,
-        // D3 明示：今日栏为冷启动「探索批次」（历史不足时），前端可据此显示说明
-        exploreOnly: Boolean(todayBatch?.bootstrap),
-        note: todayBatch?.note ?? null,
-      }
+  /** 十期 stage1：单栏主动重推（只重算指定栏，其余取当日快照；跨天/首调时缺失栏补齐）。 */
+  async function refreshSections(axis, options = {}) {
+    if (!['today', 'artist', 'new'].includes(axis)) {
+      const err = new Error('axis 必须是 today/artist/new 之一')
+      err.code = 'BAD_REQUEST'
+      throw err
+    }
+    if (sectionsBusy) {
+      const err = new Error('推荐栏目正在生成中，请稍候')
+      err.code = 'BUSY'
+      throw err
+    }
+    sectionsBusy = true
+    try {
+      const daily = await readDailySections()
+      return await computeSections({ taste: options?.taste, daily, force: axis })
     } finally {
       sectionsBusy = false
     }
@@ -604,6 +689,7 @@ export function createReco({ history, library, storage, config = {}, logger, ver
   return {
     generate,
     sections,
+    refreshSections,
     styleSearch,
     artistPage,
     artistAvatar,
@@ -637,6 +723,35 @@ export function registerRecoRoutes(webServer, { reco, logger }) {
     const languages = parseList('languages')
     return genres.length || languages.length ? { genres, languages } : undefined
   }
+
+  /** 十期：refresh 的 axis 走 JSON body {axis}（也兼容 ?axis=），便于客户端 POST。 */
+  const readJsonBody = (req) => new Promise((resolve, reject) => {
+    if (typeof req.on !== 'function') return resolve({})
+    let raw = ''
+    let done = false
+    req.on('data', (chunk) => {
+      if (done) return
+      raw += chunk
+      if (raw.length > 4096) {
+        done = true
+        reject(Object.assign(new Error('请求体过大'), { code: 'BAD_REQUEST' }))
+      }
+    })
+    req.on('end', () => {
+      if (done) return
+      done = true
+      if (!raw.trim()) return resolve({})
+      try {
+        const parsed = JSON.parse(raw)
+        resolve(parsed && typeof parsed === 'object' ? parsed : {})
+      } catch {
+        reject(Object.assign(new Error('请求体不是合法 JSON'), { code: 'BAD_REQUEST' }))
+      }
+    })
+    req.on('error', (err) => {
+      if (!done) { done = true; reject(err) }
+    })
+  })
 
   const disposers = []
   disposers.push(webServer.register({
@@ -681,6 +796,27 @@ export function registerRecoRoutes(webServer, { reco, logger }) {
         if (err.code === 'BUSY') return sendJson(res, 409, { error: err.message })
         warn(`dsh-music: 推荐栏目服务错误: ${err.message}`)
         return sendJson(res, 502, { error: `推荐栏目生成失败：${err.message}` })
+      }
+    },
+  }))
+  disposers.push(webServer.register({
+    kind: 'exact',
+    path: '/dsh-music/api/reco/sections/refresh',
+    handler: async (req, res) => {
+      if (req.method !== 'POST') return sendJson(res, 405, { error: '方法不允许' })
+      try {
+        const body = await readJsonBody(req)
+        const url = new URL(req.url ?? '/', 'http://dsh-music.local')
+        const axis = String(body?.axis ?? url.searchParams.get('axis') ?? '').trim()
+        const taste = body?.taste ? normalizeTaste(body.taste) : parseTaste(req)
+        const cleaned = taste && (taste.genres.length || taste.languages.length) ? taste : undefined
+        if (!axis) return sendJson(res, 400, { error: '缺少 axis（today/artist/new）' })
+        return sendJson(res, 200, await reco.refreshSections(axis, cleaned ? { taste: cleaned } : {}))
+      } catch (err) {
+        if (err.code === 'BUSY') return sendJson(res, 409, { error: err.message })
+        if (err.code === 'BAD_REQUEST') return sendJson(res, 400, { error: err.message })
+        warn(`dsh-music: 单栏重推服务错误: ${err.message}`)
+        return sendJson(res, 502, { error: `单栏重推失败：${err.message}` })
       }
     },
   }))

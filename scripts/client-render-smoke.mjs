@@ -77,7 +77,9 @@ const fetchMock = async (url) => {
     ? { available: true, hint: null }
     : url.includes('/sync/status')
       ? { running: false, result: null, error: null }
-      : { imageUrl: 'http://img/orig.jpg', thumbnailUrl: 'http://img/thumb.jpg' };
+      : url.includes('/library/preview')
+        ? { status: 'ready', audioUrl: '/dsh-music/preview/abc.m4a' }
+        : { imageUrl: 'http://img/orig.jpg', thumbnailUrl: 'http://img/thumb.jpg' };
   return { ok: true, json: async () => body };
 };
 const sandbox = { window: windowMock, localStorage, console, setTimeout, clearTimeout, fetch: fetchMock,
@@ -125,7 +127,11 @@ const usePreview = (sel) => sel({ status: 'idle', item: null, error: null });
 const useArtistImages = (sel) => sel({ images: { '测试歌手': 'http://img/thumb.jpg', '别的歌手': null } });
 const onboardingState = { status: 'ready', completed: true, starter: null, taste: null, error: null };
 const useOnboarding = (sel) => sel(onboardingState);
-const hooks = { usePlayer, useLibrary, useLyrics, useUi, useHistory, useReco, useDownload, useSync, useLikes, usePreview, useArtistImages, useOnboarding };
+const useWarm = (sel) => {
+  const svcWarm = (services['music'] || {}).warm;
+  return sel(svcWarm ? svcWarm.source.getSnapshot() : { pending: {}, running: false });
+};
+const hooks = { usePlayer, useLibrary, useLyrics, useUi, useHistory, useReco, useDownload, useSync, useLikes, usePreview, useWarm, useArtistImages, useOnboarding };
 const svc = services['music'] || services['shell.overlay'] || {};
 const music = comps['music'];
 const mini = comps['dsh-music.mini-player'];
@@ -181,6 +187,50 @@ state.view = 'reco';
 const recoTree = expand(music(baseProps));
 check('reco renders', !!recoTree);
 check('reco row artist clickable', has(recoTree, (n) => cls(n) === 'dshm-srow-artist'));
+
+/* 4x) 十期：三栏各自「重新推荐」 + 播放按钮缓存转圈 */
+const refreshBtns = walk(recoTree).filter((n) => /dshm-col-refresh/.test(cls(n)));
+check('reco shows one refresh button per column', refreshBtns.length === 3, 'count=' + refreshBtns.length);
+check('reco refresh buttons are enabled', refreshBtns.every((b) => !b.props.disabled));
+fetchCalls.length = 0;
+refreshBtns[0].props.onClick();
+await new Promise((r) => setTimeout(r, 40));
+check('refresh calls the per-column POST route',
+  fetchCalls.some((u) => String(u).includes('/reco/sections/refresh')), JSON.stringify(fetchCalls.slice(0, 3)));
+
+const savedRecoSpin = recoState;
+recoState = { ...recoState, refreshing: { today: true, artist: false, new: false } };
+const spinColTree = expand(music(baseProps));
+const loaders = walk(spinColTree).filter((n) => cls(n) === 'dshm-col-loading');
+check('refreshing column shows exactly one column loader', loaders.length === 1, 'count=' + loaders.length);
+check('refreshing column keeps the other columns intact',
+  walk(spinColTree).filter((n) => /dshm-col-refresh/.test(cls(n)) && n.props.disabled).length === 1);
+recoState = savedRecoSpin;
+
+const warmSvc = (services['music'] || {}).warm;
+check('warm service is injected', !!warmSvc && typeof warmSvc.playList === 'function');
+const spinItems = [{ title: '缓存曲A', artist: '缓存歌手', verification: { ok: true } },
+  { title: '缓存曲B', artist: '缓存歌手', verification: { ok: true } }];
+const savedRecoCol = recoState;
+recoState = { ...recoState, status: 'ready', sections: { today: spinItems, artist: [], new: [] } };
+state.view = 'reco';
+const warmRun = warmSvc.playList(spinItems, () => null);
+const busyTree = expand(music(baseProps));
+check('column play spins every uncached row at once',
+  walk(busyTree).filter((n) => /dshm-playround-busy/.test(cls(n))).length === 2,
+  'busy=' + walk(busyTree).filter((n) => /dshm-playround-busy/.test(cls(n))).length);
+await warmRun;
+check('rows stop spinning once caching lands',
+  Object.keys(warmSvc.source.getSnapshot().pending).length === 0,
+  JSON.stringify(warmSvc.source.getSnapshot()));
+check('warm run finishes and unlocks clicks', warmSvc.source.getSnapshot().running === false);
+warmSvc.source.set({ running: true });
+fetchCalls.length = 0;
+await warmSvc.playList(spinItems, () => null);
+check('repeated column click is ignored while a warm run is active',
+  !fetchCalls.some((u) => String(u).includes('/library/preview')), JSON.stringify(fetchCalls.slice(0, 3)));
+warmSvc.source.set({ running: false });
+recoState = savedRecoCol;
 
 /* 4z) cold-start onboarding (v6 batch 4): empty library + empty recommendations */
 const savedLib = libState, savedReco = recoState, savedHist = historyState;

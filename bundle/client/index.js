@@ -281,6 +281,10 @@ window.__ModuleLoader__.load({
       recoGenerate: '生成推荐',
       recoRegenerate: '换一批',
       recoGenerating: '正在生成推荐（每首候选先联网核实，约需半分钟）…',
+      recoRefresh: '重新推荐本栏',
+      recoRefreshHint: '只重算这一栏，其余两栏保持当天已固化的内容',
+      recoRefreshing: '正在重新推荐这一栏…',
+      recoRefreshBusy: '这一栏正在生成中，请稍后再试',
       recoEmptyTitle: '还没有推荐',
       recoEmptyBody: '基于你的收听历史生成一批 10 首：7 首口味相近 + 3 首强制探索（流派/语言/年代轮换），每首都先联网核实真实存在，杜绝幻觉歌曲。多听几首歌，推荐会更懂你。',
       recoError: '推荐生成失败',
@@ -547,6 +551,10 @@ window.__ModuleLoader__.load({
       recoGenerate: 'Generate',
       recoRegenerate: 'Another batch',
       recoGenerating: 'Generating recommendations (every candidate is verified online first, ~30s)…',
+      recoRefresh: 'Refresh this column',
+      recoRefreshHint: 'Recomputes only this column; the other two keep today\'s fixed snapshot',
+      recoRefreshing: 'Refreshing this column…',
+      recoRefreshBusy: 'This column is being generated — try again in a moment',
       recoEmptyTitle: 'No recommendations yet',
       recoEmptyBody: 'We build a batch of 10 from your listening history: 7 close to your taste + 3 forced explorations (genre / language / era rotation), each verified online before it shows up. Play a few more songs and it gets smarter.',
       recoError: 'Recommendations failed',
@@ -1049,7 +1057,14 @@ window.__ModuleLoader__.load({
 .dshm-col-head{flex:none;display:flex;align-items:center;gap:8px;padding:12px 14px 8px;}
 .dshm-col-title{font-size:13.5px;font-weight:680;color:var(--dsw-alias-label-primary);display:flex;align-items:center;gap:6px;}
 .dshm-col-count{font-size:11px;color:var(--dsw-alias-label-tertiary);}
-.dshm-col-play{margin-left:auto;}
+.dshm-col-play{margin-left:0;}
+.dshm-col-actions{display:flex;align-items:center;gap:6px;margin-left:auto;}
+.dshm-col-refresh{width:26px;height:26px;padding:0;justify-content:center;color:var(--dsw-alias-label-secondary);}
+.dshm-col-refresh:hover{color:var(--dsw-alias-label-primary);}
+.dshm-col-loading{display:flex;align-items:center;gap:6px;padding:0 14px 6px;font-size:12px;color:var(--dsw-alias-label-secondary);}
+.dshm-refresh-note{color:var(--dsw-alias-label-secondary);}
+.dshm-playround-busy{background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);opacity:.7;}
+.dshm-playround .dshm-spin,.dshm-col-refresh .dshm-spin,.dshm-col-loading .dshm-spin,.dshm-row-play .dshm-spin{display:inline-block;width:12px;height:12px;border-radius:50%;border:2px solid currentColor;border-top-color:transparent;box-sizing:border-box;}
 .dshm-col-list{flex:1;min-height:0;overflow-y:auto;padding:2px 8px 16px;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2) transparent;}
 .dshm-srow{display:grid;grid-template-columns:38px minmax(0,1fr) auto auto auto;align-items:center;gap:10px;padding:6px;border-radius:10px;transition:background .12s;}
 .dshm-srow:hover{background:var(--dsw-alias-interactive-bg-hover);}
@@ -1203,6 +1218,16 @@ window.__ModuleLoader__.load({
         if (languages.length) parts.push('languages=' + encodeURIComponent(languages.join(',')));
         return parts.length ? '?' + parts.join('&') : '';
       }
+      /* Same taste payload for POST bodies (per-column refresh). */
+      function tasteBody(taste) {
+        if (!taste || typeof taste !== 'object') return {};
+        const genres = (taste.genres || []).filter(Boolean);
+        const languages = (taste.languages || []).filter(Boolean);
+        const body = {};
+        if (genres.length) body.genres = genres;
+        if (languages.length) body.languages = languages;
+        return body;
+      }
 
       async function request(path, options) {
         let res;
@@ -1228,6 +1253,10 @@ window.__ModuleLoader__.load({
         artist: (name) => request('/dsh-music/api/artist?name=' + encodeURIComponent(name)),
         artistImage: (name) => request('/dsh-music/api/reco/artist-image?name=' + encodeURIComponent(name)),
         recoSections: (taste) => request('/dsh-music/api/reco/sections' + tasteQuery(taste)),
+        recoSectionsRefresh: (axis, taste) => request('/dsh-music/api/reco/sections/refresh', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.assign({ axis }, tasteBody(taste))),
+        }),
         deleteTrack: (trackId, confirm) => request('/dsh-music/api/library/delete', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ trackId, confirm: !!confirm }),
@@ -1512,7 +1541,12 @@ window.__ModuleLoader__.load({
      * 6c. S3 services: recommendations / downloads / sync / history
      * ================================================================ */
     function createRecoService(api) {
-      const store = createStore({ status: 'idle', items: [], sections: null, generatedAt: 0, stats: null, error: null, bootstrapNote: null });
+      const store = createStore({
+        status: 'idle', items: [], sections: null, generatedAt: 0, stats: null, error: null, bootstrapNote: null,
+        fromCache: { today: false, artist: false, new: false },
+        refreshing: { today: false, artist: false, new: false },
+        refreshError: null, refreshBusy: false,
+      });
       let inflight = false;
       async function pollUntilIdle() {
         for (;;) {
@@ -1565,6 +1599,8 @@ window.__ModuleLoader__.load({
           store.set({
             status: 'ready', sections, items: sections.today, generatedAt: data.generatedAt || Date.now(),
             error: null, bootstrapNote: data.exploreOnly ? (data.note || null) : null,
+            fromCache: (data && data.fromCache) || { today: false, artist: false, new: false },
+            refreshError: null, refreshBusy: false,
           });
           return true;
         } catch { return false; }
@@ -1580,7 +1616,41 @@ window.__ModuleLoader__.load({
           }
         } catch { /* keep empty CTA; user can still generate */ }
       }
-      return { source: store, generate, load, searchStyle: (q) => api.recoStyle(q), artistPage: (name) => api.recoArtist(name) };
+      /* Per-column "recompute this column only" (十期). The Host keeps the
+       * three-column daily snapshot and only regenerates the requested axis,
+       * reusing the rest, so the other two columns never flicker. */
+      const AXES = ['today', 'artist', 'new'];
+      async function refresh(axis) {
+        if (AXES.indexOf(axis) < 0 || !api.recoSectionsRefresh) return;
+        const cur = store.getSnapshot();
+        if (cur.refreshing[axis]) return;
+        store.set({ refreshing: Object.assign({}, cur.refreshing, { [axis]: true }), refreshError: null, refreshBusy: false });
+        try {
+          const data = await api.recoSectionsRefresh(axis, readPrefs().taste || null);
+          const prev = store.getSnapshot();
+          const base = prev.sections || { today: [], artist: [], new: [] };
+          const sections = {
+            today: (data && data.today) || base.today || [],
+            artist: (data && data.artist) || base.artist || [],
+            new: (data && (data['new'] || data.newColumn)) || base['new'] || [],
+          };
+          store.set({
+            status: 'ready', sections, items: sections.today, error: null,
+            generatedAt: (data && data.generatedAt) || prev.generatedAt,
+            fromCache: (data && data.fromCache) || prev.fromCache,
+            refreshing: { today: false, artist: false, new: false },
+            refreshError: null, refreshBusy: false,
+          });
+        } catch (err) {
+          const msg = (err && err.message) || String(err);
+          const busy = /409|正在|生成中/.test(msg);
+          store.set({
+            refreshing: { today: false, artist: false, new: false },
+            refreshError: busy ? 'busy' : msg, refreshBusy: busy,
+          });
+        }
+      }
+      return { source: store, generate, load, refresh, searchStyle: (q) => api.recoStyle(q), artistPage: (name) => api.recoArtist(name) };
     }
 
     function createDownloadService(api) {
@@ -1812,6 +1882,95 @@ window.__ModuleLoader__.load({
     }
 
     /* ================================================================
+     * 6b. Warm service —「缓存转圈」反馈（十期②）
+     * pending 里为正在缓存的行；试听缓存同一时刻只能跑一首（Host 单 job +
+     * 共享管线锁），所以这里串行预热：整栏播放时整栏行同时转圈，每首就绪
+     * 立即解除该行转圈并追加到队列（首首就绪即开播）。同一时间只跑一轮，
+     * 转圈期间再点任何一首都被忽略，避免连点重复下载。
+     * ================================================================ */
+    function createWarmService(preview, player) {
+      const store = createStore({ pending: {}, running: false });
+      function isPending(item) {
+        return !!store.getSnapshot().pending[likeKey(item)];
+      }
+      function mark(items, on) {
+        const next = Object.assign({}, store.getSnapshot().pending);
+        for (const it of items || []) {
+          const key = likeKey(it);
+          if (on) next[key] = true;
+          else delete next[key];
+        }
+        store.set({ pending: next });
+      }
+      function trackOf(item, audioUrl) {
+        return {
+          id: 'preview:' + likeKey(item),
+          title: item.title, artist: item.artist, album: item.album,
+          coverUrl: item.coverUrl || null, audioUrl, duration: null,
+        };
+      }
+      function warmOne(item) {
+        return new Promise((resolve) => { preview.start(item, (res) => resolve(res || {})); });
+      }
+      function handle(item, res) {
+        if (!res || !res.audioUrl) return;
+        const tr = trackOf(item, res.audioUrl);
+        if (!player.source.getSnapshot().track) player.playTracks([tr], 0);
+        else player.appendTrack(tr);
+      }
+      /* Whole column: local hits start instantly, the rest warm serially. */
+      async function playList(items, findLocal) {
+        if (store.getSnapshot().running) return;
+        const list = items || [];
+        const localTracks = [];
+        const remote = [];
+        for (const it of list) {
+          if (!it) continue;
+          const lc = findLocal ? findLocal(it) : null;
+          if (lc) {
+            if (!localTracks.some((tr) => tr.id === lc.id)) localTracks.push(lc);
+          } else if (it.verification) {
+            remote.push(it);
+          }
+        }
+        if (localTracks.length) player.playTracks(localTracks, 0);
+        if (!remote.length) return;
+        mark(remote, true);
+        store.set({ running: true });
+        let firstError = null;
+        try {
+          for (const it of remote) {
+            const res = await warmOne(it);
+            mark([it], false);
+            if (!res.audioUrl && res.error && !firstError) firstError = res.error;
+            handle(it, res);
+          }
+        } finally {
+          mark(remote, false);
+          store.set({ running: false });
+        }
+        return { error: firstError };
+      }
+      /* Single row: only that row spins. */
+      async function playOne(item) {
+        if (store.getSnapshot().running) return null;
+        mark([item], true);
+        store.set({ running: true });
+        let err = null;
+        try {
+          const res = await warmOne(item);
+          if (res && res.error) err = res.error;
+          handle(item, res);
+        } finally {
+          mark([item], false);
+          store.set({ running: false });
+        }
+        return err ? { error: err } : null;
+      }
+      return { source: store, isPending, playList, playOne };
+    }
+
+    /* ================================================================
      * 7. Player engine — singleton audio, survives panel navigation
      * ================================================================ */
     function createPlayer(t, api) {
@@ -1943,8 +2102,18 @@ window.__ModuleLoader__.load({
         syncHost({ trackId: queue[index].id, queue: queue.map((tr) => tr.id).filter(Boolean) });
       }
 
-      function jumpTo(index) {
-        const { queue } = snap();
+      /* Append one ready track without interrupting what plays now (十期②：
+       * 整栏逐首缓存，就绪一首追加一首，队列自然续播). */
+      function appendTrack(tr) {
+        if (!tr || !tr.audioUrl) return;
+        const snapNow = snap();
+        if (!snapNow.track) { playTracks([tr], 0); return; }
+        const queue = [...snapNow.queue, tr];
+        set({ queue });
+        syncHost({ queue: queue.map((x) => (x && x.id) || null).filter(Boolean) });
+      }
+
+      function jumpTo(index) {        const { queue } = snap();
         if (index < 0 || index >= queue.length) return;
         report(snap().track, true);
         set({ queueIndex: index });
@@ -2123,6 +2292,7 @@ window.__ModuleLoader__.load({
       return {
         source: store,
         playTracks,
+        appendTrack,
         playAll: (tracks, opts) => playTracks(tracks, 0, opts),
         jumpTo,
         toggle,
@@ -2486,7 +2656,7 @@ window.__ModuleLoader__.load({
       }, h(IconThumbDown, { size: 15, style: disliked ? { fill: 'currentColor' } : undefined }));
     }
 
-    function TrackRow({ track, index, isCurrent, playing, onPlay, onDelete, onReveal, onOpenArtist, likes, useLikes, t, muted }) {
+    function TrackRow({ track, index, isCurrent, playing, onPlay, onDelete, onReveal, onOpenArtist, likes, useLikes, t, muted, pending }) {
       return h('div', {
         className: cx('dshm-row', isCurrent && 'dshm-row-current', muted && 'dshm-row-off'),
         role: 'button', tabIndex: 0,
@@ -2516,7 +2686,8 @@ window.__ModuleLoader__.load({
         onDelete ? h('span', { className: 'dshm-row-actions', onClick: (e) => e.stopPropagation() },
           h(IconButton, { label: t('revealTrack'), onClick: (e) => { e.stopPropagation(); onReveal(track); } }, h(IconDisc, { size: 14 })),
           h(IconButton, { label: t('deleteTrack'), onClick: (e) => { e.stopPropagation(); onDelete(track); } }, h(IconClose, { size: 14 }))) : null,
-        h('span', { className: 'dshm-row-play', 'aria-hidden': true }, h(IconPlay, { size: 15 })));
+        h('span', { className: cx('dshm-row-play', pending && 'dshm-playround-busy'), 'aria-hidden': true },
+          pending ? h('span', { className: 'dshm-spin' }) : h(IconPlay, { size: 15 })));
     }
 
     /* ================================================================
@@ -2972,7 +3143,7 @@ window.__ModuleLoader__.load({
 
     /* V3 helpers: shared play-or-preview flow (preview never enters the
      * library; only ♥-like downloads it — the Host handles that on like). */
-    function playSong(item, player, tracks, preview, setNotice, t) {
+    function playSong(item, player, tracks, preview, setNotice, t, warm) {
       const local = (item.trackId && tracks.find((tr) => tr.id === item.trackId))
         || tracks.find((tr) =>
           normalizeZh(tr.artist) === normalizeZh(item.artist) &&
@@ -2983,6 +3154,14 @@ window.__ModuleLoader__.load({
         return;
       }
       if (!item.verification) { setNotice(t('previewNoVerify')); return; }
+      setNotice('');
+      if (warm) {
+        /* 十期②：该行 ▶ 变转圈直到缓存就绪；运行中再点被 warm 内部忽略。 */
+        warm.playOne(item).then((res) => {
+          if (res && res.error) setNotice(t('previewFail') + '：' + res.error);
+        });
+        return;
+      }
       setNotice(t('previewLoading'));
       preview.start(item, (res) => {
         if (res.error) { setNotice(t('previewFail') + '：' + res.error); return; }
@@ -3030,8 +3209,10 @@ window.__ModuleLoader__.load({
       return h(Thumb, { src: url || null, size: size || 20, round: true, glyph: IconNote });
     }
 
-    function SongRow({ t, item, likes, useLikes, onPlay, onOpenArtist, isCurrent, playing, showReason }) {
+    function SongRow({ t, item, likes, useLikes, onPlay, onOpenArtist, isCurrent, playing, showReason, warm, useWarm }) {
       const liked = useLikes((st) => !!st.keys[likeKey(item)]);
+      /* 十期②：该行的缓存转圈态由 warm store 驱动（整栏播放时整栏一起转）。 */
+      const pending = warm && useWarm ? !!useWarm((st) => !!(st.pending && st.pending[likeKey(item)])) : false;
       return h('div', { className: cx('dshm-srow', isCurrent && 'dshm-row-current') },
         h(Thumb, { src: item.coverUrl, size: 38 }),
         h('div', {
@@ -3061,11 +3242,15 @@ window.__ModuleLoader__.load({
         }, h(IconHeart, { size: 15, style: liked ? { fill: 'currentColor' } : undefined })),
         likes ? h(DislikeButton, { t, item, likes, useLikes }) : null,
         h('button', {
-          type: 'button', className: 'dshm-playround',
-          'aria-label': isCurrent && playing ? t('pause') : t('play'),
-          title: isCurrent && playing ? t('pause') : t('previewLabel'),
+          type: 'button', className: cx('dshm-playround', pending && 'dshm-playround-busy'),
+          'aria-label': pending ? t('previewLoading') : (isCurrent && playing ? t('pause') : t('play')),
+          'aria-busy': pending ? 'true' : undefined,
+          disabled: !!pending,
+          title: pending ? t('previewLoading') : (isCurrent && playing ? t('pause') : t('previewLabel')),
           onClick: () => onPlay(item),
-        }, h(isCurrent && playing ? IconPause : IconPlay, { size: 13 })));
+        }, pending
+          ? h('span', { className: 'dshm-spin', 'aria-hidden': true })
+          : h(isCurrent && playing ? IconPause : IconPlay, { size: 13 })));
     }
 
     /* Artist column row: real artist/band image + name + genre hint + chevron. */
@@ -3082,7 +3267,7 @@ window.__ModuleLoader__.load({
         h('span', { className: 'dshm-arow-arrow', 'aria-hidden': true }, '›'));
     }
 
-    function RecoView({ t, reco, download, player, library, likes, preview, history, openArtistPage, useReco, useDownload, useLibrary, useLikes, usePlayer, useHistory }) {
+    function RecoView({ t, reco, download, player, library, likes, preview, history, openArtistPage, warm, useReco, useDownload, useLibrary, useLikes, usePlayer, useHistory, useWarm }) {
       const s = useReco((st) => st);
       const histStats = useHistory ? useHistory((st) => st.stats) : null;
       const coldStart = !(histStats && histStats.totalPlays > 0);
@@ -3120,7 +3305,7 @@ window.__ModuleLoader__.load({
             normalizeZh(tr.title) === normalizeZh(item.title));
       }
       function onPlay(item) {
-        playSong(item, player, tracks, preview, setNotice, t);
+        playSong(item, player, tracks, preview, setNotice, t, warm);
       }
       /* Clicking a row queues the whole visible list (deduped local matches)
        * and jumps straight to the clicked song; preview-only items fall back
@@ -3137,7 +3322,14 @@ window.__ModuleLoader__.load({
         if (localTracks.length) player.playTracks(localTracks, at);
         else if (list.length) onPlay(item || list[0]);
       }
-      function playColumn(list) { playListFrom(list, null); }
+      /* 「播放本栏」：本地命中的立即入队，未入库的整栏一起转圈、串行预热，
+       * 就绪一首追加一首（首首就绪即开播）。 */
+      function playColumn(list) {
+        if (!warm) { playListFrom(list, null); return; }
+        warm.playList(list, findLocal).then((res) => {
+          if (res && res.error) setNotice(t('previewFail') + '：' + res.error);
+        });
+      }
 
       const sections = s.sections || { today: s.items, artist: [], new: [] };
       const styleActive = styleState.status !== 'idle';
@@ -3150,15 +3342,35 @@ window.__ModuleLoader__.load({
         if (!list.length) return h('div', { className: 'dshm-lyrics-hint' }, t('recoSectionEmpty'));
         return list.map((item, i) => h(SongRow, {
           key: i, t, item, likes, useLikes, onPlay: (it) => playListFrom(list, it), onOpenArtist: openArtistPage, showReason,
-          isCurrent: isCur(item), playing,
+          isCurrent: isCur(item), playing, warm, useWarm,
         }));
       }
-      function column(headKey, icon, list, extraHead) {
+      /* 十期：每栏各自的「重新推荐」——只重算本栏，刷新中仅该栏转圈。 */
+      function colRefresh(axis) {
+        const refreshing = s.refreshing || {};
+        const busy = !!refreshing[axis];
+        return h('button', {
+          type: 'button', className: cx('dshm-chipbtn dshm-col-refresh', busy && 'dshm-chipbtn-busy'),
+          disabled: busy, title: t('recoRefreshHint'), 'aria-label': t('recoRefresh'),
+          'aria-busy': busy ? 'true' : undefined,
+          onClick: () => reco.refresh(axis),
+        }, busy
+          ? h('span', { className: 'dshm-spin', 'aria-hidden': true })
+          : h(IconRefresh, { size: 12 }));
+      }
+      function colRefreshBanner(axis) {
+        const refreshing = s.refreshing || {};
+        if (!refreshing[axis]) return null;
+        return h('div', { className: 'dshm-col-loading', role: 'status' },
+          h('span', { className: 'dshm-spin', 'aria-hidden': true }), t('recoRefreshing'));
+      }
+      function column(headKey, icon, list, extraHead, axis) {
         return h('section', { className: 'dshm-column', key: headKey },
           h('div', { className: 'dshm-col-head' },
             h('div', { className: 'dshm-col-title' }, h(icon, { size: 14 }), t(headKey)),
             h('span', { className: 'dshm-col-count' }, list.length + ' ' + t('tracksUnit')),
-            extraHead),
+            h('div', { className: 'dshm-col-actions' }, axis ? colRefresh(axis) : null, extraHead)),
+          colRefreshBanner(axis),
           h('div', { className: 'dshm-col-list' }, songRows(list, true)));
       }
 
@@ -3241,17 +3453,24 @@ window.__ModuleLoader__.load({
               h('span', { className: 'dshm-explore-chip' }, t('exploreChip')),
               h('span', null, s.bootstrapNote))
           : null,
+        s.refreshError
+          ? h('div', { className: 'dshm-explore-note dshm-refresh-note', role: 'alert' },
+              h(IconAlert, { size: 13 }),
+              h('span', null, s.refreshBusy ? t('recoRefreshBusy') : s.refreshError))
+          : null,
         h('div', { className: 'dshm-columns' },
           column('colToday', IconSparkles, sections.today || [],
             h('button', {
               type: 'button', className: 'dshm-chipbtn dshm-col-play',
               disabled: !(sections.today || []).length,
               onClick: () => playColumn(sections.today || []),
-            }, h(IconPlay, { size: 12 }), t('playColumn'))),
+            }, h(IconPlay, { size: 12 }), t('playColumn')), 'today'),
           h('section', { className: 'dshm-column', key: 'colArtist' },
             h('div', { className: 'dshm-col-head' },
               h('div', { className: 'dshm-col-title' }, h(IconNote, { size: 14 }), t('colArtist')),
-              h('span', { className: 'dshm-col-count' }, (sections.artist || []).length + ' ' + t('tracksUnit'))),
+              h('span', { className: 'dshm-col-count' }, (sections.artist || []).length + ' ' + t('tracksUnit')),
+              h('div', { className: 'dshm-col-actions' }, colRefresh('artist'))),
+            colRefreshBanner('artist'),
             h('div', { className: 'dshm-col-list' },
               (sections.artist || []).length === 0
                 ? h('div', { className: 'dshm-lyrics-hint' }, t('recoSectionEmpty'))
@@ -3261,7 +3480,7 @@ window.__ModuleLoader__.load({
               type: 'button', className: 'dshm-chipbtn dshm-col-play',
               disabled: !(sections.new || []).length,
               onClick: () => playColumn(sections.new || []),
-            }, h(IconPlay, { size: 12 }), t('playColumn')))));
+            }, h(IconPlay, { size: 12 }), t('playColumn')), 'new')));
     }
 
     /* Shared artist profile block (intro / news / trivia / similar), reused by
@@ -3720,7 +3939,7 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 12. Music panel (main slot): header + tabs + per-view body
      * ================================================================ */
-    function MusicPanel({ t, player, library, lyrics, reco, download, sync, history, likes, preview, openView, openArtistPage, setMiniHidden, ui, artistImages, artistPage, onboarding, useUi, useLibrary, usePlayer, useLyrics, useReco, useDownload, useSync, useHistory, useLikes, usePreview, useArtistImages, useArtistPage, useOnboarding }) {
+    function MusicPanel({ t, player, library, lyrics, reco, download, sync, history, likes, preview, warm, openView, openArtistPage, setMiniHidden, ui, artistImages, artistPage, onboarding, useUi, useLibrary, usePlayer, useLyrics, useReco, useDownload, useSync, useHistory, useLikes, usePreview, useWarm, useArtistImages, useArtistPage, useOnboarding }) {
       const view = useUi((s) => s.view);
       const welcomePreview = useUi((s) => s.welcomePreview);
       const onboardingSnap = useOnboarding((st) => st);
@@ -3775,7 +3994,7 @@ window.__ModuleLoader__.load({
       const body = view === 'library'
         ? h(LibraryView, { t, player, library, sync, download, preview, likes, openArtistPage, artistImages, useLikes, useSync, useDownload, useLibrary, usePlayer, useArtistImages })
         : view === 'reco'
-          ? h(RecoView, { t, reco, download, player, library, likes, preview, history, openArtistPage, useReco, useDownload, useLibrary, useLikes, usePlayer, useHistory })
+          ? h(RecoView, { t, reco, download, player, library, likes, preview, history, openArtistPage, warm, useReco, useDownload, useLibrary, useLikes, usePlayer, useHistory, useWarm })
           : view === 'artist'
             ? h(ArtistPageView, { t, reco, player, likes, preview, library, openView, openArtistPage, artistImages, artistPage, useUi, useLikes, useLibrary, usePlayer, useArtistImages, useArtistPage })
             : view === 'history'
@@ -4086,6 +4305,7 @@ window.__ModuleLoader__.load({
       const historyService = createHistoryService(api);
       const player = createPlayer(t, api);
       const previewService = createPreviewService(api);
+      const warmService = createWarmService(previewService, player);
       const likesService = createLikesService(api, () => downloadService.warm());
       ctx.effect(() => () => {
         downloadService.dispose();
@@ -4153,7 +4373,7 @@ window.__ModuleLoader__.load({
         inject: () => ({
           player, library, lyrics: lyricsService, artist: artistService, artistImages: artistImageService, onboarding: onboardingService,
           reco: recoService, download: downloadService, sync: syncService, history: historyService,
-          likes: likesService, preview: previewService,
+          likes: likesService, preview: previewService, warm: warmService,
           openView, openArtistPage, setMiniHidden, ui, artistPage: artistPageService,
           hooks: {
             player: player.source, library: library.source, ui,
@@ -4161,6 +4381,7 @@ window.__ModuleLoader__.load({
             reco: recoService.source, download: downloadService.source,
             sync: syncService.source, history: historyService.source,
             likes: likesService.source, preview: previewService.source,
+            warm: warmService.source,
           },
         }),
       }, MusicPanel)), 'dsh-music: main panel');
