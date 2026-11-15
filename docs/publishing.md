@@ -188,3 +188,14 @@ Release 说明至少写：七期变更（悬浮标/应用内顶层与跨应用�
 | 目录 PR #15213 | ✅ 已钉 | commit 51d1104 tarball → v0.5.0；PR OPEN head=51d1104；仓库满 1 天门槛 2026-11-15T01:20:25Z（本地 09:20）CI 自动转绿，余候维护者审核 |
 
 - dshmarket 检索机制（已核 dshmarket 1.73.17 源码）：发现页只读官方目录（全球 awesome-dsh-plugin.com/plugins.json / 中国区 npm 包 dsh-plugin-catalog，每日 build），不做全网 npm 搜索；PR 合并+目录重建后 dshmarket 自动可见，无需用户任何操作。
+
+## 10. 十期 v0.6.0 发布（2026-11-15）
+
+| 环节 | 结果 | 证据 |
+|---|---|---|
+| git | ✅ | commit b51a143 push main（十期功能：当日快照 cache/reco/sections-daily.json + POST /reco/sections/refresh + client 三栏刷新按钮/转圈反馈 + README 十期表 + 0.6.0） |
+| 测试 | ✅ 全绿 | reco 167 / render 84 / packaging 14 / cold-install 20 / persistent-cache 13；verification-v10 0 阻塞（GUI：三栏刷新按钮实拍、行播放转圈约 6s 恢复；整栏转圈/当日固化单测覆盖） |
+| 重启后活体 | ✅ | ①refresh 路由：GET→405、POST 非法 axis→400、POST {"axis":"new"}→200 且 refreshed="new"；②当日固化：GET /reco/sections fromCache={today:true,artist:true,new:true}（sections-daily.json date=2026-11-15）；③refresh 只动指定栏：POST 后 fromCache={today:true,artist:true,new:false}，快照文件仅 new.generatedAt 更新 |
+| npm | ✅ | `npm publish` → `+ @vicyangorg/dsh-music@0.6.0`；packument dist-tags.latest=0.6.0，tarball https://registry.npmjs.org/@vicyangorg/dsh-music/-/dsh-music-0.6.0.tgz，shasum 1f296baa46e1eac1470b052e954d0c7cce92998b 与发布 tgz 一致（CDN 复制约 4 分钟） |
+| GitHub Release | ✅ | https://github.com/vicyangworld/dsh-music/releases/tag/v0.6.0 资产 vicyangorg-dsh-music-0.6.0.tgz 活体 200（419733B，created 2026-11-15T02:41:32Z） |
+| 目录 PR #15213 | ✅ 已钉 | commit 70e407d tarball → v0.6.0；checks 全绿（Submission gate pass + check pass 17m58s）；MERGEABLE，余候维护者审核 |
