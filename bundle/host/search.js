@@ -5,7 +5,7 @@ import { mbJson, mbUrl } from './reco/mb.js'
 import { normalizeZh } from './t2s.js'
 import { archiveVerificationFile } from './media-core.js'
 
-const TYPES = new Set(['song', 'artist'])
+const TYPES = new Set(['song', 'artist', 'both'])
 
 export function createSearch({ library, storage, logger } = {}) {
   const warn = (msg) => logger?.warn?.(msg)
@@ -29,6 +29,7 @@ export function createSearch({ library, storage, logger } = {}) {
       return (data.artists ?? []).map((a) => ({
         kind: 'artist',
         id: a.id,
+        name: a.name,
         artist: a.name,
         disambiguation: a.disambiguation || null,
         country: a.country || null,
@@ -67,13 +68,48 @@ export function createSearch({ library, storage, logger } = {}) {
     return items
   }
 
+  /** 十一批3 聚合候选：一次返回「可选歌手」「可选歌曲」两组（模糊搜索供选择）。
+   * Promise.allSettled：任一支路失败不拖垮另一支路，失败信息进 remoteError。 */
+  async function remoteSearchBoth(query) {
+    const [artistRes, songRes] = await Promise.allSettled([
+      remoteSearch(query, 'artist'),
+      remoteSearch(query, 'song'),
+    ])
+    const artists = artistRes.status === 'fulfilled' ? artistRes.value : []
+    const songs = songRes.status === 'fulfilled' ? songRes.value : []
+    const errors = [artistRes, songRes].filter((r) => r.status === 'rejected').map((r) => r.reason?.message || String(r.reason))
+    return { artists, songs, errors }
+  }
+
   /** 主入口：空 q 返回空；本地无匹配时才联网补全；MB 失败优雅降级（remoteError）。 */
   async function search(q, type = 'song') {
     const query = String(q ?? '').trim()
     const t = TYPES.has(type) ? type : 'song'
-    if (!query) return { local: [], remote: [], query: '', type: t, remoteError: null }
+    if (!query) {
+      return t === 'both'
+        ? { local: [], artists: [], songs: [], remote: [], query: '', type: t, remoteError: null }
+        : { local: [], remote: [], query: '', type: t, remoteError: null }
+    }
     await library.ensureScanned()
-    const local = localSearch(query, t)
+    const local = localSearch(query, t === 'both' ? 'song' : t)
+    if (t === 'both') {
+      let artists = []
+      let songs = []
+      let remoteError = null
+      try {
+        const r = await remoteSearchBoth(query)
+        artists = r.artists
+        songs = r.songs
+        if (r.errors.length) remoteError = `联网补全部分失败：${r.errors.join('; ')}`
+      } catch (err) {
+        remoteError = `联网补全暂不可用：${err.message}`
+        warn(`dsh-music: 搜索联网补全失败: ${err.message}`)
+      }
+      // 与本地去重（歌曲按 歌手+歌名）；歌手项无本地概念，全部保留供选择
+      const localKeys = new Set(local.map((x) => `${normalizeZh(x.artist)}::${normalizeZh(x.title)}`))
+      songs = songs.filter((s) => !localKeys.has(`${normalizeZh(s.artist)}::${normalizeZh(s.title)}`))
+      return { local, artists, songs, remote: [...artists, ...songs], query, type: t, remoteError }
+    }
     let remote = []
     let remoteError = null
     // O1（Chief 定口径）：非空 query 始终联网补全（不再仅本地未命中才发，本地结果在前由客户端合并）
@@ -113,7 +149,7 @@ export function registerSearchRoutes(webServer, { search, logger }) {
         const url = new URL(req.url ?? '/', 'http://dsh-music.local')
         const q = url.searchParams.get('q') ?? ''
         const type = url.searchParams.get('type') ?? 'song'
-        if (!TYPES.has(type)) return sendJson(res, 400, { error: 'type 必须是 song 或 artist' })
+        if (!TYPES.has(type)) return sendJson(res, 400, { error: 'type 必须是 song、artist 或 both' })
         return sendJson(res, 200, await search.search(q, type))
       } catch (err) {
         warn(`dsh-music: 搜索服务错误: ${err.message}`)

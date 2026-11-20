@@ -9,6 +9,8 @@ import { registerMetadataRoutes } from './metadata/index.js'
 import { createHistory, registerHistoryRoutes } from './history.js'
 import { createDownload, registerDownloadRoutes } from './download.js'
 import { createSync, registerSyncRoutes } from './sync.js'
+import { createPlaylistImport, registerImportRoutes } from './playlist-import.js'
+import { createVerifier } from './reco/verify.js'
 import { createManage, registerManageRoutes } from './manage.js'
 import { createSearch, registerSearchRoutes } from './search.js'
 import { createLikes, registerLikesRoutes } from './likes.js'
@@ -30,6 +32,7 @@ export function apply(ctx, config = {}) {
   const history = createHistory({ storage, library, logger })
   const download = createDownload({ storage, library, config, logger })
   const sync = createSync({ library, config, logger })
+  const importer = createPlaylistImport({ library, download, config, logger, verifier: createVerifier({ storage, logger }) })
   const manage = createManage({ library, logger })
   const search = createSearch({ library, storage, logger })
   const preview = createPreview({ storage, config, logger })
@@ -45,6 +48,7 @@ export function apply(ctx, config = {}) {
       ...registerHistoryRoutes(ctx.webServer, { history, likes, logger }),
       ...registerDownloadRoutes(ctx.webServer, { download, logger }),
       ...registerSyncRoutes(ctx.webServer, { sync, logger }),
+      ...registerImportRoutes(ctx.webServer, { importer, logger }),
       ...registerManageRoutes(ctx.webServer, { manage, logger }),
       ...registerSearchRoutes(ctx.webServer, { search, logger }),
       ...registerLikesRoutes(ctx.webServer, { likes, logger }),

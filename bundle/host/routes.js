@@ -137,6 +137,65 @@ export function registerRoutes(webServer, { library, playback, storage, logger }
     }),
   )
 
+  /** v13 设置页：扫描目录管理（列表/新增/移除），变更持久化到 dataDir/directories.json。 */
+  disposers.push(
+    webServer.register({
+      kind: 'exact',
+      path: '/dsh-music/api/library/directories',
+      handler: async (req, res) => {
+        if (req.method !== 'GET') return fail(res, 405, '方法不允许')
+        try {
+          return sendJson(res, 200, { directories: await library.listDirectories() })
+        } catch (err) {
+          warn(`dsh-music: 读取目录列表失败: ${err.message}`)
+          return fail(res, 500, '读取目录列表失败')
+        }
+      },
+    }),
+  )
+
+  disposers.push(
+    webServer.register({
+      kind: 'exact',
+      path: '/dsh-music/api/library/directories/add',
+      handler: async (req, res) => {
+        if (req.method !== 'POST') return fail(res, 405, '方法不允许')
+        try {
+          let body
+          try { body = JSON.parse((await readBody(req)) || '{}') } catch { return fail(res, 400, '请求体不是合法 JSON') }
+          const path = typeof body?.path === 'string' ? body.path.trim() : ''
+          if (!path) return fail(res, 400, '缺少 path（要新增的音乐目录绝对路径）')
+          const added = await library.addDirectory(path, typeof body?.source === 'string' && body.source ? body.source : 'custom')
+          return sendJson(res, 200, { added, directories: await library.listDirectories(), library: library.snapshot() })
+        } catch (err) {
+          warn(`dsh-music: 新增目录失败: ${err.message}`)
+          return fail(res, 500, '新增目录失败')
+        }
+      },
+    }),
+  )
+
+  disposers.push(
+    webServer.register({
+      kind: 'exact',
+      path: '/dsh-music/api/library/directories/remove',
+      handler: async (req, res) => {
+        if (req.method !== 'POST') return fail(res, 405, '方法不允许')
+        try {
+          let body
+          try { body = JSON.parse((await readBody(req)) || '{}') } catch { return fail(res, 400, '请求体不是合法 JSON') }
+          const path = typeof body?.path === 'string' ? body.path.trim() : ''
+          if (!path) return fail(res, 400, '缺少 path（要移除的音乐目录路径）')
+          const removed = await library.removeDirectory(path)
+          return sendJson(res, 200, { removed, directories: await library.listDirectories(), library: library.snapshot() })
+        } catch (err) {
+          warn(`dsh-music: 移除目录失败: ${err.message}`)
+          return fail(res, 500, '移除目录失败')
+        }
+      },
+    }),
+  )
+
   disposers.push(
     webServer.register({
       kind: 'exact',

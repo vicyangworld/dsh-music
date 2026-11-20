@@ -40,10 +40,12 @@ export function parseFileName(name) {
 
 export function createLibrary({ storage, config = {}, logger }) {
   const reader = createTagReader(config)
+  const directoriesFile = storage ? join(storage.dataDir, 'directories.json') : null
   const directories = (config.directories ?? DEFAULT_DIRECTORIES).map((d) => ({
     source: d.source,
     path: expandHome(d.path),
   }))
+  let directoriesLoaded = false
   const cache = { version: 1, entries: {} }
   let cacheLoaded = false
   let byId = new Map()
@@ -54,6 +56,30 @@ export function createLibrary({ storage, config = {}, logger }) {
   let disposed = false
 
   const warn = (msg) => logger?.warn?.(msg)
+
+  /** 目录列表持久化（v13 设置页）：directories.json 存在即整体生效（含默认目录的移除）。 */
+  async function ensureDirectoriesLoaded() {
+    if (directoriesLoaded || !storage || !directoriesFile) return
+    directoriesLoaded = true
+    const saved = await storage.readJson(directoriesFile, null)
+    if (saved && saved.version === 1 && Array.isArray(saved.directories)) {
+      directories.length = 0
+      for (const d of saved.directories) {
+        if (d && typeof d.path === 'string' && d.path.trim()) {
+          directories.push({ source: typeof d.source === 'string' && d.source ? d.source : 'custom', path: expandHome(d.path.trim()) })
+        }
+      }
+    }
+  }
+
+  async function persistDirectories() {
+    if (!storage || !directoriesFile) return
+    try {
+      await storage.writeJson(directoriesFile, { version: 1, directories: directories.map((d) => ({ source: d.source, path: d.path })) })
+    } catch (err) {
+      warn(`dsh-music: 写目录列表失败: ${err.message}`)
+    }
+  }
 
   async function loadCache() {
     if (cacheLoaded) return
@@ -123,6 +149,7 @@ export function createLibrary({ storage, config = {}, logger }) {
   async function scan() {
     if (scanning) return scanning
     const job = (async () => {
+      await ensureDirectoriesLoaded()
       await loadCache()
       const records = []
       const liveRoots = []
@@ -211,13 +238,34 @@ export function createLibrary({ storage, config = {}, logger }) {
     roots() {
       return roots
     },
-    /** 运行时追加音乐目录（onboarding「使用我已有的音乐库」）：去重后重扫。
+    /** 当前扫描目录列表（v13 设置页用）。 */
+    async listDirectories() {
+      await ensureDirectoriesLoaded()
+      return directories.map((d) => ({ source: d.source, path: d.path }))
+    },
+    /** 运行时追加音乐目录（onboarding「使用我已有的音乐库」/设置页）：去重、持久化后重扫。
      * 只读用户目录；返回值 = 是否真的新增并触发扫描。 */
     async addDirectory(path, source = 'custom') {
+      await ensureDirectoriesLoaded()
       const p = expandHome(String(path ?? '').trim())
       if (!p) return false
       if (directories.some((d) => d.path === p)) return false
       directories.push({ source, path: p })
+      await persistDirectories()
+      await scan()
+      return true
+    },
+    /** 移除扫描目录（含默认目录，用户自主）：持久化后重扫。返回是否真的移除。 */
+    async removeDirectory(path) {
+      await ensureDirectoriesLoaded()
+      const p = expandHome(String(path ?? '').trim())
+      if (!p) return false
+      const before = directories.length
+      const kept = directories.filter((d) => d.path !== p)
+      if (kept.length === before) return false
+      directories.length = 0
+      directories.push(...kept)
+      await persistDirectories()
       await scan()
       return true
     },

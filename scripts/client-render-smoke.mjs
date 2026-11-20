@@ -63,23 +63,51 @@ const localStorage = {
   _v: {}, getItem(k) { return this._v[k] ?? null; },
   setItem(k, v) { this._v[k] = String(v); }, removeItem(k) { delete this._v[k]; },
 };
-let captured = null;
-const windowMock = {
+let captured = null;const windowMock = {
   __ModuleLoader__: { load: (def) => { captured = def; } },
   localStorage, innerWidth: 1440, innerHeight: 900,
   addEventListener: noop, removeEventListener: noop,
   confirm: () => true,
 };
 const fetchCalls = [];
-const fetchMock = async (url) => {
+const fetchBodies = [];
+let importStatusBody = { running: false, summary: null, error: null };
+let importPostShouldFail = false;
+let importStatusShouldFail = false;
+let dirsList = [{ source: 'default', path: '~/Music/dsh-music' }, { source: 'custom', path: '/tmp/extra-music' }];
+const fetchMock = async (url, opts) => {
   fetchCalls.push(url);
-  const body = url.includes('/sync/availability')
+  if (importStatusShouldFail && url.includes('/import-playlist/status')) throw new Error('network down');
+  try { if (opts && opts.body) fetchBodies.push({ url: String(url), body: String(opts.body) }); } catch { /* none */ }
+  const body = url.includes('/import-playlist/status')
+    ? importStatusBody
+    : url.includes('/import-playlist') && opts && opts.method === 'POST'
+      ? (importPostShouldFail
+        ? { ok: false, json: async () => ({ error: '请粘贴有效的歌单链接' }) }
+        : { started: true, dryRun: true })
+      : url.includes('/library/directories')
+        ? (() => {
+            if (opts && opts.method === 'POST') {
+              let p = null;
+              try { p = JSON.parse(String(opts.body)).path; } catch { /* ignore */ }
+              if (p && url.includes('/add') && !dirsList.some((d) => d.path === p)) dirsList.push({ source: 'custom', path: p });
+              if (p && url.includes('/remove')) dirsList = dirsList.filter((d) => d.path !== p);
+              return { added: true, removed: true, directories: dirsList.slice() };
+            }
+            return { directories: dirsList.slice() };
+          })()
+      : url.includes('/sync/availability')
     ? { available: true, hint: null }
     : url.includes('/sync/status')
       ? { running: false, result: null, error: null }
       : url.includes('/library/preview')
         ? { status: 'ready', audioUrl: '/dsh-music/preview/abc.m4a' }
-        : { imageUrl: 'http://img/orig.jpg', thumbnailUrl: 'http://img/thumb.jpg' };
+        : url.includes('/library/search')
+          ? { local: [], remote: [], artists: [{ name: '模糊歌手', disambiguation: '乐队' }], songs: [{ artist: '模糊歌手', title: '模糊歌', album: '专辑X', verification: 'verified' }] }
+          : { imageUrl: 'http://img/orig.jpg', thumbnailUrl: 'http://img/thumb.jpg' };
+  if (importPostShouldFail && url.includes('/import-playlist') && opts && opts.method === 'POST') {
+    return { ok: false, json: async () => ({ error: '请粘贴有效的歌单链接' }) };
+  }
   return { ok: true, json: async () => body };
 };
 const sandbox = { window: windowMock, localStorage, console, setTimeout, clearTimeout, fetch: fetchMock,
@@ -122,6 +150,24 @@ const useHistory = (sel) => sel(historyState);
 const useReco = (sel) => sel(recoState);
 const useDownload = (sel) => sel({ running: false, total: 0, done: 0, items: [], error: null, finishedAt: 0 });
 const useSync = (sel) => sel({ phase: 'idle', result: null, error: null, tracks: [] });
+let impStateQq = { phase: 'idle', summary: null, error: null };
+let impStateNe = { phase: 'idle', summary: null, error: null };
+const impSvcRefQq = { current: null };
+const impSvcRefNe = { current: null };
+const useImportQq = (sel) => {
+  if (impSvcRefQq.current) impStateQq = impSvcRefQq.current.source.getSnapshot();
+  return sel(impStateQq);
+};
+const useImportNe = (sel) => {
+  if (impSvcRefNe.current) impStateNe = impSvcRefNe.current.source.getSnapshot();
+  return sel(impStateNe);
+};
+let dirsState = { status: 'idle', items: [], error: null };
+const dirsSvcRef = { current: null };
+const useDirs = (sel) => {
+  if (dirsSvcRef.current) dirsState = dirsSvcRef.current.source.getSnapshot();
+  return sel(dirsState);
+};
 const useLikes = (sel) => sel({ keys: {}, loaded: true, error: null });
 const usePreview = (sel) => sel({ status: 'idle', item: null, error: null });
 const useArtistImages = (sel) => sel({ images: { '测试歌手': 'http://img/thumb.jpg', '别的歌手': null } });
@@ -131,8 +177,9 @@ const useWarm = (sel) => {
   const svcWarm = (services['music'] || {}).warm;
   return sel(svcWarm ? svcWarm.source.getSnapshot() : { pending: {}, running: false });
 };
-const hooks = { usePlayer, useLibrary, useLyrics, useUi, useHistory, useReco, useDownload, useSync, useLikes, usePreview, useWarm, useArtistImages, useOnboarding };
+const hooks = { usePlayer, useLibrary, useLyrics, useUi, useHistory, useReco, useDownload, useSync, useImportQq, useImportNe, useDirs, useLikes, usePreview, useWarm, useArtistImages, useOnboarding };
 const svc = services['music'] || services['shell.overlay'] || {};
+dirsSvcRef.current = (services['music'] || {}).dirs;
 const music = comps['music'];
 const mini = comps['dsh-music.mini-player'];
 if (!music) throw new Error('MusicPanel not registered');
@@ -307,8 +354,8 @@ check('welcome preview shows a close button', has(expand(music(baseProps)), (n) 
 state.welcomePreview = false;
 state.view = 'library';
 const backTree = expand(music(baseProps));
-check('returning user gets a preview-welcome entry', has(backTree, (n) => cls(n) === 'dshm-chipbtn'
-  && (n.children || []).includes('welcomePreview')));
+check('returning user gets a settings entry (v13 replaces the preview-welcome chip)', has(backTree, (n) => cls(n) === 'dshm-chipbtn'
+  && JSON.stringify(n.children || []).includes('settings')));
 
 /* 4a) small round artist avatars where the brief asks for them */
 const isRoundThumb = (n) => cls(n).includes('dshm-tile') && n.props.style && n.props.style.borderRadius === '50%';
@@ -364,17 +411,60 @@ offRows[0].props.onClick();
 check('clicking an unplayable top song does not start playback', plays.length === beforeOff,
   'plays=' + plays.length);
 
-/* 5) mini player states */
+/* 5) mini player states (v12: quiet widget, lyrics expand/close) */
 const miniProps = { t: (k) => k, ...(services['dsh-music.mini-player'] || {}), ...hooks };
 state.miniHidden = false; state.miniCollapsed = false;
+localStorage.setItem('dsh-music.prefs', JSON.stringify({ miniVersion: 2, miniLyricsOpen: false }));
 const expanded = expand(mini(miniProps));
 check('mini expanded renders', !!expanded);
 check('mini has drag grip', has(expanded, (n) => cls(n) === 'dshm-mini-grip' && typeof n.props.onPointerDown === 'function'));
 check('mini has seek slider', has(expanded, (n) => cls(n).includes('dshm-slider')));
-check('mini shows 3 lyric lines', walk(expanded).filter((n) => /dshm-mini-lyric\b/.test(cls(n))).length === 3,
+check('mini closed state hides lyrics', walk(expanded).filter((n) => /dshm-mini-lyric\b/.test(cls(n))).length === 0,
   'count=' + walk(expanded).filter((n) => /dshm-mini-lyric\b/.test(cls(n))).length);
+check('mini has a hover-revealed lyric toggle (词)', (() => {
+  const btn = walk(expanded).find((n) => (n.props && n.props['aria-label']) === 'miniLyrics' && typeof n.props.onClick === 'function');
+  return !!btn;
+})());
+check('mini hover extras reserve space (no layout jump classes)', has(expanded, (n) => cls(n) === 'dshm-mini-hover dshm-mini-extras'));
+/* v12r2：底行常驻（词｜extras｜滑条｜A- A+）；当前时间 1 个在 row1，总时长走滑条 title */
+check('mini bottom bar always present (词+slider+A-/A+)', (() => {
+  const bar = walk(expanded).find((n) => cls(n) === 'dshm-mini-bar');
+  return !!bar
+    && walk(bar).some((n) => /dshm-mini-tool-word/.test(cls(n)))
+    && walk(bar).some((n) => cls(n).includes('dshm-slider'))
+    && ['miniFontSmaller', 'miniFontLarger'].every((k) => walk(bar).some((n) => (n.props && n.props['aria-label']) === k));
+})());
+check('mini shows a single current time; total duration lives on slider title', (() => {
+  const times = walk(expanded).filter((n) => cls(n) === 'dshm-mini-time');
+  const slider = walk(expanded).find((n) => cls(n).includes('dshm-slider'));
+  return times.length === 1 && times[0].props.children === '0:42' && slider && slider.props.title === '3:20';
+})());
+check('mini no cover renders frameless default cover (dshm-cover-empty)', has(expanded, (n) => /dshm-cover-empty/.test(cls(n))));
+check('mini root is a left-drag surface excluding interactive targets', (() => {
+  const root = walk(expanded).find((n) => /^dshm-mini/.test(cls(n)) && n.props.onPointerDown);
+  return !!root && ['onPointerDown', 'onPointerMove', 'onPointerUp', 'onPointerCancel'].every((k) => typeof root.props[k] === 'function');
+})());
 check('mini artist clickable', has(expanded, (n) => cls(n).includes('dshm-mini-artist') && typeof n.props.onClick === 'function'));
 check('mini has collapse button', has(expanded, (n) => (n.props && n.props.title) === 'miniCollapse'));
+
+/* lyrics expanded state: 3 lines (v12r2) + bar wired and persisted */
+localStorage.setItem('dsh-music.prefs', JSON.stringify({ miniVersion: 2, miniLyricsOpen: true, miniLyricFont: 13 }));
+const expandedLyrics = expand(mini(miniProps));
+check('mini expanded lyrics show exactly 3 lines (winSize=3)', walk(expandedLyrics).filter((n) => /dshm-mini-lyric\b/.test(cls(n))).length === 3,
+  'count=' + walk(expandedLyrics).filter((n) => /dshm-mini-lyric\b/.test(cls(n))).length);
+check('mini bar survives the lyrics-open state', has(expandedLyrics, (n) => cls(n) === 'dshm-mini-bar'));
+const fontBefore = (walk(expandedLyrics).find((n) => cls(n) === 'dshm-mini-lyrics').props.style || {}).fontSize;
+const aPlus = walk(expandedLyrics).find((n) => (n.props && n.props['aria-label']) === 'miniFontLarger' && typeof n.props.onClick === 'function');
+aPlus.props.onClick();
+await new Promise((r) => setTimeout(r, 20));
+const prefsNow = JSON.parse(localStorage.getItem('dsh-music.prefs'));
+check('mini A+ enlarges lyrics font and persists (11..17 clamp)', prefsNow.miniLyricFont === 14 && fontBefore === '13px',
+  JSON.stringify({ prefsNow: prefsNow.miniLyricFont, fontBefore }));
+const lyricToggle = walk(expandedLyrics).find((n) => /dshm-mini-tool-word/.test(cls(n)) && typeof n.props.onClick === 'function');
+lyricToggle.props.onClick();
+await new Promise((r) => setTimeout(r, 20));
+check('mini 词 toggle closes lyrics and persists',
+  JSON.parse(localStorage.getItem('dsh-music.prefs')).miniLyricsOpen === false);
 
 state.miniCollapsed = true;
 const collapsedTree = expand(mini(miniProps));
@@ -434,28 +524,47 @@ check('zh locale has no duplicate keys (no shadowing)', !!zhBlock.text && zhBloc
 check('en locale has no duplicate keys (no shadowing)', !!enBlock.text && enBlock.dup.length === 0, 'dups=' + JSON.stringify(enBlock.dup));
 check('no stale "stage 3" copy in zh/en', !/阶段 ?3|stage ?3/i.test(zhBlock.text) && !/阶段 ?3|stage ?3/i.test(enBlock.text));
 
-/* 5y) integration: the real preview chipbtn writes the REAL ui store and the
- *     panel re-renders into the welcome view (closes the GUI-only gap). */
+/* 5y) integration: the settings gear writes the REAL ui store and the
+ *     panel re-renders into the settings view (v13: sync cards + folders). */
 const uiStore = svc.hooks && svc.hooks.ui;
 uiStore.set({ view: 'library', welcomePreview: false, lyricsOpen: false });
 const useUiReal = (sel) => sel(uiStore.getSnapshot());
 const realProps = { ...baseProps, useUi: useUiReal };
 const realHeader = expand(music(realProps));
-const previewBtn = walk(realHeader).find((n) => cls(n) === 'dshm-chipbtn'
-  && (n.children || []).includes('welcomePreview'));
-check('preview button is rendered and enabled', !!previewBtn && !(previewBtn.props || {}).disabled);
-previewBtn.props.onClick();
+const settingsBtn = walk(realHeader).find((n) => cls(n) === 'dshm-chipbtn'
+  && JSON.stringify(n.props.children || '').includes('settings'));
+check('settings gear button is rendered and enabled', !!settingsBtn && !(settingsBtn.props || {}).disabled);
+/* preload the directory list so the settings view renders rows synchronously */
+await dirsSvcRef.current.load();
+settingsBtn.props.onClick();
 const afterClick = uiStore.getSnapshot();
-check('preview click writes the real ui store', afterClick.view === 'welcome' && afterClick.welcomePreview === true,
-  'view=' + afterClick.view + ' preview=' + afterClick.welcomePreview);
-const realPreviewTree = expand(music(realProps));
-check('preview view renders mascot + close button', has(realPreviewTree, (n) => cls(n) === 'dshm-fish')
-  && has(realPreviewTree, (n) => cls(n) === 'dshm-wclose'));
-const closeBtn = walk(realPreviewTree).find((n) => cls(n) === 'dshm-wclose');
-closeBtn.props.onClick();
-const afterClose = uiStore.getSnapshot();
-check('preview close returns to the library view', afterClose.view === 'library' && afterClose.welcomePreview === false,
-  'view=' + afterClose.view);
+check('settings click writes the real ui store', afterClick.view === 'settings', 'view=' + afterClick.view);
+const settingsTree = expand(music(realProps));
+check('settings view renders the three-card sync row and the folders section',
+  !!walk(settingsTree).find((n) => cls(n) === 'dshm-syncrow') && !!walk(settingsTree).find((n) => cls(n) === 'dshm-dirs'));
+check('settings view has no import/preview mascots', !has(settingsTree, (n) => cls(n) === 'dshm-fish'));
+const dirRows = walk(settingsTree).filter((n) => cls(n) === 'dshm-dirrow');
+check('folder rows render path + source badge + remove button', dirRows.length === 2
+  && dirRows.every((r) => walk(r).some((n) => cls(n) === 'dshm-dirpath') && walk(r).some((n) => cls(n) === 'dshm-dirsrc')
+    && walk(r).some((n) => cls(n).includes('dshm-dir-remove'))));
+const removeBtns = walk(settingsTree).filter((n) => cls(n).includes('dshm-dir-remove'));
+/* smoke's setState is a noop by design — assert the two-step confirm at source level */
+check('remove uses an inline two-step confirm (first click asks, second removes)',
+  src.includes('confirmPath === (item && item.path) ? doRemove(item.path) : setConfirmPath(item && item.path)')
+  && src.includes("t('settingsRemoveConfirm')"));
+const dirAdd = walk(settingsTree).find((n) => cls(n) === 'dshm-diradd');
+check('add-folder row renders input + submit button', !!dirAdd && walk(dirAdd).some((n) => n.type === 'input')
+  && walk(dirAdd).some((n) => /dshm-chipbtn/.test(cls(n))));
+/* service-level: add/remove hit the directories API and refresh the list */
+const dirsSvc = dirsSvcRef.current;
+check('directories service is wired into the panel', !!dirsSvc && typeof dirsSvc.add === 'function' && typeof dirsSvc.remove === 'function');
+await dirsSvc.add('/tmp/new-music');
+check('directories add posts the path and refreshes the list', fetchCalls.some((u) => u.includes('/library/directories/add'))
+  && dirsSvc.source.getSnapshot().items.some((d) => d.path === '/tmp/new-music'));
+await dirsSvc.remove('/tmp/extra-music');
+check('directories remove posts the path and refreshes the list', fetchCalls.some((u) => u.includes('/library/directories/remove'))
+  && !dirsSvc.source.getSnapshot().items.some((d) => d.path === '/tmp/extra-music'));
+uiStore.set({ view: 'library', welcomePreview: false, lyricsOpen: false });
 
 /* 5x) v8 taste plumbing + v9 card rail / background loads */
 check('library renders the liked card rail', has(realHeader, (n) => cls(n) === 'dshm-favs'));
@@ -487,6 +596,277 @@ check('dislike POSTs to the host route', fetchCalls.slice(dislikesBefore).some((
 historyState = { ...historyState, stats: { ...historyState.stats, dislikes: { count: 1, events: 1, songs: [{ title: '不喜欢歌', artist: '某歌手', dislikedAt: Date.now(), inLibrary: true }] } } };
 const histTree = expand(music({ ...realProps, useUi: (sel) => sel({ ...uiStore.getSnapshot(), view: 'history' }) }));
 check('history stats shows the dislike summary block', has(histTree, (n) => cls(n) === 'dshm-dislike-row'));
+
+/* 7) 十一期：迷你条/正在播放 ♥+👎 执行级 + 模糊搜索候选合并 */
+state.view = 'library'; state.miniHidden = false; state.miniCollapsed = false;
+fetchCalls.length = 0; fetchBodies.length = 0;
+const miniTree11 = expand(mini(miniProps));
+check('mini bar renders the taste group (♥+👎)', has(miniTree11, (n) => /dshm-mini-extras/.test(cls(n)))
+  && walk(miniTree11).filter((n) => /dshm-like-btn|dshm-dislike-btn/.test(cls(n))).length >= 2);
+const miniLike = walk(miniTree11).find((n) => /dshm-like-btn\b/.test(cls(n)) && typeof n.props.onClick === 'function');
+const miniDislike = walk(miniTree11).find((n) => /dshm-dislike-btn/.test(cls(n)) && typeof n.props.onClick === 'function');
+check('mini taste buttons are wired to onClick', !!(miniLike && miniDislike));
+miniLike.props.onClick({ stopPropagation: noop });
+miniDislike.props.onClick({ stopPropagation: noop });
+await new Promise((r) => setTimeout(r, 40));
+check('mini like/dislike truly POST to the host routes',
+  fetchCalls.some((u) => String(u).includes('/library/like')) && fetchCalls.some((u) => String(u).includes('/library/dislike')),
+  JSON.stringify(fetchCalls.slice(0, 4)));
+
+/* preview track: taste must be keyed by artist+title, preview id never sent */
+const usePlayerPreview = (sel) => sel({ ...playerState, track: { ...playerState.track, id: 'preview:测试歌手::测试歌曲' } });
+const miniTreePrev = expand(mini({ ...miniProps, usePlayer: usePlayerPreview }));
+const prevLike = walk(miniTreePrev).find((n) => /dshm-like-btn\b/.test(cls(n)) && typeof n.props.onClick === 'function');
+fetchBodies.length = 0;
+prevLike.props.onClick({ stopPropagation: noop });
+await new Promise((r) => setTimeout(r, 40));
+check('preview track like sends artist+title, not the preview id',
+  fetchBodies.some((b) => b.url.includes('/library/like') && b.body.includes('测试歌手') && !b.body.includes('preview:')),
+  JSON.stringify(fetchBodies));
+
+/* now-playing view carries the taste buttons too */
+state.view = 'now';
+const nowTree11 = expand(music(baseProps));
+check('now-playing renders the taste group', has(nowTree11, (n) => cls(n) === 'dshm-now-taste'));
+const nowLike = walk(nowTree11).find((n) => /dshm-like-btn\b/.test(cls(n)) && typeof n.props.onClick === 'function');
+fetchCalls.length = 0;
+nowLike.props.onClick({ stopPropagation: noop });
+await new Promise((r) => setTimeout(r, 40));
+check('now-playing like truly POSTs to the host route', fetchCalls.some((u) => String(u).includes('/library/like')));
+
+/* fuzzy-search candidates merge: artists/songs fields become pick groups */
+fetchCalls.length = 0;
+const merged = await svc.library.searchRemote('模糊');
+check('searchRemote prefers the single type=both request',
+  fetchCalls.filter((u) => String(u).includes('/library/search')).every((u) => String(u).includes('type=both'))
+  && fetchCalls.filter((u) => String(u).includes('/library/search')).length === 1,
+  JSON.stringify(fetchCalls.filter((u) => String(u).includes('/library/search'))));
+const kinds = (merged.remote || []).map((r) => r.kind);
+check('searchRemote merges artist candidates', kinds.includes('artist') && !kinds.filter((k) => k === 'artist').some(() => false)
+  && (merged.remote.find((r) => r.kind === 'artist') || {}).name === '模糊歌手', JSON.stringify(merged.remote));
+check('searchRemote merges song candidates', kinds.includes('song')
+  && !!(merged.remote.find((r) => r.kind === 'song') || {}).title, JSON.stringify(merged.remote));
+state.view = 'library';
+
+/* 7b) 十二期：布局结构断言（分层/分组/hover 次要键/调色板） */
+const layMini = expand(mini(miniProps));
+check('mini taste buttons live in the hover extras group', (() => {
+  const extras = walk(layMini).find((n) => /dshm-mini-extras/.test(cls(n)));
+  return !!extras && walk(extras).some((n) => /dshm-like-btn/.test(cls(n))) && walk(extras).some((n) => /dshm-dislike-btn/.test(cls(n)));
+})());
+check('mini window controls keep their own group', has(layMini, (n) => /dshm-mini-win/.test(cls(n))));
+check('mini has no legacy row/divider structure', !has(layMini, (n) => /dshm-mini-group|dshm-mini-controls|dshm-mini-inner|dshm-mini-ctrl|dshm-mini-taste/.test(cls(n))));
+check('mini palette block exists and old divider border-right is gone', (() => {
+  return src.includes('--dshm-m-accent:#5B7FA6') && !/\.dshm-mini-taste\{[^}]*border-right/.test(src);
+})());
+check('mini palette: hex colors confined to the definition block', (() => {
+  const start = src.indexOf('--dshm-m-bg:#');
+  const endMarker = src.indexOf('--dsw-alias-bg-mask-2:rgba(0,0,0,0.10)');
+  const end = src.indexOf('}', endMarker);
+  const block = src.slice(start, end);
+  const rest = src.slice(0, start) + src.slice(end);
+  const cssBody = rest.slice(rest.indexOf('const CSS ='));
+  return block.includes('#F7F8FA') && !/\.dshm-mini[^,{ ]*[,{][^}]*#[0-9a-fA-F]{6}/.test(cssBody);
+})());
+
+// v12r2 尺寸预算断言：从 CSS/JSX 解析数值核算两态渲染高度，判定线「约」±10%（超线必红）。
+// 常驻 = top(4+90+4) + bar(2+22+4) + border 2 = 128；展开 = 常驻 + body(2+2) + 3行歌词(3*13*1.15+2*2) ≈ 180.9。
+check('mini collapsed height budget 108-132px (spec ~120)', (() => {
+  const top = src.match(/\.dshm-mini-top\{[^}]*padding:(\d+)px 12px (\d+)px 10px/);
+  const coverCss = /\.dshm-mini-cover\{[^}]*width:(\d+)px;height:(\d+)px/.test(src);
+  const bar = src.match(/\.dshm-mini-bar\{[^}]*padding:(\d+)px 14px (\d+)px 10px/);
+  const btn = src.match(/\.dshm-mini-bar \.dshm-iconbtn[^{]*\{width:(\d+)px;height:(\d+)px/);
+  const border = /\.dshm-mini\{[^}]*border:1px solid/.test(src);
+  if (!top || !coverCss || !bar || !btn || !border) return false;
+  const h = Number(top[1]) + 90 + Number(top[2]) + Number(bar[1]) + Number(btn[1]) + Number(bar[2]) + 2;
+  return h >= 108 && h <= 132;
+})());
+check('mini expanded height budget 158-193px (spec ~175)', (() => {
+  const body = src.match(/\.dshm-mini-body\{padding:(\d+)px 14px/);
+  const lh = src.match(/\.dshm-mini-lyric\{line-height:([\d.]+);/);
+  const gap = src.match(/\.dshm-mini-lyrics\{[^}]*gap:(\d+)px/);
+  const bar = src.match(/\.dshm-mini-bar\{[^}]*padding:(\d+)px 14px (\d+)px 10px/);
+  const btn = src.match(/\.dshm-mini-bar \.dshm-iconbtn[^{]*\{width:(\d+)px;height:(\d+)px/);
+  const top = src.match(/\.dshm-mini-top\{[^}]*padding:(\d+)px 12px (\d+)px 10px/);
+  if (!body || !lh || !gap || !bar || !btn || !top) return false;
+  const collapsed = Number(top[1]) + 90 + Number(top[2]) + Number(bar[1]) + Number(btn[1]) + Number(bar[2]) + 2;
+  const lyrics = 3 * 13 * Number(lh[1]) + 2 * Number(gap[1]); /* 3 行默认字号 13（winSize=3） */
+  const h = collapsed + 2 * Number(body[1]) + lyrics;
+  return h >= 158 && h <= 193;
+})());
+check('mini body/tools have no decorative border-top', !/\.dshm-mini-body\{[^}]*border-top/.test(src) && !/\.dshm-mini-tools\{[^}]*border-top/.test(src));
+check('mini expanded renders exactly 3-line window size', src.includes('const winSize = 3;'));
+check('mini collapse snaps fab to the nearer screen edge (bar center vs viewport mid)', (() => {
+  const collapse = src.includes('const collapseToFab = () => {')
+    && /r\.left \+ r\.width \/ 2 < window\.innerWidth \/ 2/.test(src)
+    && /left: goLeft \? 8 : Math\.max\(8, window\.innerWidth - 56\)/.test(src)
+    && /onClick: collapseToFab/.test(src);
+  const dragEnd = /fp\.left \+ 24 < window\.innerWidth \/ 2 \? 8 : Math\.max\(8, window\.innerWidth - 56\)/.test(src);
+  return collapse && dragEnd;
+})());
+check('mini surface drag: 3px threshold, interactive targets excluded, position persisted', (() => {
+  return src.includes('const surfaceDown = (e) => {')
+    && /e\.button !== 0\) return;/.test(src)
+    && /from\.closest\('button,input,\[role="slider"\],\.dshm-mini-grip'\)/.test(src)
+    && /Math\.abs\(dx\) \+ Math\.abs\(dy\) < 3/.test(src)
+    && /onPointerDown: surfaceDown, onPointerMove: surfaceMove,/.test(src);
+})());
+check('cover fallback (no image) drops its border entirely', /\.dshm-cover-empty\{border:0;/.test(src)
+  && /!url && 'dshm-cover-empty'/.test(src));
+
+state.view = 'now';
+const layNow = expand(music(baseProps));
+check('now-playing taste sits in the meta subrow, not its own orphan line', (() => {
+  const subrow = walk(layNow).find((n) => cls(n) === 'dshm-now-subrow');
+  return !!subrow && walk(subrow).some((n) => cls(n) === 'dshm-now-taste');
+})());
+check('now-playing transport is symmetric: shuffle left, transport center, repeat right', (() => {
+  const tr = walk(layNow).find((n) => cls(n) === 'dshm-transport');
+  if (!tr) return false;
+  const kids = (tr.children || []).filter((c) => c && c.props);
+  const names = kids.map((c) => cls(c));
+  return names.length === 3 && names[0] === 'dshm-transport-side dshm-transport-left' && names[1] === 'dshm-transport-center' && names[2] === 'dshm-transport-side dshm-transport-right';
+})());
+check('now-playing transport side buttons stay wired (shuffle/repeat)', (() => {
+  const sides = walk(layNow).filter((n) => /dshm-transport-side/.test(cls(n)));
+  return sides.length === 2 && sides.every((s) => walk(s).some((n) => typeof n.props.onClick === 'function'));
+})());
+state.view = 'library';
+
+/* 5i) sync & import: three equal source cards (S12-E) */
+impSvcRefQq.current = (services['music'] || {}).impQq;
+impSvcRefNe.current = (services['music'] || {}).impNe;
+const importTree = expand(music(baseProps));
+const settingsTreeLocal = expand(music({ ...baseProps, useUi: (sel) => sel({ ...state, view: 'settings' }) }));
+check('library view no longer embeds the sync/import row (v13 moved it to settings)',
+  !walk(importTree).some((n) => cls(n) === 'dshm-syncrow'));
+const syncRow = walk(settingsTreeLocal).find((n) => cls(n) === 'dshm-syncrow');
+const rowCards = syncRow ? (syncRow.children || []).filter((c) => c && /dshm-sync$|dshm-import/.test(cls(c))) : [];
+check('sync & import render as three equal sibling cards in one row', !!syncRow && rowCards.length === 3
+  && rowCards.every((c) => /dshm-sync$/.test(cls(c)) || cls(c) === 'dshm-import'),
+  rowCards.map((c) => cls(c)).join(','));
+check('three cards carry distinct titles (Spotify / QQ / NetEase)', JSON.stringify(syncRow).includes('syncCardTitle')
+  && JSON.stringify(syncRow).includes('importQqTitle') && JSON.stringify(syncRow).includes('importNeTitle'));
+const qqCard = rowCards.find((c) => JSON.stringify(c).includes('importQqTitle'));
+const neCard = rowCards.find((c) => JSON.stringify(c).includes('importNeTitle'));
+check('QQ and NetEase placeholders differ per source', !!qqCard && !!neCard
+  && JSON.stringify(qqCard).includes('importPlaceholderQq') && JSON.stringify(neCard).includes('importPlaceholderNe'));
+check('toolbar no longer hides the sync trigger (moved into the settings card)', !JSON.stringify(walk(importTree).find((n) => cls(n) === 'dshm-toolbar')).includes('sync.start')
+  && !!syncRow && walk(syncRow).some((n) => /dshm-chipbtn/.test(cls(n)) && n.props && typeof n.props.onClick === 'function'
+    && JSON.stringify(n.props.children).includes('syncBtn')));
+check('library empty state points to the settings page', src.includes("t('emptySettingsCta')") && src.includes("onClick: () => openView('settings')"));
+check('mini bar root sets user-select:none (drag does not select text)', /\.dshm-mini\{[^}]*user-select:none/.test(src));
+check('old toolbar sync chipbtn removed from source', !src.includes("syncState === 'running' || busy || !syncUsable"));
+
+const importBox = qqCard;
+check('library shows the playlist import block with a link input', !!importBox
+  && walk(importBox).some((n) => n.type === 'input' && n.props && n.props.type === 'url' && cls(n) === 'dshm-import-input'));
+const importBtns = importBox ? walk(importBox).filter((n) => /dshm-chipbtn/.test(cls(n)) && n.props && typeof n.props.onClick === 'function') : [];
+check('import block has preview and import buttons wired', importBtns.length === 2
+  && importBtns.some((b) => b.props.children === 'importPreview')
+  && importBtns.some((b) => b.props.children === 'importRun'));
+check('import buttons disabled until a link is entered', importBtns.every((b) => b.props.disabled === true));
+
+const svcImp = impSvcRefQq.current;
+const svcNe = impSvcRefNe.current;
+check('import service is wired into the panel', !!svcImp && typeof svcImp.start === 'function');
+check('two independent import service instances exist', !!svcNe && svcNe !== svcImp && typeof svcNe.start === 'function');
+
+/* inject hooks key names must follow the framework rule: key K is injected as prop use+Pascal(K).
+   Guards against the B2 defect where hooks.impQq produced useImpQq but components wanted useImportQq. */
+{
+  const hooksBlock = src.match(/hooks:\s*\{\n([\s\S]*?)\n\s*\},/);
+  check('inject hooks block found in source', !!hooksBlock);
+  if (hooksBlock) {
+    const keys = hooksBlock[1].split('\n').flatMap((line) => {
+      const t = line.trim();
+      if (t.includes(':')) return (t.match(/[A-Za-z][A-Za-z0-9]*(?=\s*:)/g) || []);
+      return (t.replace(/,$/, '').match(/^[A-Za-z][A-Za-z0-9]*$/) || [t.match(/^[A-Za-z][A-Za-z0-9]*/)?.[0]].filter(Boolean));
+    });
+    const panelSig = src.match(/function MusicPanel\(\{([\s\S]*?)\}\)/);
+    check('MusicPanel signature found', !!panelSig);
+    if (panelSig) {
+      const missing = keys.filter((k) => !new RegExp(`(^|[^A-Za-z])use${k[0].toUpperCase()}${k.slice(1)}([^A-Za-z]|$)`).test(panelSig[1]));
+      check('every inject hooks key matches a use+Pascal prop on MusicPanel (B2 guard)', missing.length === 0 && keys.length >= 10, `missing: ${missing.join(',') || 'none'}`);
+      check('hooks keys use importQq/importNe (not impQq/impNe)', keys.includes('importQq') && keys.includes('importNe') && !keys.includes('impQq') && !keys.includes('impNe'));
+    }
+  }
+}
+
+
+/* two sources can each run their own dryRun preview independently */
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+importStatusBody = { running: false, summary: { provider: 'qq', name: '我喜欢', total: 792, fetched: 792, matched: 17, fuzzyMatched: 22, missing: 753, queued: 0, downloaded: 0, failures: [], sample: [{ artist: 'The Revivalists', title: 'Get It Honest' }] } };
+fetchCalls.length = 0;
+await svcImp.start('https://c6.y.qq.com/base/fcgi-bin/u?__=x123', true);
+await sleep(30);
+const impPosts = fetchBodies.filter((b) => b.url.includes('/import-playlist') && !b.url.includes('/status'));
+check('preview posts dryRun:true to the import endpoint', impPosts.length === 1 && JSON.parse(impPosts[0].body).dryRun === true,
+  JSON.stringify(fetchCalls));
+check('preview settles with summary', svcImp.source.getSnapshot().phase === 'preview'
+  && svcImp.source.getSnapshot().summary && svcImp.source.getSnapshot().summary.total === 792,
+  JSON.stringify(svcImp.source.getSnapshot()));
+importStatusBody = { running: false, summary: { provider: 'netease', name: '热歌榜', total: 200, fetched: 200, matched: 5, fuzzyMatched: 3, missing: 192, queued: 0, downloaded: 0, failures: [], sample: [{ artist: '网易歌手', title: '网易歌' }] } };
+await svcNe.start('https://music.163.com/playlist?id=99', true);
+await sleep(30);
+const nePosts = fetchBodies.filter((b) => b.url.includes('/import-playlist') && !b.url.includes('/status'));
+check('NetEase instance runs its own dryRun preview independently', svcNe.source.getSnapshot().phase === 'preview'
+  && svcNe.source.getSnapshot().summary.provider === 'netease'
+  && svcImp.source.getSnapshot().summary.provider === 'qq'
+  && nePosts[nePosts.length - 1] && JSON.parse(nePosts[nePosts.length - 1].body).url.includes('music.163.com'),
+  JSON.stringify(svcNe.source.getSnapshot()));
+/* import cards live in the settings view since v13 — render that for card-level checks */
+state.view = 'settings';
+const neTree = expand(music(baseProps));
+const neBoxes = walk(neTree).filter((n) => cls(n) === 'dshm-import');
+check('both import cards render their own summaries side by side', neBoxes.length === 2
+  && JSON.stringify(neBoxes[0]).includes('我喜欢') && JSON.stringify(neBoxes[1]).includes('热歌榜'));
+const previewTree = expand(music(baseProps));
+const pBox = walk(previewTree).find((n) => cls(n) === 'dshm-import');
+check('preview renders summary chips + sample + hint', !!pBox
+  && JSON.stringify(pBox).includes('importMatched') && JSON.stringify(pBox).includes('Get It Honest')
+  && JSON.stringify(pBox).includes('importPreviewHint'));
+
+/* running state shows progress chips */
+impSvcRefQq.current.source.set({ phase: 'running', summary: { fetched: 300, queued: 20, downloaded: 12, failures: [] } });
+const runningTree = expand(music(baseProps));
+const rBox = walk(runningTree).find((n) => cls(n) === 'dshm-import');
+check('running state renders progress chips with role=status', !!rBox
+  && walk(rBox).some((n) => n.props && n.props.role === 'status'));
+impSvcRefQq.current.source.set({ phase: 'preview' });
+
+/* real import flow: dryRun:false then done */
+importStatusBody = { running: false, summary: { provider: 'qq', name: '我喜欢', total: 792, fetched: 792, matched: 17, fuzzyMatched: 22, missing: 753, queued: 0, downloaded: 1, failures: [], sample: [] } };
+await svcImp.start('https://c6.y.qq.com/base/fcgi-bin/u?__=x123', false);
+await sleep(30);
+const bodies = fetchBodies.filter((b) => b.url.includes('/import-playlist') && !b.url.includes('/status'));
+check('real import posts dryRun:false last', bodies.length >= 2 && JSON.parse(bodies[bodies.length - 1].body).dryRun === false
+  && svcImp.source.getSnapshot().phase === 'done');
+const doneTree = expand(music(baseProps));
+check('done state shows completion hint', JSON.stringify(walk(doneTree).find((n) => cls(n) === 'dshm-import')) .includes('importDone'));
+
+/* host error copy passes through untouched */
+importPostShouldFail = true;
+await svcImp.start('bad-link', true);
+importPostShouldFail = false;
+check('host error copy surfaces verbatim', svcImp.source.getSnapshot().phase === 'error'
+  && svcImp.source.getSnapshot().error === '请粘贴有效的歌单链接',
+  svcImp.source.getSnapshot().error);
+const errTree = expand(music(baseProps));
+check('error renders in alert line', walk(errTree).some((n) => n.props && n.props.role === 'alert'));
+svcImp.source.set({ phase: 'idle', error: null, summary: null });
+state.view = 'library';
+
+/* consecutive status-poll failures unlock a stuck running phase */
+importStatusShouldFail = true;
+importStatusBody = { running: true, summary: { fetched: 1, queued: 1, downloaded: 0, failures: [] } };
+await svcImp.start('https://c6.y.qq.com/base/fcgi-bin/u?__=x123', true);
+await sleep(4700);
+importStatusShouldFail = false;
+check('3 consecutive poll failures turn the phase into error with locale copy',
+  svcImp.source.getSnapshot().phase === 'error' && svcImp.source.getSnapshot().error === 'importPollFail',
+  JSON.stringify(svcImp.source.getSnapshot()));
+svcImp.source.set({ phase: 'idle', error: null, summary: null });
 
 /* 6) report */
 const fail = results.filter((r) => !r.ok);

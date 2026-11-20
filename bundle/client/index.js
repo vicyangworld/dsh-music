@@ -145,10 +145,38 @@ window.__ModuleLoader__.load({
       emptySearchCta: '搜歌手/歌名试听',
       emptyAddDirHint: '默认扫描目录（支持 mp3 / flac / m4a / wav 等）：',
       emptyRescanCta: '重新扫描曲库',
-      emptyDirNote: '也可以在插件配置里用 directories 自定义扫描目录。',
+      emptyDirNote: '扫描目录可在设置页添加或管理。',
+      settings: '设置',
+      settingsSyncTitle: '同步',
+      settingsDirsTitle: '本地音乐',
+      settingsAddPlaceholder: '输入音乐目录路径，如 ~/Music/jazz',
+      settingsAdd: '添加目录',
+      settingsAdding: '添加中…',
+      settingsRemove: '移除',
+      settingsRemoveConfirm: '确认移除？',
+      settingsDirsEmpty: '还没有扫描目录，添加一个开始建库。',
+      dirSourceDefault: '默认',
+      dirSourceCustom: '自定义',
+      emptySettingsCta: '去设置页管理目录',
       syncOptional: 'Spotify 同步（可选）',
       syncOptionalHint: '可选功能：需要机器上已安装 spotify-sync CLI，没有也不影响听歌',
       syncUnavailableHint: '未检测到 spotify-sync CLI，同步功能暂不可用（可跳过，不影响听歌）',
+      importTitle: '导入歌单',
+      syncCardTitle: 'Spotify 同步',
+      importQqTitle: 'QQ 音乐导入',
+      importNeTitle: '网易云导入',
+      importPlaceholderQq: '粘贴 QQ 音乐公开歌单链接',
+      importPlaceholderNe: '粘贴网易云公开歌单链接',
+      importPlaceholder: '粘贴 QQ 音乐 / 网易云公开歌单链接',
+      importPreview: '预览',
+      importRun: '导入',
+      importing: '导入中…',
+      importPreviewHint: '预览完成，确认无误后点「导入」开始下载。',
+      importDone: '导入完成。',
+      importProvider: '平台', importName: '歌单', importTotal: '总数',
+      importMatched: '已匹配', importFuzzy: '模糊', importMissing: '缺失',
+      importFetched: '已拉取', importQueued: '排队', importDownloaded: '已下载', importFailures: '失败',
+      importPollFail: '导入状态查询连续失败，请稍后重试。',
       exploreChip: '探索批次',
       recoColdTitle: '还没有收听历史',
       recoColdBody: '先搜歌手或歌名试听，喜欢的歌会自动入库；听过几首后这里会按你的口味推荐。',
@@ -242,6 +270,8 @@ window.__ModuleLoader__.load({
       deleteFailed: '删除失败',
       searchTypeSong: '歌曲',
       searchTypeArtist: '歌手',
+      searchPickArtist: '可选歌手',
+      searchPickSong: '可选歌曲',
       searchWebTitle: '网上补全（MusicBrainz）',
       searchNoLocal: '本地曲库没有匹配，可以试试下面的在线补全。',
       styleBtn: '搜风格',
@@ -277,6 +307,9 @@ window.__ModuleLoader__.load({
       miniExpand: '展开',
       miniDrag: '拖动调整位置',
       miniLyrics: '歌词',
+      miniLyricsWord: '词',
+      miniFontSmaller: '歌词字号减小',
+      miniFontLarger: '歌词字号增大',
       playList: '播放该列表',
       recoGenerate: '生成推荐',
       recoRegenerate: '换一批',
@@ -415,10 +448,38 @@ window.__ModuleLoader__.load({
       emptySearchCta: 'Search to preview',
       emptyAddDirHint: 'Default scanned folders (mp3 / flac / m4a / wav…):',
       emptyRescanCta: 'Rescan library',
-      emptyDirNote: 'You can also set custom folders with `directories` in the plugin config.',
+      emptyDirNote: 'Scan folders can be added or managed in Settings.',
+      settings: 'Settings',
+      settingsSyncTitle: 'Sync',
+      settingsDirsTitle: 'Local Music',
+      settingsAddPlaceholder: 'Folder path, e.g. ~/Music/jazz',
+      settingsAdd: 'Add folder',
+      settingsAdding: 'Adding…',
+      settingsRemove: 'Remove',
+      settingsRemoveConfirm: 'Confirm remove?',
+      settingsDirsEmpty: 'No scan folders yet — add one to start.',
+      dirSourceDefault: 'Default',
+      dirSourceCustom: 'Custom',
+      emptySettingsCta: 'Manage folders in Settings',
       syncOptional: 'Spotify sync (optional)',
       syncOptionalHint: 'Optional: needs the spotify-sync CLI installed; music works without it',
       syncUnavailableHint: 'spotify-sync CLI not found — sync is unavailable (safe to skip)',
+      importTitle: 'Import playlist',
+      syncCardTitle: 'Spotify Sync',
+      importQqTitle: 'QQ Music Import',
+      importNeTitle: 'NetEase Import',
+      importPlaceholderQq: 'Paste a public QQ Music playlist link',
+      importPlaceholderNe: 'Paste a public NetEase playlist link',
+      importPlaceholder: 'Paste a public QQ Music / NetEase playlist link',
+      importPreview: 'Preview',
+      importRun: 'Import',
+      importing: 'Importing…',
+      importPreviewHint: 'Preview done — press "Import" to start downloading.',
+      importDone: 'Import finished.',
+      importProvider: 'Provider', importName: 'Playlist', importTotal: 'Total',
+      importMatched: 'Matched', importFuzzy: 'Fuzzy', importMissing: 'Missing',
+      importFetched: 'Fetched', importQueued: 'Queued', importDownloaded: 'Downloaded', importFailures: 'Failed',
+      importPollFail: 'Lost track of the import status — please try again.',
       exploreChip: 'Exploration batch',
       recoColdTitle: 'No listening history yet',
       recoColdBody: 'Search and preview some songs first — liked songs are added automatically, and recommendations will follow your taste.',
@@ -512,6 +573,8 @@ window.__ModuleLoader__.load({
       deleteFailed: 'Delete failed',
       searchTypeSong: 'Songs',
       searchTypeArtist: 'Artists',
+      searchPickArtist: 'Artist picks',
+      searchPickSong: 'Song picks',
       searchWebTitle: 'Web matches (MusicBrainz)',
       searchNoLocal: 'Nothing local matched — try a web match below.',
       styleBtn: 'Search style',
@@ -547,6 +610,9 @@ window.__ModuleLoader__.load({
       miniExpand: 'Expand',
       miniDrag: 'Drag to move',
       miniLyrics: 'Lyrics',
+      miniLyricsWord: '词',
+      miniFontSmaller: 'Lyrics font smaller',
+      miniFontLarger: 'Lyrics font larger',
       playList: 'Play this list',
       recoGenerate: 'Generate',
       recoRegenerate: 'Another batch',
@@ -750,6 +816,10 @@ window.__ModuleLoader__.load({
       ['path', { d: 'M18.6 15.4l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z' }],
     ]);
     const IconCheck = makeIcon([['path', { d: 'M5 12.5l4.4 4.4L19 7' }]]);
+    const IconGear = makeIcon([
+      ['circle', { cx: 12, cy: 12, r: 3.1 }],
+      ['path', { d: 'M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.01a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.01a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z' }],
+    ]);
     const IconFolder = makeIcon([
       ['path', { d: 'M4 6.8A1.8 1.8 0 0 1 5.8 5h3.1l1.8 2.1h7.5A1.8 1.8 0 0 1 20 8.9v8.3a1.8 1.8 0 0 1-1.8 1.8H5.8A1.8 1.8 0 0 1 4 17.2z' }],
     ]);
@@ -910,6 +980,8 @@ window.__ModuleLoader__.load({
 .dshm-cover{flex:none;position:relative;border-radius:8px;overflow:hidden;background:linear-gradient(145deg,var(--dsw-alias-bg-layer-2),var(--dsw-alias-bg-layer-3));display:flex;align-items:center;justify-content:center;border:1px solid var(--dsw-alias-border-l1);}
 .dshm-cover img{width:100%;height:100%;object-fit:cover;display:block;}
 .dshm-cover-fallback{color:var(--dsw-alias-label-tertiary);display:flex;}
+/* 无封面：浅灰底默认封面，边缘线框全部不显示（用户第二轮第 4 条） */
+.dshm-cover-empty{border:0;outline:none;background:var(--dsw-alias-bg-layer-2);}
 .dshm-eq{display:inline-flex;align-items:flex-end;gap:2px;height:12px;flex:none;}
 .dshm-eq i{width:3px;border-radius:1.5px;background:var(--dsw-alias-brand-primary);height:30%;}
 .dshm-eq-on i{animation:dshm-eq 1s ease-in-out infinite;}
@@ -958,7 +1030,11 @@ window.__ModuleLoader__.load({
 .dshm-slider:hover .dshm-slider-thumb,.dshm-slider:focus-visible .dshm-slider-thumb,.dshm-slider-drag .dshm-slider-thumb{transform:translate(-50%,-50%) scale(1);}
 .dshm-slider:focus-visible .dshm-slider-track{box-shadow:0 0 0 2px var(--dsw-alias-brand-primary);}
 .dshm-slider-disabled{opacity:.4;cursor:default;}
-.dshm-transport{display:flex;align-items:center;gap:10px;margin-top:4px;}
+.dshm-transport{display:flex;align-items:center;margin-top:4px;}
+.dshm-transport-center{display:flex;align-items:center;gap:10px;margin:0 auto;}
+.dshm-transport-side{display:flex;align-items:center;gap:4px;flex:none;}
+.dshm-transport-left{margin-right:auto;}
+.dshm-transport-right{margin-left:auto;}
 .dshm-playbtn{width:48px;height:48px;border-radius:50%;border:0;background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,transform .12s;box-shadow:0 4px 14px var(--dsw-alias-bg-mask-2);flex:none;padding:0;}
 .dshm-playbtn:hover{background:var(--dsw-alias-button-primary-hover);transform:scale(1.05);}
 .dshm-playbtn:active{transform:scale(.96);}
@@ -978,7 +1054,25 @@ window.__ModuleLoader__.load({
   .dshm-transport{justify-content:center;}
   .dshm-volumerow{margin:0 auto;}
 }
-.dshm-mini{position:fixed;right:16px;bottom:16px;z-index:2147483000;width:min(380px,calc(100% - 32px));background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:14px;box-shadow:0 10px 30px var(--dsw-alias-bg-mask-2);overflow:hidden;animation:dshm-mini-in .22s ease-out;}
+/* ---- mini player palette (v12: user-specified light widget look; hex confined to this block) ---- */
+.dshm-mini{
+  --dshm-m-bg:#F7F8FA;--dshm-m-ink:#2A2E33;--dshm-m-ink2:#8A9099;--dshm-m-accent:#5B7FA6;
+  --dshm-m-line:#E3E6EA;--dshm-m-accent-soft:rgba(91,127,166,0.14);--dshm-m-ink-soft:rgba(42,46,51,0.06);--dshm-m-on-accent:#FFFFFF;
+  --dsw-alias-bg-layer-1:var(--dshm-m-bg);
+  --dsw-alias-label-primary:var(--dshm-m-ink);
+  --dsw-alias-label-secondary:var(--dshm-m-ink2);
+  --dsw-alias-label-tertiary:var(--dshm-m-ink2);
+  --dsw-alias-brand-primary:var(--dshm-m-accent);
+  --dsw-alias-brand-text:var(--dshm-m-accent);
+  --dsw-alias-button-primary-fill:var(--dshm-m-accent);
+  --dsw-alias-button-primary-hover:#4C6C90;
+  --dsw-alias-border-l1:var(--dshm-m-line);
+  --dsw-alias-border-l2:var(--dshm-m-line);
+  --dsw-alias-border-l3:var(--dshm-m-line);
+  --dsw-alias-interactive-bg-hover:var(--dshm-m-ink-soft);
+  --dsw-alias-bg-mask-2:rgba(0,0,0,0.10);
+}
+.dshm-mini{position:fixed;right:16px;bottom:16px;z-index:2147483000;width:min(400px,calc(100% - 32px));background:var(--dshm-m-bg);color:var(--dshm-m-ink);border:1px solid var(--dshm-m-line);border-radius:14px;box-shadow:0 10px 30px var(--dsw-alias-bg-mask-2);overflow:hidden;user-select:none;animation:dshm-mini-in .22s ease-out;}
 .dshm-mini-fab{position:fixed;right:16px;bottom:16px;z-index:2147483000;width:48px;height:48px;border-radius:50%;padding:0;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);box-shadow:0 10px 30px var(--dsw-alias-bg-mask-2);cursor:grab;touch-action:none;animation:dshm-mini-in .18s ease-out;}
 .dshm-mini-fab:hover{box-shadow:0 12px 34px var(--dsw-alias-bg-mask-2);}
 .dshm-mini-fab:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px;}
@@ -986,30 +1080,54 @@ window.__ModuleLoader__.load({
 .dshm-mini-fab-badge{position:absolute;right:1px;bottom:1px;width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);border:2px solid var(--dsw-alias-bg-layer-1);pointer-events:none;}
 .dshm-mini-dragging{box-shadow:0 16px 40px var(--dsw-alias-bg-mask-2);transition:none;animation:none;}
 @keyframes dshm-mini-in{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
-.dshm-mini-inner{display:flex;align-items:center;gap:6px;padding:8px 10px 8px 20px;}
-.dshm-mini-main{display:flex;align-items:center;gap:10px;flex:1;min-width:0;border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;padding:2px;border-radius:9px;text-align:left;}
+.dshm-mini-top{position:relative;display:flex;align-items:center;gap:10px;padding:4px 12px 4px 10px;}
+.dshm-mini-cover{flex:none;width:90px;height:90px;padding:0;border:0;background:transparent;cursor:pointer;border-radius:8px;overflow:hidden;}
+.dshm-mini-cover:focus-visible{outline:2px solid var(--dshm-m-accent);outline-offset:1px;}
+.dshm-mini-main{display:flex;flex-direction:column;align-items:flex-start;gap:2px;flex:1;min-width:0;border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;padding:0;border-radius:8px;text-align:left;}
 .dshm-mini-main:hover{background:var(--dsw-alias-interactive-bg-hover);}
-.dshm-mini-main:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}
-.dshm-mini-text{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
-.dshm-mini-title{font-size:12.5px;font-weight:600;color:var(--dsw-alias-label-primary);}
-.dshm-mini-sub{font-size:11px;color:var(--dsw-alias-label-tertiary);}
+.dshm-mini-main:focus-visible{outline:2px solid var(--dshm-m-accent);outline-offset:1px;}
+.dshm-mini-title{font-size:14px;font-weight:600;color:var(--dshm-m-ink);}
+.dshm-mini-sub{font-size:11px;color:var(--dshm-m-ink2);}
 .dshm-mini-sub-error{color:var(--dsw-alias-state-error-primary);}
-.dshm-mini-grip{position:absolute;left:3px;top:50%;transform:translateY(-50%);width:14px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--dsw-alias-label-tertiary);cursor:grab;border-radius:6px;touch-action:none;opacity:.6;}
-.dshm-mini-grip:hover,.dshm-mini-grip:focus-visible{opacity:1;background:var(--dsw-alias-interactive-bg-hover);outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px;}
+.dshm-mini-grip{position:absolute;left:3px;top:50%;transform:translateY(-50%);width:14px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--dshm-m-ink2);cursor:grab;border-radius:6px;touch-action:none;opacity:0;transition:opacity .18s ease;}
+.dshm-mini:hover .dshm-mini-grip,.dshm-mini:focus-within .dshm-mini-grip,.dshm-mini-dragging .dshm-mini-grip{opacity:.7;}
+.dshm-mini-grip:hover,.dshm-mini-grip:focus-visible{opacity:1;background:var(--dsw-alias-interactive-bg-hover);outline:2px solid var(--dshm-m-accent);outline-offset:-2px;}
 .dshm-mini-grip:active{cursor:grabbing;}
-.dshm-mini-artist{display:inline-flex;align-items:center;gap:4px;max-width:100%;border:0;background:transparent;padding:0;margin:0;font:inherit;font-size:11px;line-height:14px;color:var(--dsw-alias-label-tertiary);cursor:pointer;text-align:left;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dshm-mini-artist:hover{color:var(--dsw-alias-brand-text);text-decoration:underline;}
-.dshm-mini-artist:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}
-.dshm-mini-seek{padding:0 12px 0 20px;}
-.dshm-mini-seek .dshm-slider{height:16px;}
-.dshm-mini-lyrics{display:flex;flex-direction:column;gap:1px;padding:2px 14px 8px 20px;overflow:hidden;}
-.dshm-mini-lyric{font-size:11.5px;line-height:16px;color:var(--dsw-alias-label-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.5;transition:opacity .25s ease,color .25s ease;}
-.dshm-mini-lyric-on{color:var(--dsw-alias-label-primary);opacity:1;font-weight:600;}
+.dshm-mini-artist{display:inline-flex;align-items:center;gap:4px;max-width:100%;border:0;background:transparent;padding:0;margin:0;font:inherit;font-size:12px;line-height:15px;color:var(--dshm-m-ink2);cursor:pointer;text-align:left;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dshm-mini-artist:hover{color:var(--dshm-m-accent);text-decoration:underline;}
+.dshm-mini-artist:focus-visible{outline:2px solid var(--dshm-m-accent);outline-offset:1px;}
+.dshm-mini-hover{opacity:0;pointer-events:none;transition:opacity .18s ease;}
+.dshm-mini:hover .dshm-mini-hover,.dshm-mini:focus-within .dshm-mini-hover{opacity:1;pointer-events:auto;}
+@media (hover:none){.dshm-mini-hover{opacity:1;pointer-events:auto;}}
+.dshm-mini-extras{display:flex;align-items:center;gap:2px;justify-content:flex-end;}
+.dshm-mini-win{position:absolute;top:8px;right:10px;display:flex;align-items:center;gap:2px;}
+.dshm-mini .dshm-iconbtn{color:var(--dshm-m-ink2);width:26px;height:26px;border-radius:50%;}
+.dshm-mini .dshm-iconbtn:hover{background:var(--dshm-m-ink-soft);color:var(--dshm-m-ink);}
+.dshm-mini .dshm-iconbtn-active{color:var(--dshm-m-accent);}
+.dshm-mini .dshm-like-btn,.dshm-mini .dshm-dislike-btn{width:26px;height:26px;}
+.dshm-mini-bar{display:flex;align-items:center;gap:6px;padding:2px 14px 4px 10px;}
+.dshm-mini-bar .dshm-iconbtn,.dshm-mini-bar .dshm-like-btn,.dshm-mini-bar .dshm-dislike-btn{width:22px;height:22px;}
+.dshm-mini-bar .dshm-mini-extras{min-width:72px;justify-content:flex-start;}
+.dshm-mini-bar .dshm-slider{flex:1;height:16px;min-width:60px;}
+.dshm-mini-time{font-size:10px;color:var(--dshm-m-ink2);font-variant-numeric:tabular-nums;flex:none;}
+.dshm-mini-play{background:var(--dshm-m-accent);color:var(--dshm-m-on-accent);border-radius:50%;width:34px;height:34px;}
+.dshm-mini-play:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover);color:var(--dshm-m-on-accent);}
+.dshm-mini-body{padding:2px 14px;}
+.dshm-mini-lyrics{display:flex;flex-direction:column;gap:2px;overflow:hidden;}
+.dshm-mini-lyric{line-height:1.15;color:var(--dshm-m-ink2);opacity:.72;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:12px;position:relative;transition:opacity .25s ease,color .25s ease;}
+.dshm-mini-lyric-on{color:var(--dshm-m-ink);opacity:1;font-weight:600;}
+.dshm-mini-lyric-on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:1em;border-radius:2px;background:var(--dshm-m-accent);}
+.dshm-mini-toolgroup{display:flex;align-items:center;gap:2px;}
+.dshm-mini-tool{border:0;background:transparent;color:var(--dshm-m-ink2);font:inherit;font-size:12px;line-height:1;padding:3px 8px;border-radius:6px;cursor:pointer;transition:color .15s ease,background .15s ease;}
+.dshm-mini-tool:hover{color:var(--dshm-m-ink);background:var(--dshm-m-ink-soft);}
+.dshm-mini-tool:focus-visible{outline:2px solid var(--dshm-m-accent);outline-offset:1px;}
+.dshm-mini-tool-word{font-weight:600;}
+.dshm-mini-tool-on{color:var(--dshm-m-accent);background:var(--dshm-m-accent-soft);}
 .dshm-mode-cycle{min-width:32px;}
 .dshm-chipbtn.dshm-mode-cycle{padding:0 9px;}
-.dshm-mini-controls{display:flex;align-items:center;gap:2px;flex:none;}
-.dshm-mini-play{background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);border-radius:50%;width:34px;height:34px;}
-.dshm-mini-play:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover);color:var(--dsw-alias-label-primary-inverted);}
+.dshm-now-subrow{display:flex;align-items:center;gap:10px;min-width:0;}
+.dshm-now-taste{display:flex;align-items:center;gap:4px;flex:none;}
+.dshm-mini-transport{display:flex;align-items:center;gap:4px;}
 .dshm-reco{max-width:560px;margin:0 auto;}
 .dshm-reco-tags{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:6px;}
 .dshm-reco-tag{font-size:11px;color:var(--dsw-alias-label-secondary);border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);border-radius:99px;padding:4px 10px;}
@@ -1033,7 +1151,26 @@ window.__ModuleLoader__.load({
 .dshm-dl-status{font-size:11px;color:var(--dsw-alias-label-tertiary);flex:none;}
 .dshm-dl-bar{height:3px;border-radius:2px;background:var(--dsw-alias-bg-layer-3);overflow:hidden;margin:2px 0 4px;}
 .dshm-dl-bar>div{height:100%;background:var(--dsw-alias-brand-primary);transition:width .4s ease;}
+.dshm-syncrow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 24px 0;align-items:stretch;}
+.dshm-syncrow .dshm-sync,.dshm-syncrow .dshm-import{margin:0;}
+.dshm-syncrow-actions{display:flex;align-items:center;}
+.dshm-settings{display:flex;flex-direction:column;gap:24px;margin:16px 24px 0;}
+.dshm-setsec{display:flex;flex-direction:column;gap:10px;}
+.dshm-setsec-title{font-size:13px;font-weight:650;color:var(--dsw-alias-label-secondary);margin:0;padding:0 4px;}
+.dshm-dirs{display:flex;flex-direction:column;gap:8px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:10px;padding:10px 12px;}
+.dshm-dirrow{display:flex;align-items:center;gap:8px;}
+.dshm-dirpath{font-size:12px;color:var(--dsw-alias-label-primary);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+.dshm-dirsrc{flex:none;font-size:10px;padding:1px 8px;border-radius:99px;border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);}
+.dshm-dir-remove{flex:none;}
+.dshm-diradd{display:flex;gap:8px;align-items:center;margin-top:2px;}
+.dshm-diradd input{flex:1;min-width:0;}
+.dshm-dirs-empty{font-size:12px;color:var(--dsw-alias-label-tertiary);padding:2px 0;}
 .dshm-sync{margin:12px 24px 0;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:10px;}
+.dshm-import{margin:12px 24px 0;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:10px;}
+.dshm-import-row{display:flex;align-items:center;gap:6px;}
+.dshm-import-input{flex:1;min-width:0;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:9px;padding:6px 10px;color:var(--dsw-alias-label-primary);font:inherit;outline:none;transition:border-color .15s;}
+.dshm-import-input::placeholder{color:var(--dsw-alias-label-tertiary);}
+.dshm-import-input:focus{border-color:var(--dsw-alias-brand-primary);}
 .dshm-sync-chips{display:flex;gap:8px;flex-wrap:wrap;}
 .dshm-sync-chip{font-size:11.5px;border:1px solid var(--dsw-alias-border-l1);border-radius:99px;padding:4px 12px;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-2);}
 .dshm-sync-detail{font-size:11.5px;color:var(--dsw-alias-label-tertiary);line-height:1.7;}
@@ -1167,6 +1304,8 @@ window.__ModuleLoader__.load({
   .dshm-hrow{grid-template-columns:40px minmax(0,1fr) auto;}
   .dshm-hbar,.dshm-hskip,.dshm-htime{display:none;}
   .dshm-sync{margin:12px 12px 0;}
+  .dshm-import{margin:12px 12px 0;}
+  .dshm-syncrow{grid-template-columns:1fr;margin:12px 12px 0;}
   .dshm-reco-page{padding:16px 12px;}
 }
 .dshm-lyrics{max-width:860px;margin:24px auto 0;display:flex;flex-direction:column;gap:8px;}
@@ -1249,6 +1388,13 @@ window.__ModuleLoader__.load({
       return {
         library: () => request('/dsh-music/api/library'),
         rescan: () => request('/dsh-music/api/rescan', { method: 'POST' }),
+        directoriesList: () => request('/dsh-music/api/library/directories'),
+        directoriesAdd: (path) => request('/dsh-music/api/library/directories/add', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path }),
+        }),
+        directoriesRemove: (path) => request('/dsh-music/api/library/directories/remove', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path }),
+        }),
         lyrics: (trackId) => request('/dsh-music/api/lyrics?track=' + encodeURIComponent(trackId)),
         artist: (name) => request('/dsh-music/api/artist?name=' + encodeURIComponent(name)),
         artistImage: (name) => request('/dsh-music/api/reco/artist-image?name=' + encodeURIComponent(name)),
@@ -1274,6 +1420,11 @@ window.__ModuleLoader__.load({
         sync: () => request('/dsh-music/api/sync', { method: 'POST' }),
         syncStatus: () => request('/dsh-music/api/sync/status'),
         syncAvailability: () => request('/dsh-music/api/sync/availability'),
+        importPlaylist: (url, opts) => request('/dsh-music/api/import-playlist', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.assign({ url }, opts || {})),
+        }),
+        importPlaylistStatus: () => request('/dsh-music/api/import-playlist/status'),
         history: (limit) => request('/dsh-music/api/history?limit=' + (limit || 50)),
         historyStats: () => request('/dsh-music/api/history/stats'),
         onboardingState: () => request('/dsh-music/api/onboarding/state'),
@@ -1337,26 +1488,67 @@ window.__ModuleLoader__.load({
         reveal: (trackId) => api.revealTrack(trackId),
         /* 统一搜索：song+artist 两个口径并行，合并去重并打类型标签。 */
         searchRemote: async (q) => {
-          const [song, artist] = await Promise.all([
-            api.librarySearch(q, 'song').catch(() => ({ local: [], remote: [] })),
-            api.librarySearch(q, 'artist').catch(() => ({ local: [], remote: [] })),
-          ]);
+          /* 十一期③：优先 host 的 type=both 单请求（一次拿全模糊候选）；
+           * 旧 host 无该口径时退回 song/artist 两请求合并。 */
+          let main = null;
+          try { main = await api.librarySearch(q, 'both'); } catch { main = null; }
+          const legacy = main && (main.artists || main.songs)
+            ? []
+            : await Promise.all([
+              api.librarySearch(q, 'song').catch(() => ({ local: [], remote: [] })),
+              api.librarySearch(q, 'artist').catch(() => ({ local: [], remote: [] })),
+            ]);
+          const candArtists = (main && main.artists) || (legacy[1] && legacy[1].artists) || [];
+          const candSongs = (main && main.songs) || (legacy[0] && legacy[0].songs) || [];
           const localMap = new Map();
-          for (const tr of [...((song && song.local) || []), ...((artist && artist.local) || [])]) {
+          for (const tr of [...((main && main.local) || []), ...((legacy[0] && legacy[0].local) || []), ...((legacy[1] && legacy[1].local) || [])]) {
             if (tr && tr.id && !localMap.has(tr.id)) localMap.set(tr.id, tr);
           }
           const remoteMap = new Map();
-          for (const r of (song && song.remote) || []) {
+          for (const src of [main, legacy[0], legacy[1]]) {
+            for (const r of (src && src.remote) || []) {
+              const k = ((r && r.kind) === 'artist' || (r && !r.title && (r.name || r.artist)))
+                ? 'artist::' + normalizeZh(r && (r.name || r.artist))
+                : 'song::' + normalizeZh(r && r.artist) + '::' + normalizeZh(r && r.title);
+              if (!remoteMap.has(k)) remoteMap.set(k, (r && r.kind) ? r : { ...r, kind: (r && !r.title && (r.name || r.artist)) ? 'artist' : 'song' });
+            }
+          }
+          for (const r of candArtists) {
+            const k = 'artist::' + normalizeZh(r && (r.name || r.artist));
+            if (!remoteMap.has(k)) remoteMap.set(k, { kind: 'artist', name: r && (r.name || r.artist), artist: r && (r.name || r.artist), disambiguation: r && r.disambiguation });
+          }
+          for (const r of candSongs) {
             const k = 'song::' + normalizeZh(r && r.artist) + '::' + normalizeZh(r && r.title);
             if (!remoteMap.has(k)) remoteMap.set(k, { ...r, kind: 'song' });
-          }
-          for (const r of (artist && artist.remote) || []) {
-            const k = 'artist::' + normalizeZh(r && (r.name || r.artist));
-            if (!remoteMap.has(k)) remoteMap.set(k, { ...r, kind: 'artist' });
           }
           return { local: [...localMap.values()], remote: [...remoteMap.values()] };
         },
       };
+    }
+
+    /* ================================================================
+     * 6a-2. Scan-directories store (v13 settings page).
+     * add/remove responses carry the fresh list from the host.
+     * ================================================================ */
+    function createDirsService(api) {
+      const store = createStore({ status: 'idle', items: [], error: null });
+      function applyList(data) {
+        const items = Array.isArray(data && data.directories) ? data.directories : [];
+        store.set({ status: 'ready', items, error: null });
+        return items;
+      }
+      async function load() {
+        store.set({ status: 'loading', error: null });
+        try { applyList(await api.directoriesList()); }
+        catch (err) { store.set({ status: 'error', error: (err && err.message) || String(err) }); }
+      }
+      async function add(path) {
+        applyList(await api.directoriesAdd(path));
+      }
+      async function remove(path) {
+        applyList(await api.directoriesRemove(path));
+      }
+      return { source: store, load, add, remove };
     }
 
     /* ================================================================
@@ -1745,6 +1937,75 @@ window.__ModuleLoader__.load({
       return { source: store, start, warm, dispose, probe };
     }
 
+    /* ================================================================
+     * Playlist import (S12-A): dryRun preview then real import, with
+     * status polling. Host error copy (LINK_HINT etc.) passes through.
+     * ================================================================ */
+    function createImportService(api, t) {
+      const store = createStore({ phase: 'idle', summary: null, error: null });
+      let timer = null;
+      let pollFails = 0;
+      async function refresh(finalPhase) {
+        try {
+          const s = await api.importPlaylistStatus();
+          pollFails = 0;
+          if (s && s.running) {
+            store.set({ phase: 'running', summary: (s && s.summary) || store.getSnapshot().summary, error: null });
+            return true;
+          }
+          if (s && (s.summary || s.error)) {
+            store.set({
+              phase: s.error && !s.summary ? 'error' : finalPhase,
+              summary: (s && s.summary) || store.getSnapshot().summary,
+              error: (s && s.error) || null,
+            });
+            return false;
+          }
+          return false;
+        } catch {
+          /* Consecutive poll failures unlock a stuck "running" phase so the
+           * buttons are not disabled forever after a transient outage. */
+          pollFails += 1;
+          if (pollFails >= 3) {
+            pollFails = 0;
+            store.set({ phase: 'error', error: t ? t('importPollFail') : 'importPollFail' });
+            timer = null;
+            return false;
+          }
+          return true;
+        }
+      }
+      function poll(finalPhase) {
+        if (timer) return;
+        const tick = async () => {
+          const running = await refresh(finalPhase);
+          if (!running) { timer = null; return; }
+          timer = setTimeout(tick, 1500);
+        };
+        tick();
+      }
+      async function start(url, dryRun) {
+        if (!url || store.getSnapshot().phase === 'running') return;
+        store.set({ phase: 'running', error: null, summary: null });
+        try {
+          await api.importPlaylist(url, { dryRun: !!dryRun });
+        } catch (err) {
+          store.set({ phase: 'error', error: (err && err.message) || String(err), summary: null });
+          timer = null;
+          return;
+        }
+        poll(dryRun ? 'preview' : 'done');
+      }
+      async function warm() {
+        try {
+          const s = await api.importPlaylistStatus();
+          if (s && s.running) poll('done');
+        } catch { /* import API is optional during warm-up */ }
+      }
+      function dispose() { if (timer) { clearTimeout(timer); timer = null; } }
+      return { source: store, start, warm, dispose };
+    }
+
     function createHistoryService(api) {
       const store = createStore({ status: 'idle', events: [], total: 0, stats: null, error: null });
       async function load(limit) {
@@ -1773,6 +2034,21 @@ window.__ModuleLoader__.load({
      * ================================================================ */
     function likeKey(o) {
       return normalizeZh(o.artist) + '::' + normalizeZh(o.title);
+    }
+
+    /* Taste target for the CURRENT track: preview tracks carry a synthetic
+     * "preview:" id which is NOT a library id — strip it so likes/dislikes
+     * are keyed by artist+title on the host (十一期①②). */
+    function tasteItem(track) {
+      if (!track) return track;
+      const id = track.id ? String(track.id) : '';
+      if (id.indexOf('preview:') === 0) {
+        return {
+          artist: track.artist, title: track.title, album: track.album,
+          durationMs: track.durationMs, coverUrl: track.coverUrl, verification: track.verification,
+        };
+      }
+      return track;
     }
 
     function createLikesService(api, onAutoDownload) {
@@ -2329,7 +2605,7 @@ window.__ModuleLoader__.load({
       // (the now-playing hero shrinks through a container query).
       const style = size ? { width: size, height: size } : undefined;
       const glyph = size ? Math.max(14, Math.round(size * 0.4)) : 64;
-      return h('div', { className: cx('dshm-cover', className), style },
+      return h('div', { className: cx('dshm-cover', !url && 'dshm-cover-empty', className), style },
         url
           ? h('img', { src: url, alt: '', loading: 'lazy', draggable: false, onError: () => setFailed(true) })
           : h('span', { className: 'dshm-cover-fallback' }, h(IconNote, { size: glyph })));
@@ -2448,7 +2724,7 @@ window.__ModuleLoader__.load({
         }
         setBusy(false);
         if (mode === 'starter') setStep(3);
-        else onRoute('library');
+        else onRoute('settings');
       }
 
       function skipAll() {
@@ -2565,7 +2841,7 @@ window.__ModuleLoader__.load({
             : null));
     }
 
-    function Slider({ value, onChange, label, disabled, className }) {
+    function Slider({ value, onChange, label, disabled, className, title }) {
       const ref = useRef(null);
       const [drag, setDrag] = useState(null);
       const v = Math.min(1, Math.max(0, drag == null ? (value || 0) : drag));
@@ -2581,6 +2857,7 @@ window.__ModuleLoader__.load({
         role: 'slider', tabIndex: disabled ? -1 : 0,
         'aria-label': label, 'aria-valuemin': 0, 'aria-valuemax': 100,
         'aria-valuenow': Math.round(v * 100), 'aria-disabled': disabled || undefined,
+        title,
         onPointerDown: (e) => {
           if (disabled) return;
           e.currentTarget.setPointerCapture(e.pointerId);
@@ -2693,7 +2970,7 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 9. Library view — search, grouping, play-all / shuffle
      * ================================================================ */
-    function LibraryView({ t, player, library, sync, download, preview, likes, openArtistPage, artistImages, useSync, useDownload, useLibrary, usePlayer, useLikes, useArtistImages }) {
+    function LibraryView({ t, player, library, sync, download, preview, likes, openView, openArtistPage, artistImages, useSync, useDownload, useLibrary, usePlayer, useLikes, useArtistImages }) {
       const status = useLibrary((s) => s.status);
       const tracks = useLibrary((s) => s.tracks);
       const error = useLibrary((s) => s.error);
@@ -2823,7 +3100,7 @@ window.__ModuleLoader__.load({
         const isArtist = item.kind === 'artist';
         const name = isArtist ? (item.name || item.artist || '') : (item.title || '');
         const sub = isArtist
-          ? t('searchTypeArtist')
+          ? ((item.disambiguation ? item.disambiguation + ' · ' : '') + t('searchTypeArtist'))
           : (item.artist || '') + (item.album ? ' · ' + item.album : '');
         return h('div', { className: 'dshm-row', key: 'r' + i, role: 'listitem' },
           isArtist
@@ -2857,6 +3134,8 @@ window.__ModuleLoader__.load({
 
       let content;
       const remoteList = searching && searchState.status === 'ready' ? searchState.remote : [];
+      const remoteArtists = remoteList.filter((r) => r.kind === 'artist');
+      const remoteSongs = remoteList.filter((r) => r.kind !== 'artist');
       if (libTab === 'likes') {
         content = likeItems.length === 0
           ? h(EmptyState, {
@@ -2910,6 +3189,9 @@ window.__ModuleLoader__.load({
             h('div', { className: 'dshm-empty-dirs-head' }, t('emptyAddDirHint')),
             ['~/Music/dsh-music', '~/Music/spotify-liked', '~/Music/Music/Media.localized']
               .map((d) => h('code', { key: d, className: 'dshm-empty-dir' }, d)),
+            h('button', {
+              type: 'button', className: 'dshm-chipbtn', onClick: () => openView('settings'),
+            }, h(IconGear, { size: 12 }), t('emptySettingsCta')),
             h('div', { className: 'dshm-count' }, t('emptyDirNote'))));
       } else if (searching && searchState.status === 'loading') {
         content = h('div', { className: 'dshm-list' }, h(SkeletonRows));
@@ -2931,13 +3213,21 @@ window.__ModuleLoader__.load({
                 h('span', { className: 'dshm-group-count' }, list.length + ' ' + t('tracksUnit'))),
               list.map((tr, i) => renderRow(tr, i))))
             : shownList.map((tr, i) => renderRow(tr, i)),
-          remoteList.length > 0
-            ? h('section', null,
+          remoteArtists.length > 0
+            ? h('section', { key: 'pick-artists' },
                 h('div', { className: 'dshm-group-head' },
                   h(IconSearch, { size: 14 }),
-                  h('span', { className: 'dshm-ellipsis' }, t('searchWebTitle')),
-                  h('span', { className: 'dshm-group-count' }, remoteList.length + ' ' + t('tracksUnit'))),
-                remoteList.map((item, i) => RemoteRow(item, i)))
+                  h('span', { className: 'dshm-ellipsis' }, t('searchPickArtist')),
+                  h('span', { className: 'dshm-group-count' }, remoteArtists.length + ' ' + t('searchTypeArtist'))),
+                remoteArtists.map((item, i) => RemoteRow(item, i)))
+            : null,
+          remoteSongs.length > 0
+            ? h('section', { key: 'pick-songs' },
+                h('div', { className: 'dshm-group-head' },
+                  h(IconSearch, { size: 14 }),
+                  h('span', { className: 'dshm-ellipsis' }, t('searchPickSong')),
+                  h('span', { className: 'dshm-group-count' }, remoteSongs.length + ' ' + t('tracksUnit'))),
+                remoteSongs.map((item, i) => RemoteRow(item, i)))
             : null,
           shownList.length === 0 && remoteList.length > 0 && searching
             ? h('div', { className: 'dshm-lyrics-hint', style: { padding: '4px 8px' } }, t('searchNoLocal'))
@@ -2946,7 +3236,6 @@ window.__ModuleLoader__.load({
 
       const busy = status === 'loading';
       return h(React.Fragment, null,
-        sync ? h(SyncPanel, { t, sync, useSync }) : null,
         rowError ? h('div', { className: 'dshm-errorline', role: 'alert', style: { margin: '8px 24px 0' } }, rowError) : null,
         libTab === 'likes'
           ? h('div', { className: 'dshm-libtabs' },
@@ -3014,13 +3303,6 @@ window.__ModuleLoader__.load({
             'aria-label': mode.label, title: mode.hint + ' · ' + t('modeCycleHint'),
             onClick: () => player.cycleMode(),
           }, h(mode.icon, { size: 14 })),
-          sync ? h('button', {
-            type: 'button', className: cx('dshm-chipbtn', !syncUsable && 'dshm-chipbtn-off'),
-            disabled: syncState === 'running' || busy || !syncUsable,
-            title: syncUsable ? (syncHint || t('syncOptionalHint')) : (syncHint || t('syncUnavailableHint')),
-            onClick: () => sync.start(),
-          }, h(IconRefresh, { size: 13, className: syncState === 'running' ? 'dshm-spin' : undefined }),
-            syncState === 'running' ? t('syncing') : t('syncBtn')) : null,
           h('span', { className: 'dshm-count', style: { marginLeft: 'auto' } },
             busy && tracks.length === 0 ? t('rescanning')
               : (libTab === 'likes' ? likedFiltered.length : shownList.length) + ' ' + t('tracksUnit'))),
@@ -3033,7 +3315,7 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 10. Now-playing view — hero + transport + queue
      * ================================================================ */
-    function NowPlayingView({ t, player, lyrics, usePlayer, useLyrics, openView, openArtistPage, artistImages, useArtistImages }) {
+    function NowPlayingView({ t, player, lyrics, likes, usePlayer, useLyrics, useLikes, openView, openArtistPage, artistImages, useArtistImages }) {
       const track = usePlayer((s) => s.track);
       const playing = usePlayer((s) => s.playing);
       const position = usePlayer((s) => s.position);
@@ -3042,7 +3324,6 @@ window.__ModuleLoader__.load({
       const muted = usePlayer((s) => s.muted);
       const shuffle = usePlayer((s) => s.shuffle);
       const repeat = usePlayer((s) => s.repeat);
-      const mode = modeMeta(t, shuffle, repeat);
       const error = usePlayer((s) => s.error);
       const queue = usePlayer((s) => s.queue);
       const queueIndex = usePlayer((s) => s.queueIndex);
@@ -3064,15 +3345,19 @@ window.__ModuleLoader__.load({
           h('div', { className: 'dshm-now-meta' },
             h('span', { className: 'dshm-source-chip' }, h(IconDisc, { size: 12 }), sourceLabel(track.source, t)),
             h('h2', { className: 'dshm-now-title dshm-ellipsis' }, track.title),
-            h('p', { className: 'dshm-now-sub dshm-ellipsis' },
-              h('button', {
-                type: 'button', className: 'dshm-artist-btn',
-                title: t('artistOpen'), 'aria-label': t('artistOpen'),
-                onClick: () => openArtistPage(track.artist || ''),
-              },
-                h(ArtistAvatar, { name: track.artist || '', size: 18, service: artistImages, useArtistImages }),
-                h('span', null, track.artist || t('unknownArtist'))),
-              track.album ? ' · ' + track.album : ''),
+            h('div', { className: 'dshm-now-subrow' },
+              h('p', { className: 'dshm-now-sub dshm-ellipsis' },
+                h('button', {
+                  type: 'button', className: 'dshm-artist-btn',
+                  title: t('artistOpen'), 'aria-label': t('artistOpen'),
+                  onClick: () => openArtistPage(track.artist || ''),
+                },
+                  h(ArtistAvatar, { name: track.artist || '', size: 18, service: artistImages, useArtistImages }),
+                  h('span', null, track.artist || t('unknownArtist'))),
+                track.album ? ' · ' + track.album : ''),
+              likes ? h('div', { className: 'dshm-now-taste' },
+                h(LikeButton, { t, item: tasteItem(track), likes, useLikes }),
+                h(DislikeButton, { t, item: tasteItem(track), likes, useLikes })) : null),
             error ? h('div', { className: 'dshm-errorline', role: 'alert' }, h(IconAlert, { size: 15 }), error) : null,
             h('div', { className: 'dshm-seekrow' },
               h('span', { className: 'dshm-time' }, formatTime(position)),
@@ -3082,18 +3367,25 @@ window.__ModuleLoader__.load({
               }),
               h('span', { className: 'dshm-time dshm-time-end' }, formatTime(duration))),
             h('div', { className: 'dshm-transport' },
-              h(IconButton, {
-                label: mode.label, title: mode.hint + ' · ' + t('modeCycleHint'),
-                className: cx((shuffle || repeat === 'one') && 'dshm-iconbtn-active'),
-                onClick: () => player.cycleMode(),
-              }, h(mode.icon, { size: 17 })),
-              h(IconButton, { label: t('prev'), onClick: () => player.prev() }, h(IconPrev, { size: 20 })),
-              h('button', {
-                type: 'button', className: 'dshm-playbtn',
-                'aria-label': playing ? t('pause') : t('play'),
-                onClick: () => player.toggle(),
-              }, h(playing ? IconPause : IconPlay, { size: 22 })),
-              h(IconButton, { label: t('next'), onClick: () => player.next() }, h(IconNext, { size: 20 }))),
+              h('div', { className: 'dshm-transport-side dshm-transport-left' },
+                h(IconButton, {
+                  label: shuffle ? t('shuffleOn') : t('shuffle'),
+                  title: t('shuffle'), active: shuffle,
+                  onClick: () => player.setMode(shuffle ? 'order' : 'shuffle'),
+                }, h(IconShuffle, { size: 17 }))),
+              h('div', { className: 'dshm-transport-center' },
+                h(IconButton, { label: t('prev'), onClick: () => player.prev() }, h(IconPrev, { size: 20 })),
+                h('button', {
+                  type: 'button', className: 'dshm-playbtn',
+                  'aria-label': playing ? t('pause') : t('play'),
+                  onClick: () => player.toggle(),
+                }, h(playing ? IconPause : IconPlay, { size: 22 })),
+                h(IconButton, { label: t('next'), onClick: () => player.next() }, h(IconNext, { size: 20 }))),
+              h('div', { className: 'dshm-transport-side dshm-transport-right' },
+                h(IconButton, {
+                  label: repeatLabel, title: repeatLabel, active: repeat !== 'all',
+                  onClick: () => player.setMode(repeat === 'one' ? 'order' : 'one'),
+                }, h(RepeatIcon, { size: 17 })))),
             h('div', { className: 'dshm-volumerow' },
               h(IconButton, { label: muted ? t('unmute') : t('mute'), onClick: () => player.toggleMute() },
                 h(muted || volume === 0 ? IconMute : IconVolume, { size: 17 })),
@@ -3636,20 +3928,32 @@ window.__ModuleLoader__.load({
     }
 
     /* ================================================================
-     * 11b. Spotify sync panel (S3): trigger + result chips
+     * 11b. Spotify sync card (S12-E): one of the three equal "sync &
+     * import" sources, trigger + status/result chips, always visible.
      * ================================================================ */
     function SyncPanel({ t, sync, useSync }) {
       const s = useSync((st) => st);
-      if (s.phase === 'idle' && !s.result && !s.error) return null;
+      const usable = s.available !== false;
       const r = s.result || {};
       const chips = [
         ['syncCloud', r.cloud], ['syncAdded', r.added], ['syncRemoved', r.removed],
         ['syncOk', r.ok], ['syncFail', r.fail], ['syncMissing', r.missing],
       ];
       const problems = (s.tracks || []).filter((tr) => tr && (tr.status === 'fail' || tr.status === 'missing'));
-      return h('div', { className: 'dshm-sync', role: 'status' },
+      return h('div', { className: 'dshm-sync' },
         h('div', { className: 'dshm-asec-title' }, h(IconRefresh, { size: 13, className: s.phase === 'running' ? 'dshm-spin' : undefined }),
-          s.phase === 'running' ? t('syncing') : s.phase === 'error' ? t('syncError') : t('syncBtn')),
+          t('syncCardTitle')),
+        h('div', { className: 'dshm-lyrics-hint' },
+          usable ? (s.hint || t('syncOptionalHint')) : (s.hint || t('syncUnavailableHint'))),
+        h('div', { className: 'dshm-syncrow-actions' },
+          h('button', {
+            type: 'button', className: cx('dshm-chipbtn', !usable && 'dshm-chipbtn-off'),
+            disabled: s.phase === 'running' || !usable,
+            title: usable ? (s.hint || t('syncOptionalHint')) : (s.hint || t('syncUnavailableHint')),
+            onClick: () => sync.start(),
+          }, h(IconRefresh, { size: 13, className: s.phase === 'running' ? 'dshm-spin' : undefined }),
+            s.phase === 'running' ? t('syncing') : t('syncBtn'))),
+        s.phase === 'running' ? h('div', { className: 'dshm-sync-chips', role: 'status' }, t('syncing')) : null,
         s.error ? h('div', { className: 'dshm-errorline', role: 'alert' }, h(IconAlert, { size: 14 }), s.error) : null,
         s.phase !== 'running' && s.result
           ? h('div', { className: 'dshm-sync-chips' },
@@ -3662,6 +3966,132 @@ window.__ModuleLoader__.load({
                 (tr.status === 'fail' ? '✕ ' : '⚠ ') + (tr.artist || '') + ' - ' + (tr.title || '') + (tr.note ? '（' + tr.note + '）' : ''))),
               problems.length > 8 ? h('div', null, '… +' + (problems.length - 8)) : null)
           : null);
+    }
+
+    /* ================================================================
+     * 11b-2. Playlist import card (S12-A/E): link input + preview/import.
+     * One instance per source (QQ / NetEase); host auto-detects the
+     * platform from the link, so the placeholder is a hint, not a gate.
+     * ================================================================ */
+    function ImportPanel({ t, imp, useImport, platform }) {
+      const titleKey = platform === 'qq' ? 'importQqTitle' : platform === 'netease' ? 'importNeTitle' : 'importTitle';
+      const phKey = platform === 'qq' ? 'importPlaceholderQq' : platform === 'netease' ? 'importPlaceholderNe' : 'importPlaceholder';
+      const s = useImport((st) => st);
+      const [url, setUrl] = useState('');
+      const busy = s.phase === 'running';
+      const ready = !!url.trim() && !busy;
+      const go = (dryRun) => { if (ready) imp.start(url.trim(), dryRun); };
+      const sm = s.summary || {};
+      const chip = ([key, value]) => h('span', { className: 'dshm-sync-chip', key },
+        t(key) + ' ' + (value == null || value === '' ? '—' : value));
+      const runningChips = [
+        ['importFetched', sm.fetched], ['importQueued', sm.queued],
+        ['importDownloaded', sm.downloaded], ['importFailures', sm.failures],
+      ];
+      const summaryChips = [
+        ['importProvider', sm.provider], ['importName', sm.name],
+        ['importTotal', sm.total], ['importMatched', sm.matched],
+        ['importFuzzy', sm.fuzzyMatched], ['importMissing', sm.missing],
+        ['importDownloaded', sm.downloaded],
+      ];
+      const sample = Array.isArray(sm.sample) ? sm.sample : [];
+      return h('div', { className: 'dshm-import' },
+        h('div', { className: 'dshm-asec-title' }, h(IconQueue, { size: 13 }), t(titleKey)),
+        h('div', { className: 'dshm-import-row' },
+          h('input', {
+            type: 'url', className: 'dshm-import-input', value: url,
+            placeholder: t(phKey), 'aria-label': t(phKey),
+            onChange: (e) => setUrl(e.target.value),
+            onKeyDown: (e) => { if (e.key === 'Enter') go(true); },
+          }),
+          h('button', { type: 'button', className: 'dshm-chipbtn', disabled: !ready, onClick: () => go(true) },
+            t('importPreview')),
+          h('button', { type: 'button', className: 'dshm-chipbtn dshm-chipbtn-primary', disabled: !ready,
+            onClick: () => go(false) }, busy ? t('importing') : t('importRun'))),
+        s.error ? h('div', { className: 'dshm-errorline', role: 'alert' }, h(IconAlert, { size: 14 }), s.error) : null,
+        busy ? h('div', { className: 'dshm-sync-chips', role: 'status' }, runningChips.map(chip)) : null,
+        !busy && (s.phase === 'preview' || s.phase === 'done') && s.summary
+          ? h(React.Fragment, null,
+              h('div', { className: 'dshm-sync-chips' }, summaryChips.map(chip)),
+              sample.length
+                ? h('div', { className: 'dshm-sync-detail' },
+                    sample.slice(0, 8).map((it, i) => h('div', { key: i },
+                      (it && it.artist ? it.artist + ' - ' : '') + (it && it.title ? it.title : ''))),
+                    sample.length > 8 ? h('div', null, '… +' + (sample.length - 8)) : null)
+                : null,
+              s.phase === 'preview'
+                ? h('div', { className: 'dshm-lyrics-hint' }, t('importPreviewHint'))
+                : h('div', { className: 'dshm-lyrics-hint' }, t('importDone')))
+          : null);
+    }
+
+    /* ================================================================
+     * 11b-2. Settings view (v13): sync cards + local-music folders.
+     * Folder add/remove with inline two-step confirm; the host response
+     * carries the fresh directory list, then the library re-scans.
+     * ================================================================ */
+    function SettingsView({ t, library, sync, impQq, impNe, dirs, useDirs, useSync, useImportQq, useImportNe }) {
+      const s = useDirs ? useDirs((st) => st) : { status: 'idle', items: [], error: null };
+      const [dirPath, setDirPath] = useState('');
+      const [dirBusy, setDirBusy] = useState(false);
+      const [dirError, setDirError] = useState(null);
+      const [confirmPath, setConfirmPath] = useState(null);
+      useEffect(() => { if (dirs && dirs.load && dirs.source.getSnapshot().status === 'idle') dirs.load(); }, []);
+
+      async function doAdd() {
+        if (dirBusy || !dirPath.trim()) return;
+        setDirBusy(true);
+        setDirError(null);
+        try {
+          await dirs.add(dirPath.trim());
+          setDirPath('');
+          if (library && library.rescan) library.rescan();
+        } catch (err) { setDirError((err && err.message) || String(err)); }
+        setDirBusy(false);
+      }
+      async function doRemove(path) {
+        setConfirmPath(null);
+        setDirError(null);
+        try {
+          await dirs.remove(path);
+          if (library && library.rescan) library.rescan();
+        } catch (err) { setDirError((err && err.message) || String(err)); }
+      }
+      const sourceLabel = (src) => (src === 'default'
+        ? t('dirSourceDefault')
+        : (!src || src === 'custom' ? t('dirSourceCustom') : src));
+
+      const folderRows = (s.items || []).map((item) => h('div', { className: 'dshm-dirrow', key: item && item.path },
+        h('code', { className: 'dshm-dirpath' }, item && item.path),
+        h('span', { className: 'dshm-dirsrc' }, sourceLabel(item && item.source)),
+        h('button', {
+          type: 'button', className: 'dshm-chipbtn dshm-dir-remove', disabled: dirBusy,
+          onClick: () => (confirmPath === (item && item.path) ? doRemove(item.path) : setConfirmPath(item && item.path)),
+        }, confirmPath === (item && item.path) ? t('settingsRemoveConfirm') : t('settingsRemove'))));
+
+      return h('div', { className: 'dshm-settings' },
+        h('section', { className: 'dshm-setsec' },
+          h('h2', { className: 'dshm-setsec-title' }, t('settingsSyncTitle')),
+          h('div', { className: 'dshm-syncrow' },
+            sync ? h(SyncPanel, { t, sync, useSync }) : null,
+            impQq && useImportQq ? h(ImportPanel, { t, imp: impQq, useImport: useImportQq, platform: 'qq' }) : null,
+            impNe && useImportNe ? h(ImportPanel, { t, imp: impNe, useImport: useImportNe, platform: 'netease' }) : null)),
+        h('section', { className: 'dshm-setsec' },
+          h('h2', { className: 'dshm-setsec-title' }, t('settingsDirsTitle')),
+          h('div', { className: 'dshm-dirs' },
+            folderRows.length ? folderRows : h('div', { className: 'dshm-dirs-empty' }, t('settingsDirsEmpty')),
+            h('div', { className: 'dshm-diradd' },
+              h('input', {
+                value: dirPath, placeholder: t('settingsAddPlaceholder'), 'aria-label': t('settingsAddPlaceholder'),
+                onChange: (e) => setDirPath(e && e.target ? e.target.value : e),
+                onKeyDown: (e) => { if (e && e.key === 'Enter') doAdd(); },
+              }),
+              h('button', {
+                type: 'button', className: 'dshm-chipbtn dshm-chipbtn-primary',
+                disabled: dirBusy || !dirPath.trim(), onClick: doAdd,
+              }, dirBusy ? t('settingsAdding') : t('settingsAdd'))),
+            (dirError || s.error) ? h('div', { className: 'dshm-errorline', role: 'alert' },
+              h(IconAlert, { size: 14 }), dirError || s.error) : null)));
     }
 
     /* ================================================================
@@ -3939,7 +4369,7 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 12. Music panel (main slot): header + tabs + per-view body
      * ================================================================ */
-    function MusicPanel({ t, player, library, lyrics, reco, download, sync, history, likes, preview, warm, openView, openArtistPage, setMiniHidden, ui, artistImages, artistPage, onboarding, useUi, useLibrary, usePlayer, useLyrics, useReco, useDownload, useSync, useHistory, useLikes, usePreview, useWarm, useArtistImages, useArtistPage, useOnboarding }) {
+    function MusicPanel({ t, player, library, lyrics, reco, download, sync, history, impQq, impNe, dirs, likes, preview, warm, openView, openArtistPage, setMiniHidden, ui, artistImages, artistPage, onboarding, useUi, useLibrary, usePlayer, useLyrics, useReco, useDownload, useSync, useHistory, useLikes, usePreview, useWarm, useArtistImages, useArtistPage, useOnboarding, useImportQq, useImportNe, useDirs }) {
       const view = useUi((s) => s.view);
       const welcomePreview = useUi((s) => s.welcomePreview);
       const onboardingSnap = useOnboarding((st) => st);
@@ -3992,14 +4422,16 @@ window.__ModuleLoader__.load({
       ];
 
       const body = view === 'library'
-        ? h(LibraryView, { t, player, library, sync, download, preview, likes, openArtistPage, artistImages, useLikes, useSync, useDownload, useLibrary, usePlayer, useArtistImages })
+        ? h(LibraryView, { t, player, library, sync, download, preview, likes, openView, openArtistPage, artistImages, useLikes, useSync, useDownload, useLibrary, usePlayer, useArtistImages })
         : view === 'reco'
           ? h(RecoView, { t, reco, download, player, library, likes, preview, history, openArtistPage, warm, useReco, useDownload, useLibrary, useLikes, usePlayer, useHistory, useWarm })
           : view === 'artist'
             ? h(ArtistPageView, { t, reco, player, likes, preview, library, openView, openArtistPage, artistImages, artistPage, useUi, useLikes, useLibrary, usePlayer, useArtistImages, useArtistPage })
-            : view === 'history'
-              ? h(HistoryView, { t, history, player, openArtistPage, artistImages, likes, useHistory, useLibrary, useArtistImages, useLikes })
-              : h(NowPlayingView, { t, player, lyrics, usePlayer, useLyrics, openView, openArtistPage, artistImages, useArtistImages });
+            : view === 'settings'
+              ? h(SettingsView, { t, library, sync, impQq, impNe, dirs, useDirs, useSync, useImportQq, useImportNe })
+              : view === 'history'
+                ? h(HistoryView, { t, history, player, openArtistPage, artistImages, likes, useHistory, useLibrary, useArtistImages, useLikes })
+                : h(NowPlayingView, { t, player, lyrics, likes, usePlayer, useLyrics, useLikes, openView, openArtistPage, artistImages, useArtistImages });
 
       return h(React.Fragment, null,
         h('div', { className: 'dshm-panel' },
@@ -4011,8 +4443,8 @@ window.__ModuleLoader__.load({
                 onboardingSnap && onboardingSnap.completed
                   ? h('button', {
                       type: 'button', className: 'dshm-chipbtn',
-                      title: t('welcomePreview'), onClick: () => ui.set({ view: 'welcome', welcomePreview: true }),
-                    }, h(IconSparkles, { size: 12 }), t('welcomePreview'))
+                      title: t('settings'), onClick: () => openView('settings'),
+                    }, h(IconGear, { size: 12 }), t('settings'))
                   : null,
                 h('button', {
                   type: 'button', className: cx('dshm-chipbtn', !miniHidden && 'dshm-chipbtn-primary'),
@@ -4059,7 +4491,7 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 14. Mini player (shell.overlay — mounted across navigation)
      * ================================================================ */
-    function MiniPlayer({ t, player, lyrics, artistImages, usePlayer, useUi, useLyrics, useArtistImages, openNow, openArtistPage, setMiniHidden, setMiniCollapsed }) {
+    function MiniPlayer({ t, player, lyrics, likes, artistImages, usePlayer, useUi, useLyrics, useLikes, useArtistImages, openNow, openArtistPage, setMiniHidden, setMiniCollapsed }) {
       const track = usePlayer((s) => s.track);
       const playing = usePlayer((s) => s.playing);
       const position = usePlayer((s) => s.position);
@@ -4074,6 +4506,15 @@ window.__ModuleLoader__.load({
       const snap = useLyrics((s) => (s.trackId === trackId ? s : null));
       const [pos, setPos] = useState(() => readPrefs().miniPos || null);
       const [fabPos, setFabPos] = useState(() => readPrefs().miniFabPos || null);
+      const [lyricsOpen, setLyricsOpen] = useState(() => !!readPrefs().miniLyricsOpen);
+      const [lyricFont, setLyricFont] = useState(() => {
+        const saved = Number(readPrefs().miniLyricFont);
+        return Number.isFinite(saved) && saved >= 11 && saved <= 17 ? saved : 13;
+      });
+      const lyricsOpenRef = useRef(lyricsOpen);
+      const lyricFontRef = useRef(lyricFont);
+      lyricsOpenRef.current = lyricsOpen;
+      lyricFontRef.current = lyricFont;
       const [dragging, setDragging] = useState(false);
       const boxRef = useRef(null);
       const dragRef = useRef(null);
@@ -4147,7 +4588,17 @@ window.__ModuleLoader__.load({
           if (!fabDragRef.current) return;
           fabDragRef.current = null;
           if (fabMoved.current < 5) { setMiniCollapsed(false); return; }
-          if (fabPosRef.current) writePrefs({ miniFabPos: fabPosRef.current });
+          /* 拖动结束：按 icon 中心 x 贴左缘或右缘 */
+          const fp = fabPosRef.current;
+          if (fp) {
+            const snapped = {
+              left: fp.left + 24 < window.innerWidth / 2 ? 8 : Math.max(8, window.innerWidth - 56),
+              top: fp.top,
+            };
+            fabPosRef.current = snapped;
+            setFabPos(snapped);
+            writePrefs({ miniFabPos: snapped });
+          }
           try { if (fabRef.current) fabRef.current.releasePointerCapture(e.pointerId); } catch { /* released */ }
         };
         const fabStyle = fabPos ? { left: fabPos.left, top: fabPos.top, right: 'auto', bottom: 'auto' } : undefined;
@@ -4193,6 +4644,66 @@ window.__ModuleLoader__.load({
         try { if (boxRef.current) boxRef.current.releasePointerCapture(e.pointerId); } catch { /* released */ }
       };
 
+      /* 整条表面拖动：左键按在非交互面（按钮/滑条/输入/grip 之外）即可拖动，
+         ≥3px 阈值区分点击与拖动；拖毕写 miniPos。 */
+      const surfaceDown = (e) => {
+        if (e.button !== 0) return;
+        const from = e.target;
+        if (from && from.closest && from.closest('button,input,[role="slider"],.dshm-mini-grip')) return;
+        const el = boxRef.current;
+        if (!el) return;
+        const box = el.getBoundingClientRect();
+        dragRef.current = {
+          px: e.clientX, py: e.clientY, left: box.left, top: box.top,
+          w: box.width, h: box.height, active: false, pointerId: e.pointerId,
+        };
+      };
+      const surfaceMove = (e) => {
+        const d = dragRef.current;
+        if (!d) return;
+        const dx = e.clientX - d.px, dy = e.clientY - d.py;
+        if (!d.active) {
+          if (Math.abs(dx) + Math.abs(dy) < 3) return;
+          d.active = true;
+          setDragging(true);
+          try { boxRef.current && boxRef.current.setPointerCapture(d.pointerId); } catch { /* unsupported */ }
+        }
+        const next = {
+          left: Math.max(0, Math.min(d.left + dx, window.innerWidth - d.w - 8)),
+          top: Math.max(0, Math.min(d.top + dy, window.innerHeight - d.h - 8)),
+        };
+        posRef.current = next;
+        setPos(next);
+      };
+      const surfaceUp = (e) => {
+        const d = dragRef.current;
+        if (!d) return;
+        dragRef.current = null;
+        if (!d.active) return;
+        setDragging(false);
+        if (posRef.current) writePrefs({ miniPos: posRef.current });
+        try { if (boxRef.current) boxRef.current.releasePointerCapture(d.pointerId); } catch { /* released */ }
+      };
+
+      /* 收起到悬浮 icon：按条中心 x 与视口中线比较，贴左缘或右缘（用户第二轮第 3 条）。 */
+      const collapseToFab = () => {
+        try {
+          const el = boxRef.current;
+          if (el) {
+            const r = el.getBoundingClientRect();
+            const goLeft = r.left + r.width / 2 < window.innerWidth / 2;
+            const prevTop = fabPosRef.current ? fabPosRef.current.top : r.top;
+            const next = {
+              left: goLeft ? 8 : Math.max(8, window.innerWidth - 56),
+              top: Math.max(0, Math.min(prevTop, window.innerHeight - 56)),
+            };
+            setFabPos(next);
+            writePrefs({ miniFabPos: next });
+          }
+        } catch { /* geometry unavailable */ }
+        setMiniCollapsed(true);
+      };
+
       const frac = duration > 0 ? Math.min(1, position / duration) : 0;
       const lines = snap && snap.data && snap.data.synced ? snap.data.lines : null;
       let activeIdx = -1;
@@ -4204,10 +4715,21 @@ window.__ModuleLoader__.load({
         }
       }
       const win = [];
+      const winSize = 3; /* 用户第二轮规格：展开三行 */
       if (lines && lines.length) {
-        const start = activeIdx < 0 ? 0 : Math.max(0, Math.min(activeIdx - 1, lines.length - 3));
-        for (let i = start; i < Math.min(lines.length, start + 3); i++) win.push({ i, text: lines[i].text || '♪' });
+        const start = activeIdx < 0 ? 0 : Math.max(0, Math.min(activeIdx - 1, lines.length - winSize));
+        for (let i = start; i < Math.min(lines.length, start + winSize); i++) win.push({ i, text: lines[i].text || '♪' });
       }
+      const toggleLyrics = () => {
+        const next = !lyricsOpenRef.current;
+        setLyricsOpen(next);
+        writePrefs({ miniLyricsOpen: next });
+      };
+      const nudgeLyricFont = (delta) => {
+        const next = Math.max(11, Math.min(17, lyricFontRef.current + delta));
+        setLyricFont(next);
+        writePrefs({ miniLyricFont: next });
+      };
       const style = pos ? { left: pos.left, top: pos.top, right: 'auto', bottom: 'auto' } : undefined;
       const activeLine = activeIdx >= 0 && lines && lines[activeIdx] ? (lines[activeIdx].text || '♪') : '';
       const artistBtn = h('button', {
@@ -4222,8 +4744,10 @@ window.__ModuleLoader__.load({
 
       return portalToBody(h('div', {
         ref: boxRef, style,
-        className: cx('dshm-mini', dragging && 'dshm-mini-dragging'),
+        className: cx('dshm-mini', lyricsOpen && 'dshm-mini-open', dragging && 'dshm-mini-dragging'),
         role: 'region', 'aria-label': t('miniLabel'),
+        onPointerDown: surfaceDown, onPointerMove: surfaceMove,
+        onPointerUp: surfaceUp, onPointerCancel: surfaceUp,
       },
         h('div', {
           className: 'dshm-mini-grip', role: 'button', tabIndex: 0,
@@ -4242,44 +4766,69 @@ window.__ModuleLoader__.load({
             writePrefs({ miniPos: next });
           },
         }, h(IconGrip, { size: 14 })),
-        h('div', { className: 'dshm-mini-inner' },
+        h('div', { className: 'dshm-mini-top' },
+          h('button', {
+            type: 'button', className: 'dshm-mini-cover',
+            onClick: openNow, title: t('openNow'), 'aria-label': t('openNow'),
+          }, h(Cover, { track, size: 90 })),
           h('button', {
             type: 'button', className: 'dshm-mini-main',
             onClick: openNow, title: t('openNow'), 'aria-label': t('openNow'),
           },
-            h(Cover, { track, size: 36 }),
-            h('span', { className: 'dshm-mini-text' },
-              h('span', { className: 'dshm-mini-title dshm-ellipsis' }, track.title),
-              artistBtn)),
-          h('div', { className: 'dshm-mini-controls' },
-            h(IconButton, { label: t('prev'), onClick: () => player.prev() }, h(IconPrev, { size: 15 })),
+            h('span', { className: 'dshm-mini-title dshm-ellipsis' }, track.title),
+            artistBtn),
+          h('div', { className: 'dshm-mini-transport' },
+            h(IconButton, { label: t('prev'), onClick: () => player.prev() }, h(IconPrev, { size: 16 })),
             h(IconButton, {
               label: playing ? t('pause') : t('play'), className: 'dshm-mini-play',
               onClick: () => player.toggle(),
-            }, h(playing ? IconPause : IconPlay, { size: 16 })),
-            h(IconButton, { label: t('next'), onClick: () => player.next() }, h(IconNext, { size: 15 })),
+            }, h(playing ? IconPause : IconPlay, { size: 18 })),
+            h(IconButton, { label: t('next'), onClick: () => player.next() }, h(IconNext, { size: 16 }))),
+          h('span', { className: 'dshm-mini-time' }, formatTime(position)),
+          h('div', { className: 'dshm-mini-hover dshm-mini-win' },
+            h(IconButton, {
+              label: t('miniCollapse'), title: t('miniCollapse'),
+              onClick: collapseToFab,
+            }, h(IconChevronDown, { size: 14 })),
+            h(IconButton, { label: t('hideMini'), title: t('hideMini'), onClick: () => setMiniHidden(true) }, h(IconClose, { size: 13 })))),
+        h('div', { className: 'dshm-mini-bar' },
+          h('button', {
+            type: 'button', className: cx('dshm-mini-tool', 'dshm-mini-tool-word', lyricsOpen && 'dshm-mini-tool-on'),
+            'aria-label': t('miniLyrics'), title: t('miniLyrics'),
+            onClick: toggleLyrics,
+          }, t('miniLyricsWord')),
+          h('div', { className: 'dshm-mini-hover dshm-mini-extras' },
+            likes ? h(LikeButton, { t, item: tasteItem(track), likes, useLikes }) : null,
+            likes ? h(DislikeButton, { t, item: tasteItem(track), likes, useLikes }) : null,
             h(IconButton, {
               label: mode.label, title: mode.hint + ' · ' + t('modeCycleHint'),
               className: cx((shuffle || repeat === 'one') && 'dshm-iconbtn-active'),
               onClick: () => player.cycleMode(),
-            }, h(mode.icon, { size: 15 })),
-            h(IconButton, {
-              label: t('miniCollapse'), title: t('miniCollapse'),
-              onClick: () => setMiniCollapsed(true),
-            }, h(IconChevronDown, { size: 15 })),
-            h(IconButton, { label: t('hideMini'), title: t('hideMini'), onClick: () => setMiniHidden(true) }, h(IconClose, { size: 13 })))),
-        h('div', { className: 'dshm-mini-seek' },
+            }, h(mode.icon, { size: 15 }))),
           h(Slider, {
             value: frac, label: t('seekLabel'), disabled: !(duration > 0),
+            className: 'dshm-mini-bar-slider',
+            title: duration > 0 ? formatTime(duration) : undefined,
             onChange: (f) => player.seek(f * duration),
-          })),
-        win.length
-          ? h('div', { className: 'dshm-mini-lyrics', 'aria-label': t('miniLyrics') },
-              win.map((ln) => h('div', {
-                key: ln.i,
-                className: cx('dshm-mini-lyric', ln.i === activeIdx && 'dshm-mini-lyric-on'),
-                title: ln.text,
-              }, ln.text)))
+          }),
+          h('button', {
+            type: 'button', className: 'dshm-mini-tool',
+            'aria-label': t('miniFontSmaller'), title: t('miniFontSmaller'),
+            onClick: () => nudgeLyricFont(-1),
+          }, 'A-'),
+          h('button', {
+            type: 'button', className: 'dshm-mini-tool',
+            'aria-label': t('miniFontLarger'), title: t('miniFontLarger'),
+            onClick: () => nudgeLyricFont(1),
+          }, 'A+')),
+        lyricsOpen && win.length
+          ? h('div', { className: 'dshm-mini-body' },
+              h('div', { className: 'dshm-mini-lyrics', 'aria-label': t('miniLyrics'), style: { fontSize: lyricFont + 'px' } },
+                win.map((ln) => h('div', {
+                  key: ln.i,
+                  className: cx('dshm-mini-lyric', ln.i === activeIdx && 'dshm-mini-lyric-on'),
+                  title: ln.text,
+                }, ln.text))))
           : null));
     }
 
@@ -4302,6 +4851,9 @@ window.__ModuleLoader__.load({
       const recoService = createRecoService(api);
       const downloadService = createDownloadService(api);
       const syncService = createSyncService(api);
+      const importServiceQq = createImportService(api, t);
+      const importServiceNe = createImportService(api, t);
+      const dirsService = createDirsService(api);
       const historyService = createHistoryService(api);
       const player = createPlayer(t, api);
       const previewService = createPreviewService(api);
@@ -4310,6 +4862,8 @@ window.__ModuleLoader__.load({
       ctx.effect(() => () => {
         downloadService.dispose();
         syncService.dispose();
+        importServiceQq.dispose();
+        importServiceNe.dispose();
         previewService.dispose();
       }, 'dsh-music: s3 poll timers');
       downloadService.warm();
@@ -4372,14 +4926,14 @@ window.__ModuleLoader__.load({
         locale: NS,
         inject: () => ({
           player, library, lyrics: lyricsService, artist: artistService, artistImages: artistImageService, onboarding: onboardingService,
-          reco: recoService, download: downloadService, sync: syncService, history: historyService,
+          reco: recoService, download: downloadService, sync: syncService, history: historyService, impQq: importServiceQq, impNe: importServiceNe, dirs: dirsService,
           likes: likesService, preview: previewService, warm: warmService,
           openView, openArtistPage, setMiniHidden, ui, artistPage: artistPageService,
           hooks: {
             player: player.source, library: library.source, ui,
-            lyrics: lyricsService.source, artist: artistService.source, artistPage: artistPageService.source, artistImages: artistImageService.source, onboarding: onboardingService.source,
+            lyrics: lyricsService.source, artistPage: artistPageService.source, artistImages: artistImageService.source, onboarding: onboardingService.source,
             reco: recoService.source, download: downloadService.source,
-            sync: syncService.source, history: historyService.source,
+            sync: syncService.source, history: historyService.source, importQq: importServiceQq.source, importNe: importServiceNe.source, dirs: dirsService.source,
             likes: likesService.source, preview: previewService.source,
             warm: warmService.source,
           },
@@ -4392,10 +4946,10 @@ window.__ModuleLoader__.load({
         id: 'dsh-music.mini-player',
         locale: NS,
         inject: () => ({
-          player, lyrics: lyricsService, artistImages: artistImageService, setMiniHidden, setMiniCollapsed,
+          player, lyrics: lyricsService, likes: likesService, artistImages: artistImageService, setMiniHidden, setMiniCollapsed,
           openNow: () => { openView('now'); ctx.layout.selectPanel(PANEL_ID); },
           openArtistPage: (name) => { if (!name) return; openArtistPage(name); ctx.layout.selectPanel(PANEL_ID); },
-          hooks: { player: player.source, ui, lyrics: lyricsService.source, artistImages: artistImageService.source },
+          hooks: { player: player.source, ui, lyrics: lyricsService.source, likes: likesService.source, artistImages: artistImageService.source },
         }),
       }, MiniPlayer)), 'dsh-music: mini player');
 

@@ -4,4 +4,13 @@
 - insert:
     - id: dsh-music
       name: '@vicyangorg/dsh-music'
-      config: {}
+      config:
+        directories:
+          - path: ~/Music/spotify-liked
+            source: spotify-liked
+          - path: ~/Music/dsh-music
+            source: dsh-music
+          - path: ~/Music/Music/Media.localized
+            source: apple-music
+          - path: /Volumes/CAR-USB
+            source: car-usb
