@@ -319,15 +319,17 @@
   function palette(m, tone) {
     const hue = round(34 + m.accent * 114);
     const warm = m.warmth;
-    const sat = round(10 + warm * 12);
+    const sat = round(8 + warm * 10);
     return {
-      light: `hsl(${hue} ${sat}% ${tone === "dark" ? 91 : 94}%)`,
-      paper: `hsl(${hue} ${sat + 1}% 84%)`,
-      middle: `hsl(${hue} ${sat}% ${68 + warm * 7}%)`,
-      shade: `hsl(${hue} ${sat - 3}% 44%)`,
-      dark: `hsl(${hue} 13% 28%)`,
-      line: `hsl(${hue} 12% 37%)`,
-      copper: `hsl(${30 + warm * 10} 40% 52%)`
+      hue,
+      saturation: sat,
+      light: `hsl(${hue} ${sat - 2}% ${tone === "dark" ? 95 : 97}%)`,
+      paper: `hsl(${hue} ${sat}% 86%)`,
+      middle: `hsl(${hue} ${sat}% ${70 + warm * 6}%)`,
+      shade: `hsl(${hue} ${sat - 3}% ${49 + warm * 4}%)`,
+      dark: `hsl(${hue} 10% 33%)`,
+      line: `hsl(${hue} 10% 39%)`,
+      copper: `hsl(${30 + warm * 10} 31% 51%)`
     };
   }
   function random(seed, offset) {
@@ -339,6 +341,14 @@
   function cubic(a, b, c, d, t) {
     const u = 1 - t;
     return [u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * c[0] + t * t * t * d[0], u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * c[1] + t * t * t * d[1]];
+  }
+  function smoothPath(points, closed = false) {
+    if (!points.length) return "";
+    const middle = (a, b) => a.map((value, index) => (value + b[index]) / 2);
+    if (closed) {
+      return `M ${point(middle(points.at(-1), points[0]))} ${points.map((p, index) => `Q ${point(p)} ${point(middle(p, points[(index + 1) % points.length]))}`).join(" ")} Z`;
+    }
+    return `M ${point(points[0])} ${points.slice(1, -1).map((p, index) => `Q ${point(p)} ${point(middle(p, points[index + 2]))}`).join(" ")} Q ${point(points.at(-1))} ${point(points.at(-1))}`;
   }
   function fitScale(points, anchor, bounds) {
     let scale = 1;
@@ -396,7 +406,7 @@
       left.push([p[0] - dy / length * width, p[1] + dx / length * width]);
       right.push([p[0] + dy / length * width, p[1] - dx / length * width]);
     });
-    return { path: `M ${left.map(point).join(" L ")} L ${[...right].reverse().map(point).join(" L ")} Z`, left, right };
+    return { path: smoothPath([...left, ...right.slice().reverse()], true), left, right };
   }
   function foldGeometry(m) {
     const root = [304, 349];
@@ -439,29 +449,42 @@
     const fit = (p) => p.map((v, i) => root[i] + (v - root[i]) * scale);
     return { root, leaves: leaves.map((leaf) => ({ ...leaf, outline: leaf.outline.map(fit), vein: leaf.vein.map(fit), edge: fit(leaf.edge), detail: fit(leaf.detail) })) };
   }
-  function renderFold(h, m, ids, colors, compact) {
-    const { root, leaves } = foldGeometry(m);
+  function foldTransforms({ root, leaves }, compact) {
     const rotatePoint = (p, leaf) => {
       const rad = -leaf.angle * 36 * Math.PI / 180;
       const x = p[0] - root[0], y = p[1] - root[1];
       return [root[0] + (Math.cos(rad) * x - Math.sin(rad) * y) * 0.8, root[1] + (Math.sin(rad) * x + Math.cos(rad) * y) * 0.8];
     };
     const compactFit = compact ? fitScale(leaves.flatMap((leaf) => [...leaf.outline, ...leaf.vein, leaf.detail].map((p) => rotatePoint(p, leaf))), root, [132, 468, 90, 394]) : 1;
+    return leaves.map((leaf) => {
+      const rad = (compact ? -leaf.angle * 36 : 0) * Math.PI / 180, scale = compact ? 0.8 * compactFit : 1;
+      const a = Math.cos(rad) * scale, b = Math.sin(rad) * scale, c = -Math.sin(rad) * scale, d = Math.cos(rad) * scale;
+      return [a, b, c, d, root[0] - a * root[0] - c * root[1], root[1] - b * root[0] - d * root[1]].map(round);
+    });
+  }
+  function renderFold(h, m, ids, colors, compact) {
+    const geometry = foldGeometry(m);
+    const { leaves } = geometry;
+    const transforms = foldTransforms(geometry, compact);
     const petals = leaves.map((leaf) => {
-      const { index, angle, side, outline, vein: line, edge, detail } = leaf;
+      const { index, side, outline, vein: line } = leaf;
       const d = `M ${point(outline[0])} C ${outline.slice(1, 4).map(point).join(" ")} C ${outline.slice(4, 7).map(point).join(" ")} C ${outline.slice(7).map(point).join(" ")} Z`;
       const vein = `M ${point(line[0])} C ${line.slice(1).map(point).join(" ")}`;
-      const rad = (compact ? -angle * 36 : 0) * Math.PI / 180, scale = compact ? 0.8 * compactFit : 1;
-      const a = Math.cos(rad) * scale, b = Math.sin(rad) * scale, c = -Math.sin(rad) * scale, dMatrix = Math.cos(rad) * scale;
-      const e = root[0] - a * root[0] - c * root[1], fMatrix = root[1] - b * root[0] - dMatrix * root[1];
-      const matrix = `matrix(${[a, b, c, dMatrix, e, fMatrix].map(round).join(",")})`;
+      const matrix = `matrix(${transforms[index].join(",")})`;
+      const clip = `${ids.leafClip}-${index}`;
       return h(
         "g",
         { key: `fold-${index}`, className: "echo-fold-leaf", style: { transform: matrix, transformOrigin: "0 0", transitionDelay: `${Math.abs(index - leaves.length / 2) * 14}ms` } },
-        h("path", { d, fill: `url(#${ids[`leaf${index % 3}`]})`, stroke: colors.paper, strokeWidth: 0.8, strokeLinejoin: "round", opacity: 0.98 }),
-        h("path", { d: vein, fill: "none", stroke: colors.line, strokeWidth: 0.72 + m.texture * 0.7, opacity: 0.19 }),
-        h("path", { d: vein, transform: `translate(${side * 1.8} -0.5)`, fill: "none", stroke: colors.light, strokeWidth: 1.2, opacity: 0.6 }),
-        h("path", { d: `M ${point(root)} Q ${point(detail)} ${point(edge)}`, fill: "none", stroke: colors.light, strokeWidth: 0.65, opacity: 0.35 + m.texture * 0.15 })
+        h("defs", null, h("clipPath", { id: clip }, h("path", { d }))),
+        h("path", { d, fill: `url(#${ids[`leaf${index % 3}`]})` }),
+        h(
+          "g",
+          { clipPath: `url(#${clip})` },
+          h("path", { d, fill: `url(#${ids.surfaceLight})`, opacity: 0.2 }),
+          h("path", { d, fill: `url(#${ids.rootShade})` }),
+          h("path", { d: vein, fill: "none", stroke: colors.line, strokeWidth: 1.1 + m.texture * 0.6, opacity: 0.075 + m.texture * 0.035 }),
+          h("path", { d: vein, transform: `translate(${side * 1.4} -0.5)`, fill: "none", stroke: colors.light, strokeWidth: 1, opacity: 0.32 })
+        )
       );
     });
     return h(
@@ -469,9 +492,9 @@
       { className: "echo-body-fold" },
       h("path", { d: "M 274 345 C 281 321 312 318 329 341 C 347 359 334 376 309 379 C 282 381 261 365 274 345 Z", fill: `url(#${ids.underside})`, className: "echo-fold-foot" }),
       ...petals,
-      h("path", { d: "M 293 346 C 293 321 303 297 314 276 C 323 296 330 323 323 347 C 315 365 300 365 293 346 Z", fill: `url(#${ids.ceramic})`, stroke: colors.paper, strokeWidth: 0.8 }),
+      h("path", { d: "M 293 346 C 293 321 303 297 314 276 C 323 296 330 323 323 347 C 315 365 300 365 293 346 Z", fill: `url(#${ids.ceramic})` }),
       h("path", { d: `M ${301 + m.seed * 5} 334 Q 309 326 318 333`, fill: "none", stroke: colors.dark, strokeWidth: 2, strokeLinecap: "round", opacity: 0.65 }),
-      h("path", { d: "M 305 353 Q 310 358 315 352", fill: "none", stroke: colors.light, strokeWidth: 1.1, opacity: 0.7 })
+      h("path", { d: "M 305 353 Q 310 358 315 352", fill: "none", stroke: colors.light, strokeWidth: 1, opacity: 0.4 })
     );
   }
   function shellGeometry(m) {
@@ -502,11 +525,20 @@
     const center = [shell.cx, shell.base - shell.height * 0.28];
     return p.map((v, i) => mix(v, center[i], inset));
   }
+  function shellFootReach(m) {
+    const count = 2 + Math.min(2, Math.floor(random(m.seed, 309) * 3));
+    return Math.max(...Array.from({ length: count }, (_, index) => mix(21, 38, random(m.seed, 330 + index))));
+  }
+  function shellTransform(m, compact, shell = shellGeometry(m)) {
+    if (!compact) return [1, 0, 0, 1, 0, 0];
+    const floor = shell.base + shellFootReach(m);
+    return [0.72, 0, 0, 0.72, shell.cx * 0.28, floor - (floor - 13) * 0.72].map(round);
+  }
   function renderShell(h, m, ids, colors, compact) {
     const shell = shellGeometry(m);
     const { cx, base, width, height } = shell;
     const plates = [];
-    const plateCount = 7 + Math.min(4, Math.floor(random(m.seed, 308) * 5));
+    const plateCount = 3 + Math.min(2, Math.floor(random(m.seed, 308) * 3));
     for (let i = 0; i < plateCount; i += 1) {
       const at = (i + 1) / (plateCount + 1);
       const top = shellSurface(shell, at);
@@ -517,8 +549,8 @@
         d: `M ${point(top)} C ${point([top[0] + bend, top[1] + height * 0.32])} ${point([end[0] - bend, base - height * 0.18])} ${point(end)}`,
         fill: "none",
         stroke: i % 2 ? colors.light : colors.line,
-        strokeWidth: i % 2 ? 2.2 : 1.15,
-        opacity: i % 2 ? 0.38 : 0.1 + m.texture * 0.12
+        strokeWidth: i % 2 ? 1.5 : 0.9,
+        opacity: i % 2 ? 0.19 : 0.045 + m.texture * 0.045
       }));
     }
     const feet = [];
@@ -536,66 +568,100 @@
     const gleam = Array.from({ length: 17 }, (_, i) => shellSurface(shell, 0.1 + i / 16 * 0.48, 0.1));
     return h(
       "g",
-      { className: "echo-body-shell", transform: compact ? "translate(84 98) scale(0.72)" : void 0 },
+      { className: "echo-body-shell", style: { transform: `matrix(${shellTransform(m, compact, shell).join(",")})`, transformOrigin: "0 0" } },
       h(
         "g",
         { className: "echo-shell-feet", style: { transform: `translateY(${compact ? -13 : 0}px)` } },
         ...feet
       ),
-      h("path", { d: shell.path, transform: "translate(0 7)", fill: `url(#${ids.underside})` }),
-      h("path", { d: shell.path, fill: `url(#${ids.ceramic})`, stroke: colors.paper, strokeWidth: 1.2 }),
+      h("path", { d: shell.path, transform: "translate(0 3.5)", fill: `url(#${ids.underside})`, opacity: 0.8 }),
+      h("path", { d: shell.path, fill: `url(#${ids.ceramic})` }),
       h(
         "g",
         { clipPath: `url(#${ids.shellClip})` },
+        h("path", { d: shell.path, fill: `url(#${ids.surfaceLight})`, opacity: 0.24 }),
         ...plates,
-        h("path", { d: `M ${point([cx - width, base - height * 0.22])} Q ${point([cx, base - height * 0.7])} ${point([cx + width, base - height * 0.22])}`, fill: "none", stroke: colors.light, strokeWidth: 1.2, opacity: 0.45 }),
-        h("path", { d: `M ${point([cx - width, base - 18])} Q ${point([cx, base + 21])} ${point([cx + width, base - 24])}`, fill: "none", stroke: colors.shade, strokeWidth: 0.8, opacity: 0.2 })
+        h("path", { d: `M ${point([cx - width, base - 13])} Q ${point([cx, base + 21])} ${point([cx + width, base - 16])}`, fill: "none", stroke: colors.shade, strokeWidth: 4.5, opacity: 0.08 })
       ),
       h("path", { d: `M ${point(eye)} q 7 11 19 7`, fill: "none", stroke: colors.dark, strokeWidth: 3.4, strokeLinecap: "round", opacity: 0.84 }),
-      h("path", { d: `M ${point(scar)} q 3 12 10 17`, fill: "none", stroke: colors.copper, strokeWidth: 1.5, opacity: 0.55 }),
-      h("path", { d: `M ${gleam.map(point).join(" L ")}`, fill: "none", stroke: colors.light, strokeWidth: 2.3, strokeLinecap: "round", opacity: 0.65 })
+      h("path", { d: `M ${point(scar)} q 3 12 10 17`, fill: "none", stroke: colors.copper, strokeWidth: 1.3, opacity: 0.42 }),
+      h("path", { d: smoothPath(gleam), fill: "none", stroke: colors.light, strokeWidth: 1.6, strokeLinecap: "round", opacity: 0.25 })
     );
   }
   function renderRibbon(h, m, ids, colors, compact) {
     const points = ribbonPoints(m);
     const outline = ribbonShape(points, m);
-    const ridge = points.slice(0, 65).map(point).join(" L ");
-    const edge = outline.left.slice(1, 65).map(point).join(" L ");
+    const ridge = smoothPath(points.slice(0, 65));
+    const edge = smoothPath(outline.left.slice(2, 50));
     const veins = [];
-    const count = 12;
+    const surfaces = [], lights = [];
+    for (let start = 0; start < points.length - 1; start += 4) {
+      const end = Math.min(points.length - 1, start + 4), middle = Math.round((start + end) / 2);
+      const left = outline.left[middle], right = outline.right[middle];
+      const width = Math.hypot(left[0] - right[0], left[1] - right[1]) || 1;
+      const key = clamp2(0.5 + ((left[0] - right[0]) * -0.6 + (left[1] - right[1]) * -0.8) / width * 0.5);
+      const color = (lightness) => `hsl(${colors.hue} ${colors.saturation}% ${round(lightness)}%)`;
+      const id = `${ids.ribbon}-surface-${start}`;
+      lights.push(h(
+        "linearGradient",
+        { key: id, id, gradientUnits: "userSpaceOnUse", x1: left[0], y1: left[1], x2: right[0], y2: right[1] },
+        h("stop", { offset: "0%", stopColor: color(61 + key * 27) }),
+        h("stop", { offset: "42%", stopColor: color(82 + Math.sin(middle / points.length * Math.PI) * 3) }),
+        h("stop", { offset: "100%", stopColor: color(88 - key * 25) })
+      ));
+      const from = Math.max(0, start - 1), to = Math.min(points.length - 1, end + 1);
+      const contour = [...outline.left.slice(from, to + 1), ...outline.right.slice(from, to + 1).reverse()];
+      surfaces.push(h("path", { key: start, d: `M ${contour.map(point).join(" L ")} Z`, fill: `url(#${id})` }));
+    }
+    const count = 5 + Math.round(m.texture * 2);
     for (let i = 0; i < count; i += 1) {
-      const index = 12 + i * 5;
-      veins.push(h("path", { key: `ribbon-rib-${i}`, d: `M ${point(outline.left[index])} Q ${point(points[index + 1])} ${point(outline.right[index + 2])}`, fill: "none", stroke: colors.line, strokeWidth: 0.65 + m.texture * 0.55, opacity: 0.12 + m.texture * 0.08 }));
+      const index = 12 + i * 9;
+      veins.push(h("path", { key: `ribbon-rib-${i}`, d: `M ${point(outline.left[index])} Q ${point(points[index + 1])} ${point(outline.right[index + 2])}`, fill: "none", stroke: colors.line, strokeWidth: 0.7 + m.texture * 0.3, opacity: 0.06 + m.texture * 0.055 }));
     }
     return h(
       "g",
       { className: "echo-body-ribbon", style: { transform: compact ? "matrix(0.78, 0, 0, 0.72, 66, 89.6)" : "matrix(1, 0, 0, 1, 0, 0)", transformOrigin: "0 0" } },
-      h("path", { d: outline.path, fill: `url(#${ids.ribbon})`, stroke: colors.paper, strokeWidth: 0.9, strokeLinejoin: "round" }),
-      h("path", { d: `M ${edge}`, fill: "none", stroke: colors.light, strokeWidth: 2.2, strokeLinejoin: "round", strokeLinecap: "round", opacity: 0.7 }),
-      h("path", { d: `M ${ridge}`, fill: "none", stroke: colors.light, strokeWidth: 0.7, opacity: 0.32 }),
-      ...veins,
+      h(
+        "defs",
+        null,
+        h("clipPath", { id: ids.ribbonClip }, h("path", { d: outline.path })),
+        h("filter", { id: `${ids.ribbon}-softness`, x: "-10%", y: "-10%", width: "120%", height: "120%", colorInterpolationFilters: "sRGB" }, h("feGaussianBlur", { stdDeviation: 4.5 })),
+        ...lights
+      ),
+      h("path", { d: outline.path, fill: `url(#${ids.ribbon})` }),
+      h(
+        "g",
+        { clipPath: `url(#${ids.ribbonClip})` },
+        h("g", { filter: `url(#${ids.ribbon}-softness)` }, ...surfaces),
+        h("path", { d: outline.path, fill: `url(#${ids.surfaceLight})`, opacity: 0.18 }),
+        h("path", { d: edge, fill: "none", stroke: colors.light, strokeWidth: 1.5, strokeLinecap: "round", opacity: 0.43 }),
+        h("path", { d: ridge, fill: "none", stroke: colors.shade, strokeWidth: 1.5, opacity: 0.09 }),
+        ...veins
+      ),
       h("path", { d: `M ${point(points[75])} Q ${point(points[78])} ${point(points[81])}`, fill: "none", stroke: colors.dark, strokeWidth: 2.8, strokeLinecap: "round", opacity: 0.65 }),
-      h("path", { d: `M ${point(outline.right[20])} L ${point(points[22])} L ${point(outline.left[23])}`, fill: "none", stroke: colors.copper, strokeWidth: 1.4, opacity: 0.52 })
+      h("path", { d: `M ${point(outline.right[20])} Q ${point(points[22])} ${point(outline.left[23])}`, fill: "none", stroke: colors.copper, strokeWidth: 1.25, opacity: 0.42 })
     );
   }
-  function markerPosition(m, mark) {
+  function markerPlacement(m, mark, compact = false) {
     const at = clamp2(mark.position);
     if (m.structure === "ribbon") {
       const points = ribbonPoints(m);
-      return points[Math.round(mix(9, 62, at))];
+      return { position: points[Math.round(mix(9, 62, at))], matrix: compact ? [0.78, 0, 0, 0.72, 66, 89.6] : [1, 0, 0, 1, 0, 0], delay: 0 };
     }
     if (m.structure === "shell") {
-      return shellSurface(shellGeometry(m), mix(0.12, 0.88, at), 0.32);
+      const shell = shellGeometry(m);
+      return { position: shellSurface(shell, mix(0.12, 0.88, at), 0.32), matrix: shellTransform(m, compact, shell), delay: 0 };
     }
-    const { leaves } = foldGeometry(m);
+    const geometry = foldGeometry(m);
+    const { leaves } = geometry;
     const leaf = leaves[Math.min(leaves.length - 1, Math.floor(at * leaves.length))];
-    return cubic(...leaf.vein, mix(0.58, 0.74, at));
+    return { position: cubic(...leaf.vein, mix(0.58, 0.74, at)), matrix: foldTransforms(geometry, compact)[leaf.index], delay: Math.abs(leaf.index - leaves.length / 2) * 14 };
   }
   function createCreatureComponents(React) {
     const h = React.createElement;
     const { useRef, useState, useEffect, useMemo } = React;
     let sequence = 0;
-    function Creature({ life, morphology, active = false, compact = false, gesture = 0, onTouch, onMemorySelect, className = "", label, motionEnabled = true, tone = "light" }) {
+    function Creature({ life, morphology, active = false, compact = false, gesture = 0, onTouch, onMemorySelect, className = "", label, motionEnabled = true, tone = "light", framing = "stage" }) {
       const instance = useRef(null);
       if (!instance.current) instance.current = `echo-being-${++sequence}`;
       const root = useRef(null);
@@ -607,8 +673,10 @@
       const [responding, setResponding] = useState(false);
       const m = useMemo(() => normalizeMorphology(morphology || (life ? getMorphology(life) : defaults)), [life, morphology]);
       const colors = useMemo(() => palette(m, tone), [m, tone]);
-      const ids = useMemo(() => Object.fromEntries(["ceramic", "underside", "ribbon", "leaf0", "leaf1", "leaf2", "contact", "grain", "shellClip", "title", "desc"].map((key) => [key, `${instance.current}-${key}`])), []);
+      const ids = useMemo(() => Object.fromEntries(["ceramic", "underside", "ribbon", "leaf0", "leaf1", "leaf2", "surfaceLight", "rootShade", "leafClip", "ribbonClip", "contact", "grain", "shellClip", "title", "desc"].map((key) => [key, `${instance.current}-${key}`])), []);
       const canMove = motionEnabled && visible;
+      const presence = framing === "presence";
+      const viewport = presence ? [52, 48, 496, 388] : compact ? [120, 70, 360, 340] : [0, 0, 600, 480];
       useEffect(() => {
         if (typeof document === "undefined") return void 0;
         const change = () => {
@@ -662,14 +730,15 @@
         touch(event);
       };
       const look = (event) => {
-        if (!canMove || compact || !root.current) return;
+        if (!canMove || compact && !presence || !root.current) return;
+        if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
         const rect = root.current.getBoundingClientRect();
         if (!rect.width || !rect.height) return;
         const x = Math.max(-1, Math.min(1, (event.clientX - rect.left) / rect.width * 2 - 1));
         const y = Math.max(-1, Math.min(1, (event.clientY - rect.top) / rect.height * 2 - 1));
-        root.current.style.setProperty("--echo-look-x", `${round(x * 5)}px`);
-        root.current.style.setProperty("--echo-look-y", `${round(y * 3)}px`);
-        root.current.style.setProperty("--echo-look-r", `${round(x * 1.1)}deg`);
+        root.current.style.setProperty("--echo-look-x", `${round(x * 2.7)}px`);
+        root.current.style.setProperty("--echo-look-y", `${round(y * 1.6)}px`);
+        root.current.style.setProperty("--echo-look-r", `${round(x * 0.75)}deg`);
       };
       const lookAway = () => {
         if (!root.current) return;
@@ -678,10 +747,13 @@
         root.current.style.setProperty("--echo-look-r", "0deg");
       };
       const name = label || life?.name || "\u4F60\u7684\u97F3\u7075";
-      const body = m.structure === "shell" ? renderShell(h, m, ids, colors, compact) : m.structure === "ribbon" ? renderRibbon(h, m, ids, colors, compact) : renderFold(h, m, ids, colors, compact);
+      const body = useMemo(() => m.structure === "shell" ? renderShell(h, m, ids, colors, compact) : m.structure === "ribbon" ? renderRibbon(h, m, ids, colors, compact) : renderFold(h, m, ids, colors, compact), [m, colors, compact]);
+      const marks = useMemo(() => m.marks.map((mark) => ({ mark, ...markerPlacement(m, mark, compact) })), [m, compact]);
       const stops = (items) => items.map(([offset, color, opacity]) => h("stop", { key: offset, offset, stopColor: color, ...opacity == null ? {} : { stopOpacity: opacity } }));
       const gradient = (id, x1, y1, x2, y2, items) => h("linearGradient", { id, x1, y1, x2, y2 }, ...stops(items));
       const memoryName = (mark) => life?.memories?.find((memory) => memory.id === mark.id)?.title || "\u5171\u540C\u8BB0\u5FC6";
+      const shell = m.structure === "shell" ? shellGeometry(m) : null;
+      const shadow = shell ? { x: shell.cx, y: shell.base + shellFootReach(m) + 2, width: shell.width * (compact ? 0.68 : 0.9) } : { x: 303, y: m.structure === "ribbon" ? 397 : 383, width: m.structure === "ribbon" ? 102 : 91 };
       return h("div", {
         ref: root,
         className: `echo-creature ${className}`.trim(),
@@ -691,36 +763,40 @@
         "data-motion": canMove ? "on" : "off",
         "data-responding": responding ? "true" : "false",
         "data-tone": tone,
+        "data-framing": presence ? "presence" : "stage",
         onPointerMove: look,
         onPointerLeave: lookAway,
-        style: { "--echo-breath-duration": `${round(5.2 + m.phase * 3.1)}s`, "--echo-drift-duration": `${round(8 + m.seed * 5)}s`, "--echo-listen-duration": `${round(1.45 + (1 - m.buoyancy) * 1.1)}s`, "--echo-response-duration": `${responseDuration}ms`, "--echo-inhale": String(round(1.008 + m.buoyancy * 0.012)), "--echo-shadow-opacity": tone === "dark" ? 0.32 : 0.17 }
+        style: { "--echo-breath-duration": `${round(6.8 + m.phase * 3.6)}s`, "--echo-drift-duration": `${round(12 + m.seed * 6)}s`, "--echo-listen-duration": `${round(3.8 + (1 - m.buoyancy) * 1.6)}s`, "--echo-response-duration": `${responseDuration}ms`, "--echo-inhale": String(Number((1.006 + m.buoyancy * 8e-3).toFixed(3))), "--echo-shadow-opacity": tone === "dark" ? 0.31 : 0.21, "--echo-origin-x": `${round((303 - viewport[0]) / viewport[2] * 100)}%`, "--echo-origin-y": `${round((350 - viewport[1]) / viewport[3] * 100)}%` }
       }, h(
         "svg",
-        { viewBox: compact ? "120 70 360 340" : "0 0 600 480", className: "echo-creature-svg", role: "group", "aria-labelledby": `${ids.title} ${ids.desc}`, focusable: false },
+        { viewBox: viewport.join(" "), className: "echo-creature-svg", role: "group", "aria-labelledby": `${ids.title} ${ids.desc}`, focusable: false },
         h("title", { id: ids.title }, name),
         h("desc", { id: ids.desc }, compact ? "\u6536\u62E2\u8EAB\u4F53\uFF0C\u5B89\u9759\u966A\u4F34\u3002" : "\u7531\u5171\u540C\u7ECF\u5386\u5851\u9020\u7684\u751F\u547D\u3002\u8F7B\u89E6\u8EAB\u4F53\u4E0E\u5B83\u6253\u62DB\u547C\uFF0C\u89E6\u6478\u8EAB\u4F53\u4E0A\u7684\u5C0F\u6807\u8BB0\u53EF\u4EE5\u56DE\u770B\u8BB0\u5FC6\u3002"),
         h(
           "defs",
           null,
-          gradient(ids.ceramic, "9%", "0%", "81%", "100%", [["0%", colors.light], ["28%", colors.paper], ["62%", colors.middle], ["88%", colors.shade], ["100%", colors.dark]]),
-          gradient(ids.underside, "0%", "0%", "75%", "100%", [["0%", colors.middle], ["48%", colors.shade], ["100%", colors.dark]]),
-          gradient(ids.leaf0, "0%", "3%", "100%", "100%", [["0%", colors.light], ["30%", colors.paper], ["58%", colors.middle], ["79%", colors.paper], ["100%", colors.shade]]),
-          gradient(ids.leaf1, "94%", "0%", "0%", "100%", [["0%", colors.light], ["35%", colors.paper], ["64%", colors.middle], ["100%", colors.shade]]),
-          gradient(ids.leaf2, "10%", "0%", "92%", "100%", [["0%", colors.paper], ["20%", colors.light], ["52%", colors.middle], ["82%", colors.paper], ["100%", colors.shade]]),
-          gradient(ids.ribbon, "7%", "0%", "91%", "100%", [["0%", colors.light], ["22%", colors.paper], ["39%", colors.shade], ["51%", colors.middle], ["66%", colors.light], ["78%", colors.paper], ["94%", colors.shade], ["100%", colors.dark]]),
-          h("radialGradient", { id: ids.contact }, ...stops([["0%", "#263a31", 0.8], ["42%", "#263a31", 0.3], ["100%", "#263a31", 0]])),
+          h("radialGradient", { id: ids.ceramic, cx: "26%", cy: "18%", r: "96%", fx: "24%", fy: "15%" }, ...stops([["0%", colors.light], ["25%", colors.paper], ["62%", colors.middle], ["86%", colors.shade], ["100%", colors.dark]])),
+          gradient(ids.underside, "8%", "0%", "74%", "100%", [["0%", colors.middle], ["62%", colors.shade], ["100%", colors.dark]]),
+          gradient(ids.leaf0, "5%", "0%", "84%", "100%", [["0%", colors.light], ["29%", colors.paper], ["66%", colors.middle], ["100%", colors.shade]]),
+          gradient(ids.leaf1, "8%", "0%", "88%", "100%", [["0%", colors.light], ["40%", colors.paper], ["76%", colors.middle], ["100%", colors.shade]]),
+          gradient(ids.leaf2, "5%", "0%", "84%", "100%", [["0%", colors.paper], ["16%", colors.light], ["54%", colors.paper], ["79%", colors.middle], ["100%", colors.shade]]),
+          gradient(ids.ribbon, "7%", "0%", "88%", "100%", [["0%", colors.light], ["26%", colors.paper], ["53%", colors.middle], ["76%", colors.shade], ["100%", colors.dark]]),
+          h("radialGradient", { id: ids.surfaceLight, cx: "25%", cy: "18%", r: "83%" }, ...stops([["0%", colors.light, 0.72], ["46%", colors.light, 0.12], ["100%", colors.light, 0]])),
+          h("linearGradient", { id: ids.rootShade, gradientUnits: "userSpaceOnUse", x1: 304, y1: 351, x2: 303, y2: 180 }, ...stops([["0%", colors.dark, 0.2], ["44%", colors.dark, 0.035], ["100%", colors.dark, 0]])),
+          h("radialGradient", { id: ids.contact }, ...stops([["0%", "#26362c", 0.75], ["36%", "#26362c", 0.27], ["100%", "#26362c", 0]])),
           h("clipPath", { id: ids.shellClip }, h("path", { d: shellOutline(m) })),
           h(
             "filter",
             { id: ids.grain, x: "-8%", y: "-8%", width: "116%", height: "116%", colorInterpolationFilters: "sRGB" },
             h("feTurbulence", { type: "fractalNoise", baseFrequency: 0.67, numOctaves: 2, seed: Math.floor(m.seed * 1e3), stitchTiles: "stitch", result: "noise" }),
             h("feColorMatrix", { in: "noise", type: "saturate", values: 0, result: "mono" }),
-            h("feComponentTransfer", { in: "mono", result: "fine" }, h("feFuncA", { type: "linear", slope: 0.055 + m.texture * 0.045 })),
+            h("feComponentTransfer", { in: "mono", result: "fine" }, h("feFuncA", { type: "linear", slope: 0.025 + m.texture * 0.02 })),
             h("feComposite", { in: "fine", in2: "SourceGraphic", operator: "in", result: "surface" }),
             h("feBlend", { in: "SourceGraphic", in2: "surface", mode: "multiply" })
           )
         ),
-        h("ellipse", { cx: 303, cy: m.structure === "ribbon" ? 397 : 387, rx: m.structure === "shell" ? 173 : 127, ry: 28, fill: `url(#${ids.contact})`, className: "echo-creature-shadow" }),
+        h("ellipse", { cx: shadow.x, cy: shadow.y, rx: shadow.width, ry: m.structure === "ribbon" ? 15 : 18, fill: `url(#${ids.contact})`, className: "echo-creature-shadow" }),
+        m.structure !== "ribbon" ? h("ellipse", { cx: shadow.x, cy: shadow.y - 3, rx: shell ? shadow.width * 0.52 : 35, ry: 5.5, fill: `url(#${ids.contact})`, className: "echo-creature-shadow echo-creature-contact" }) : null,
         h(
           "g",
           { className: "echo-creature-drift" },
@@ -744,18 +820,16 @@
                     onKeyDown: onTouch ? keyboardTouch : void 0
                   },
                   h("rect", { x: 119, y: 67, width: 364, height: 326, rx: 80, fill: "transparent", pointerEvents: onTouch ? "all" : "none", className: "echo-creature-focus-ring" }),
-                  h("g", { filter: compact ? void 0 : `url(#${ids.grain})`, className: "echo-creature-surface" }, body)
+                  h("g", { filter: compact && !presence ? void 0 : `url(#${ids.grain})`, className: "echo-creature-surface" }, body)
                 ),
-                !compact ? h("g", { className: "echo-creature-memories" }, ...m.marks.map((mark) => {
-                  const [x, y] = markerPosition(m, mark);
+                !compact || presence ? h("g", { className: "echo-creature-memories" }, ...marks.map(({ mark, position: [x, y], matrix, delay }) => {
                   const click = (event) => {
                     event.stopPropagation();
                     if (onMemorySelect) onMemorySelect(mark.id);
                   };
-                  return h(
+                  return h("g", { key: mark.id, className: "echo-memory-pose", style: { transform: `matrix(${matrix.join(",")})`, transformOrigin: "0 0", transitionDelay: `${delay}ms` } }, h(
                     "g",
                     {
-                      key: mark.id,
                       className: "echo-memory-mark",
                       transform: `translate(${round(x)} ${round(y)})`,
                       role: onMemorySelect ? "button" : void 0,
@@ -769,10 +843,10 @@
                         }
                       } : void 0
                     },
-                    h("circle", { r: 14, fill: "transparent", className: "echo-memory-hit" }),
+                    h("circle", { r: presence ? 24 : 14, fill: "transparent", className: "echo-memory-hit" }),
                     h("path", { d: "M -4 -3 Q -1 3 4 5 M -1 -5 Q 1 0 6 1", fill: "none", stroke: colors.copper, strokeWidth: 1.6 + clamp2(mark.strength) * 0.5, strokeLinecap: "round" }),
                     h("circle", { r: 10, fill: "none", stroke: colors.copper, strokeWidth: 0.8, className: "echo-memory-halo" })
-                  );
+                  ));
                 })) : null
               )
             )
@@ -781,6 +855,456 @@
       ));
     }
     return { Creature };
+  }
+
+  // src/client/echo/mini.js
+  var POSITION_KEY = "dsh-music.echo.mini-position";
+  var LYRICS_KEY = "dsh-music.echo.mini-lyrics";
+  var empty = Object.freeze({});
+  var identity2 = (track2) => track2 ? String(track2.id || `${track2.artist || ""}::${track2.title || ""}`) : "";
+  var bounded = (value, low, high) => Math.max(low, Math.min(Math.max(low, high), value));
+  function preference(key, fallback) {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(key));
+      return saved == null ? fallback : saved;
+    } catch {
+      return fallback;
+    }
+  }
+  function remember(key, value) {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+    }
+  }
+  function companionPlacement(anchor, panel, viewport) {
+    const gap = 10, margin = 12;
+    const width = Math.min(panel.width || 286, Math.max(0, viewport.width - margin * 2));
+    const height = Math.min(panel.height || 240, Math.max(0, viewport.height - margin * 2));
+    let left, top, side;
+    if (viewport.width - anchor.right >= width + gap + margin) {
+      left = anchor.right + gap;
+      top = anchor.top + 30;
+      side = "right";
+    } else if (anchor.left >= width + gap + margin) {
+      left = anchor.left - width - gap;
+      top = anchor.top + 30;
+      side = "left";
+    } else {
+      side = "stack";
+      left = anchor.left + anchor.width / 2 - width / 2;
+      top = viewport.height - anchor.bottom >= height + gap + margin ? anchor.bottom + gap : anchor.top - height - gap;
+    }
+    return { left: bounded(left, margin, viewport.width - width - margin), top: bounded(top, margin, viewport.height - height - margin), width, maxHeight: Math.max(0, viewport.height - margin * 2), side };
+  }
+  function createEchoMiniComponent(React, { Creature, Icon, useLife, formatTime: formatTime2 }) {
+    const h = React.createElement;
+    const { useState, useEffect, useRef } = React;
+    const useBeforePaint = typeof window === "undefined" ? useEffect : React.useLayoutEffect || useEffect;
+    function useSource(source) {
+      const [snapshot, setSnapshot] = useState(() => source?.getSnapshot() || empty);
+      useEffect(() => {
+        const update = () => setSnapshot(source?.getSnapshot() || empty);
+        update();
+        return source?.subscribe(update);
+      }, [source]);
+      return snapshot;
+    }
+    return function EchoMini({ lifeService, player, lyrics, likes, usePlayer, useUi, openHome, openNow, openLibrary, setMiniHidden, setMiniCollapsed }) {
+      const state = useLife(lifeService);
+      const playback = usePlayer((s) => s);
+      const hidden = useUi((s) => s.miniHidden || s.dockVisible);
+      const collapsed = useUi((s) => !!s.miniCollapsed);
+      const lyricState = useSource(lyrics?.source);
+      useSource(likes?.source);
+      const { track: track2, playing, loading, position: playPosition = 0, duration = 0, volume = 1, muted, queue = [], queueIndex = -1, shuffle, repeat, error } = playback;
+      const trackKey = identity2(track2);
+      const [position, setPosition] = useState(() => {
+        const saved = preference(POSITION_KEY, null);
+        return saved && Number.isFinite(saved.x) && Number.isFinite(saved.y) ? saved : null;
+      });
+      const [musicOpen, setMusicOpen] = useState(false);
+      const [more, setMore] = useState(false);
+      const [showQueue, setShowQueue] = useState(false);
+      const [showLyrics, setShowLyrics] = useState(() => preference(LYRICS_KEY, false) === true);
+      const [paper, setPaper] = useState(null);
+      const [gesture, setGesture] = useState(0);
+      const [feedback, setFeedback] = useState(null);
+      const [undo, setUndo] = useState(null);
+      const [busy, setBusy] = useState(null);
+      const [seekDraft, setSeekDraft] = useState(null);
+      const [placement, setPlacement] = useState(null);
+      const [paperPlacement, setPaperPlacement] = useState(null);
+      const [tone, setTone] = useState("light");
+      const miniRef = useRef(null), menuRef = useRef(null), paperRef = useRef(null), musicRef = useRef(null), moreRef = useRef(null), queueRef = useRef(null);
+      const positionRef = useRef(position), drag = useRef(null), touchAt = useRef(0), feedbackRef = useRef(null);
+      const operation = useRef(null), mounted = useRef(true), greetingTimer = useRef(null);
+      const redrawRef = useRef(null);
+      const life = state.life;
+      const name = life?.name && life.name !== "\u672A\u547D\u540D" ? life.name : "\u4F60\u7684\u97F3\u7075";
+      const liked = !!(track2 && likes?.isLiked(track2)), disliked = !!(track2 && likes?.isDisliked(track2));
+      const modeName = shuffle ? "\u968F\u673A\u64AD\u653E" : repeat === "one" ? "\u5355\u66F2\u5FAA\u73AF" : "\u987A\u5E8F\u64AD\u653E";
+      function anchorBox() {
+        const box = miniRef.current?.getBoundingClientRect();
+        if (box?.width && box?.height) return box;
+        const width = Math.min(320, window.innerWidth - 24), height = width * 388 / 496 + 62;
+        const left = positionRef.current?.x ?? Math.max(12, window.innerWidth - width - 20);
+        const top = positionRef.current?.y ?? Math.max(12, window.innerHeight - height - 20);
+        return { left, top, width, height, right: left + width, bottom: top + height };
+      }
+      function redraw() {
+        if (!miniRef.current) return;
+        const anchor = anchorBox(), viewport = { width: window.innerWidth, height: window.innerHeight };
+        const next = companionPlacement(anchor, { width: 286, height: menuRef.current?.offsetHeight || 240 }, viewport);
+        setPlacement((previous) => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
+        const width = Math.min(280, window.innerWidth - 24), height = Math.min(paperRef.current?.offsetHeight || 88, window.innerHeight - 24);
+        const sheet = { left: bounded(anchor.left + (anchor.width - width) / 2, 12, window.innerWidth - width - 12), top: bounded(anchor.top - height - 10, 12, window.innerHeight - height - 12), width, maxHeight: Math.max(80, window.innerHeight - 24) };
+        setPaperPlacement((previous) => JSON.stringify(previous) === JSON.stringify(sheet) ? previous : sheet);
+      }
+      redrawRef.current = redraw;
+      function moveTo(next) {
+        const box = anchorBox();
+        const value = { x: bounded(next.x, 0, window.innerWidth - box.width), y: bounded(next.y, 0, window.innerHeight - box.height) };
+        positionRef.current = value;
+        setPosition(value);
+      }
+      useEffect(() => {
+        mounted.current = true;
+        const move = (event) => {
+          const current = drag.current;
+          if (!current || event.pointerId != null && current.pointerId !== event.pointerId) return;
+          if (!current.moved && Math.hypot(event.clientX - current.startX, event.clientY - current.startY) < 4) return;
+          current.moved = true;
+          moveTo({ x: event.clientX - current.x, y: event.clientY - current.y });
+        };
+        const end = () => {
+          if (drag.current?.moved) remember(POSITION_KEY, positionRef.current);
+          drag.current = null;
+        };
+        const resize = () => {
+          if (positionRef.current) {
+            moveTo(positionRef.current);
+            remember(POSITION_KEY, positionRef.current);
+          }
+          redrawRef.current?.();
+        };
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", end);
+        window.addEventListener("pointercancel", end);
+        window.addEventListener("resize", resize);
+        const media = window.matchMedia?.("(prefers-color-scheme: dark)");
+        const appearance = () => setTone(media?.matches ? "dark" : "light");
+        appearance();
+        media?.addEventListener?.("change", appearance);
+        return () => {
+          mounted.current = false;
+          clearTimeout(greetingTimer.current);
+          window.removeEventListener("pointermove", move);
+          window.removeEventListener("pointerup", end);
+          window.removeEventListener("pointercancel", end);
+          window.removeEventListener("resize", resize);
+          media?.removeEventListener?.("change", appearance);
+        };
+      }, []);
+      useBeforePaint(() => {
+        if (!hidden && life) {
+          if (positionRef.current) moveTo(positionRef.current);
+          redraw();
+        }
+      }, [hidden, !!life, collapsed, position?.x, position?.y, musicOpen, more, showQueue, showLyrics, paper, feedback, busy, error, loading]);
+      useEffect(() => {
+        if (!hidden) return;
+        setMusicOpen(false);
+        setMore(false);
+        setShowQueue(false);
+        setSeekDraft(null);
+        setPaper(null);
+        clearTimeout(greetingTimer.current);
+      }, [hidden]);
+      useEffect(() => {
+        if (typeof ResizeObserver === "undefined") return;
+        const observer = new ResizeObserver(() => redrawRef.current?.());
+        [miniRef.current, menuRef.current, paperRef.current].forEach((node) => {
+          if (node) observer.observe(node);
+        });
+        return () => observer.disconnect();
+      }, [hidden, musicOpen, paper, showLyrics]);
+      useEffect(() => {
+        setSeekDraft(null);
+        if (paper?.kind === "greeting") setPaper(null);
+      }, [trackKey]);
+      useEffect(() => {
+        if (showLyrics && track2?.id && lyrics) Promise.resolve(lyrics.load(track2.id)).catch(() => {
+        });
+      }, [showLyrics, track2?.id, lyrics]);
+      function closeMusic(restore = true) {
+        setMusicOpen(false);
+        setMore(false);
+        setShowQueue(false);
+        setSeekDraft(null);
+        if (restore) musicRef.current?.focus();
+      }
+      function say(message, failed = false) {
+        if (mounted.current) setFeedback({ message, failed });
+      }
+      function touch() {
+        const now = Date.now();
+        if (now - touchAt.current < 1200) return;
+        touchAt.current = now;
+        setGesture((value) => value + 1);
+        setPaper({ kind: "greeting", title: name, text: playing ? "\u5728\u5462\uFF0C\u4E00\u8D77\u542C\u3002" : "\u5728\u5462\uFF0C\u966A\u4F60\u5B89\u9759\u4E00\u4F1A\u513F\u3002" });
+        clearTimeout(greetingTimer.current);
+        greetingTimer.current = setTimeout(() => {
+          if (mounted.current) setPaper((current) => current?.kind === "greeting" ? null : current);
+        }, 2600);
+        lifeService.dispatch("interaction", { action: life?.greeting ? "greet" : "touch" }).catch((problem) => {
+          if (problem.queued) return;
+          if (mounted.current) setPaper({ kind: "error", title: "\u8FD9\u6B21\u56DE\u5E94\u6682\u672A\u4FDD\u5B58", text: problem.message || "\u8BF7\u7A0D\u540E\u91CD\u8BD5\u3002" });
+        });
+      }
+      function readMemory(id) {
+        const memory = life?.memories?.find((item) => item.id === id);
+        if (!memory) return;
+        clearTimeout(greetingTimer.current);
+        closeMusic(false);
+        setPaper({ kind: "memory", title: memory.title, text: memory.note || "\u4F60\u4EEC\u628A\u8FD9\u4E00\u523B\u7559\u4E86\u4E0B\u6765\u3002", memory });
+      }
+      async function preferenceAction(item, action) {
+        if (!item || !likes || operation.current) return;
+        const key = identity2(item);
+        operation.current = key;
+        setBusy({ key, title: item.title });
+        try {
+          await action();
+        } catch (problem) {
+          say(`\u300A${item.title || "\u8FD9\u9996\u6B4C"}\u300B\u7684\u504F\u597D\u672A\u80FD\u4FDD\u5B58\uFF1A${problem.message || "\u8BF7\u91CD\u8BD5"}`, true);
+        } finally {
+          operation.current = null;
+          if (mounted.current) setBusy(null);
+        }
+      }
+      async function checked(result) {
+        const value = await result;
+        if (value?.error) throw new Error(value.error);
+        return value || {};
+      }
+      function toggleLike() {
+        const item = { ...track2 }, wasLiked = likes?.isLiked(track2);
+        return preferenceAction(item, async () => {
+          const result = await checked(likes.toggle(item, !wasLiked));
+          if (!mounted.current) return;
+          setUndo((old) => identity2(old?.track) === identity2(item) ? null : old);
+          say(result.message || (wasLiked ? `\u5DF2\u53D6\u6D88\u559C\u6B22\u300A${item.title}\u300B\u3002` : result.downloading ? `\u5DF2\u559C\u6B22\u300A${item.title}\u300B\uFF0C\u6B63\u5728\u52A0\u5165\u66F2\u5E93\u3002` : `\u5DF2\u559C\u6B22\u300A${item.title}\u300B\u3002`));
+        });
+      }
+      function toggleDislike() {
+        const item = { ...track2 }, before = likes?.isDisliked(track2) ? "dislike" : likes?.isLiked(track2) ? "like" : null;
+        return preferenceAction(item, async () => {
+          await checked(likes.setDislike(item, before !== "dislike"));
+          if (before === "dislike") {
+            if (mounted.current) {
+              setUndo((old) => identity2(old?.track) === identity2(item) ? null : old);
+              say(`\u5DF2\u53D6\u6D88\u5BF9\u300A${item.title}\u300B\u7684\u4E0D\u559C\u6B22\u3002`);
+            }
+            return;
+          }
+          let outcome = "\u8FD9\u6B21\u6CA1\u6709\u6253\u65AD\u4F60\u540E\u6765\u9009\u62E9\u7684\u6B4C\u66F2";
+          const latest = player.source.getSnapshot();
+          if (identity2(latest.track) === identity2(item)) {
+            const list = latest.queue || [];
+            let candidate = -1;
+            for (let step = 1; step <= list.length; step++) {
+              const index = ((latest.queueIndex || 0) + step) % list.length;
+              if (identity2(list[index]) !== identity2(item) && !likes.isDisliked(list[index])) {
+                candidate = index;
+                break;
+              }
+            }
+            if (candidate >= 0) {
+              player.jumpTo(candidate);
+              outcome = "\u5DF2\u5207\u6362\u4E0B\u4E00\u9996";
+            } else {
+              if (player.pause) player.pause();
+              else if (latest.playing) player.toggle();
+              outcome = "\u961F\u5217\u91CC\u6CA1\u6709\u5176\u4ED6\u53EF\u64AD\u653E\u7684\u6B4C\uFF0C\u5DF2\u6682\u505C";
+            }
+          }
+          if (mounted.current) {
+            setUndo({ track: item, before });
+            say(`\u5DF2\u5C06\u300A${item.title}\u300B\u6807\u8BB0\u4E3A\u4E0D\u559C\u6B22\u3002${outcome}\u3002`);
+          }
+        });
+      }
+      function undoDislike() {
+        if (!undo) return;
+        const original = undo;
+        if (!likes?.isDisliked(original.track)) {
+          setUndo(null);
+          say(`\u300A${original.track.title}\u300B\u7684\u504F\u597D\u5DF2\u66F4\u65B0\uFF0C\u5DF2\u4FDD\u7559\u4F60\u7684\u65B0\u9009\u62E9\u3002`);
+          return;
+        }
+        return preferenceAction(original.track, async () => {
+          await checked(likes.setDislike(original.track, false));
+          if (original.before === "like") {
+            try {
+              await checked(likes.toggle({ ...original.track, verification: void 0 }, true));
+            } catch (problem) {
+              throw new Error(`\u4E0D\u559C\u6B22\u5DF2\u64A4\u9500\uFF0C\u539F\u6765\u7684\u559C\u6B22\u5C1A\u672A\u6062\u590D\uFF1A${problem.message}`);
+            }
+          }
+          if (mounted.current) {
+            setUndo(null);
+            say(`\u5DF2\u6062\u590D\u300A${original.track.title}\u300B\u7684\u539F\u504F\u597D\uFF0C\u7EE7\u7EED\u5F53\u524D\u64AD\u653E\u3002`);
+          }
+        });
+      }
+      function commitSeek() {
+        if (seekDraft != null) {
+          player.seek(seekDraft);
+          setSeekDraft(null);
+        }
+      }
+      function iconButton(label, icon, onClick, extra = {}) {
+        return h("button", { type: "button", "aria-label": label, title: label, onClick, ...extra }, h(Icon, { name: icon, size: extra.size || 17 }));
+      }
+      function playButton(className) {
+        return iconButton(playing ? "\u6682\u505C" : "\u64AD\u653E", loading ? "loading" : playing ? "pause" : "play", player.toggle, { className, disabled: !track2, "aria-busy": !!loading });
+      }
+      if (!life || hidden) return null;
+      const currentLyrics = lyricState.trackId === track2?.id ? lyricState : null;
+      let displayedPaper = paper;
+      if (!displayedPaper && showLyrics && track2) {
+        const data = currentLyrics?.data;
+        if (currentLyrics?.status === "error") displayedPaper = { kind: "lyric-error", title: "\u6B4C\u8BCD\u6682\u672A\u53D6\u5F97", text: currentLyrics.error || "\u53EF\u4EE5\u7A0D\u540E\u91CD\u8BD5\u3002" };
+        else if (!currentLyrics || currentLyrics.status === "loading") displayedPaper = { kind: "lyrics", title: track2.title, text: "\u6B63\u5728\u67E5\u627E\u6B4C\u8BCD\u2026" };
+        else if (data?.synced && data.lines?.length) {
+          const line = [...data.lines].reverse().find((item) => Number.isFinite(item.time) && playPosition + 0.2 >= item.time);
+          displayedPaper = { kind: "lyrics", title: track2.title, text: line?.text || track2.title };
+        } else displayedPaper = { kind: data?.plain ? "plain-lyrics" : "lyrics", title: track2.title, text: data?.plain ? "\u8FD9\u9996\u6B4C\u53EA\u6709\u672A\u540C\u6B65\u6B4C\u8BCD\u3002" : data?.message || "\u6682\u65F6\u6CA1\u6709\u8FD9\u9996\u6B4C\u7684\u6B4C\u8BCD\u3002" };
+      }
+      const paperVisible = displayedPaper && (!musicOpen || placement?.side !== "stack");
+      const menuStyle = placement ? { left: placement.left, top: placement.top, width: placement.width, maxHeight: placement.maxHeight } : void 0;
+      const count = queue.length;
+      const libraryTrack = /^[a-f0-9]{16}$/.test(String(track2?.id || ""));
+      const likeLabel = liked ? "\u53D6\u6D88\u559C\u6B22\u8FD9\u9996\u6B4C" : libraryTrack ? "\u559C\u6B22\u8FD9\u9996\u6B4C" : track2?.verification ? "\u559C\u6B22\u5E76\u52A0\u5165\u66F2\u5E93" : "\u559C\u6B22\u8FD9\u9996\u6B4C\uFF08\u6682\u4E0D\u5165\u5E93\uFF09";
+      return h(
+        "aside",
+        {
+          ref: miniRef,
+          className: `echo-mini echo-mini-presence ${collapsed ? "is-compact" : ""}`,
+          "aria-label": "\u97F3\u7075\u4F34\u751F\u7A97",
+          "data-tone": tone,
+          style: position ? { left: position.x, top: position.y, right: "auto", bottom: "auto" } : void 0,
+          onKeyDown: (event) => {
+            if (event.key !== "Escape") return;
+            if (showQueue) {
+              setShowQueue(false);
+              queueRef.current?.focus();
+              event.preventDefault();
+            } else if (more) {
+              setSeekDraft(null);
+              setMore(false);
+              moreRef.current?.focus();
+              event.preventDefault();
+            } else if (musicOpen) {
+              closeMusic();
+              event.preventDefault();
+            } else if (paper) {
+              setPaper(null);
+              event.preventDefault();
+            }
+          }
+        },
+        h("button", {
+          type: "button",
+          className: "echo-mini-grip",
+          title: "\u62D6\u52A8\u4F34\u751F\u7A97\uFF0C\u6216\u7528\u65B9\u5411\u952E\u79FB\u52A8",
+          "aria-label": "\u79FB\u52A8\u4F34\u751F\u7A97\uFF0C\u4F7F\u7528\u65B9\u5411\u952E",
+          onPointerDown: (event) => {
+            if (event.button !== 0) return;
+            const box = anchorBox();
+            drag.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, x: event.clientX - box.left, y: event.clientY - box.top, moved: false };
+            event.preventDefault();
+          },
+          onKeyDown: (event) => {
+            const delta = { ArrowLeft: [-12, 0], ArrowRight: [12, 0], ArrowUp: [0, -12], ArrowDown: [0, 12] }[event.key];
+            if (!delta) return;
+            event.preventDefault();
+            const box = anchorBox();
+            moveTo({ x: box.left + delta[0], y: box.top + delta[1] });
+            remember(POSITION_KEY, positionRef.current);
+          }
+        }, h("i"), h("i"), h("i")),
+        h(
+          "div",
+          { className: "echo-mini-creature" },
+          h(Creature, { life, morphology: state.morphology, framing: "presence", compact: collapsed || !!track2 && !playing, active: playing && !loading && !error && !collapsed, gesture, onTouch: touch, onMemorySelect: readMemory, label: name, tone }),
+          life.memories?.length ? iconButton("\u56DE\u770B\u6700\u8FD1\u5171\u540C\u8BB0\u5FC6", "memory", () => readMemory(life.memories.at(-1).id), { className: "echo-mini-memory-button" }) : null
+        ),
+        h(
+          "div",
+          { className: "echo-mini-foot", role: "group", "aria-label": "\u968F\u624B\u63A7\u5236\u97F3\u4E50" },
+          track2 ? playButton("echo-mini-quiet") : iconButton("\u9009\u4E00\u9996\u6B4C", "play", openLibrary || openNow || openHome, { className: "echo-mini-quiet" }),
+          iconButton("\u4E0B\u4E00\u9996", "next", player.next, { className: "echo-mini-quiet", disabled: !track2 || !count }),
+          h("button", { type: "button", className: "echo-mini-music", ref: musicRef, onClick: () => musicOpen ? closeMusic(false) : setMusicOpen(true), "aria-label": "\u97F3\u4E50\u64CD\u4F5C", "aria-expanded": musicOpen }, h(Icon, { name: "sound", size: 16 }), h("span", null, "\u97F3\u4E50"))
+        ),
+        error && !musicOpen ? h("button", { type: "button", className: "echo-mini-playback-status is-error", onClick: () => setMusicOpen(true) }, "\u64AD\u653E\u5931\u8D25\uFF0C\u67E5\u770B\u539F\u56E0") : loading && !musicOpen ? h("div", { className: "echo-mini-playback-status", role: "status" }, "\u6B63\u5728\u52A0\u8F7D\u97F3\u4E50\u2026") : null,
+        paperVisible ? h(
+          "section",
+          { ref: paperRef, className: `echo-mini-paper is-${displayedPaper.kind}`, style: paperPlacement || void 0, "aria-label": displayedPaper.kind === "memory" ? "\u5171\u540C\u8BB0\u5FC6" : displayedPaper.kind === "greeting" ? "\u97F3\u7075\u7684\u56DE\u5E94" : "\u4F34\u968F\u6B4C\u8BCD" },
+          h("div", { className: "echo-mini-paper-title" }, displayedPaper.title),
+          h("p", null, displayedPaper.text),
+          displayedPaper.memory?.track ? h("small", null, `${displayedPaper.memory.track.title || "\u97F3\u4E50"}${displayedPaper.memory.track.artist ? ` \xB7 ${displayedPaper.memory.track.artist}` : ""}`) : null,
+          displayedPaper.kind === "lyric-error" ? h("button", { type: "button", className: "echo-mini-text", onClick: () => lyrics?.load(track2.id) }, "\u91CD\u8BD5\u6B4C\u8BCD") : null,
+          displayedPaper.kind === "plain-lyrics" ? h("button", { type: "button", className: "echo-mini-text", onClick: openNow }, "\u6253\u5F00\u5B8C\u6574\u6B4C\u8BCD") : null,
+          iconButton("\u6536\u8D77\u7EB8\u6761", "close", () => {
+            if (paper) setPaper(null);
+            else {
+              setShowLyrics(false);
+              remember(LYRICS_KEY, false);
+            }
+            musicRef.current?.focus();
+          }, { className: "echo-mini-paper-close" })
+        ) : null,
+        musicOpen ? h(
+          "section",
+          { ref: menuRef, className: "echo-mini-tools", style: menuStyle, "aria-label": "\u4F34\u751F\u97F3\u4E50\u64CD\u4F5C" },
+          h("div", { className: "echo-mini-tools-head" }, h("div", null, h("strong", null, track2?.title || "\u4E00\u8D77\u542C\u70B9\u4EC0\u4E48"), h("small", null, track2?.artist || "\u4ECE\u4F60\u7684\u97F3\u4E50\u5F00\u59CB")), iconButton("\u6536\u8D77\u97F3\u4E50\u64CD\u4F5C", "close", () => closeMusic(), { className: "echo-mini-close" })),
+          h("div", { className: "echo-mini-transport", role: "group", "aria-label": "\u64AD\u653E\u63A7\u5236" }, iconButton("\u4E0A\u4E00\u9996", "previous", player.prev, { disabled: !track2 }), playButton("echo-mini-play-main"), iconButton("\u4E0B\u4E00\u9996", "next", player.next, { disabled: !track2 || !count })),
+          !track2 ? h("button", { type: "button", className: "echo-mini-select-track", onClick: openLibrary || openNow || openHome }, "\u9009\u4E00\u9996\u6B4C") : null,
+          loading ? h("p", { className: "echo-mini-hint", role: "status" }, "\u6B63\u5728\u52A0\u8F7D\u97F3\u4E50\u2026") : null,
+          error ? h("div", { className: "echo-mini-error", role: "alert" }, h("p", null, error), h("button", { type: "button", onClick: player.play || player.toggle }, "\u91CD\u8BD5\u64AD\u653E")) : null,
+          h(
+            "div",
+            { className: "echo-mini-actions" },
+            h("button", { type: "button", disabled: !track2 || !likes || !!busy, onClick: toggleLike, "aria-pressed": liked, "aria-label": likeLabel, title: likeLabel }, h(Icon, { name: "heart", size: 17 }), h("span", null, liked ? "\u5DF2\u559C\u6B22" : "\u559C\u6B22")),
+            h("button", { type: "button", disabled: !track2 || !likes || !!busy, onClick: toggleDislike, "aria-pressed": disliked, "aria-label": disliked ? "\u53D6\u6D88\u4E0D\u559C\u6B22\u8FD9\u9996\u6B4C" : "\u4E0D\u559C\u6B22\u8FD9\u9996\u6B4C\u5E76\u8DF3\u8FC7", title: disliked ? "\u53D6\u6D88\u4E0D\u559C\u6B22\u8FD9\u9996\u6B4C" : "\u4E0D\u559C\u6B22\u8FD9\u9996\u6B4C\u5E76\u8DF3\u8FC7\uFF0C\u53EF\u64A4\u9500" }, h(Icon, { name: "dislike", size: 17 }), h("span", null, disliked ? "\u5DF2\u6807\u8BB0" : "\u4E0D\u559C\u6B22")),
+            h("button", { type: "button", onClick: () => {
+              const next = !showLyrics;
+              setShowLyrics(next);
+              remember(LYRICS_KEY, next);
+              setPaper(null);
+              closeMusic();
+            }, "aria-pressed": showLyrics, "aria-label": showLyrics ? "\u5173\u95ED\u4F34\u968F\u6B4C\u8BCD" : "\u663E\u793A\u4F34\u968F\u6B4C\u8BCD" }, h(Icon, { name: "lyrics", size: 17 }), h("span", null, "\u6B4C\u8BCD")),
+            h("button", { type: "button", ref: moreRef, onClick: () => {
+              setMore((value) => !value);
+              setShowQueue(false);
+            }, "aria-expanded": more, "aria-label": "\u66F4\u591A\u64AD\u653E\u64CD\u4F5C" }, h(Icon, { name: "more", size: 17 }), h("span", null, "\u66F4\u591A"))
+          ),
+          busy ? h("p", { className: "echo-mini-hint", role: "status" }, `\u6B63\u5728\u4FDD\u5B58\u300A${busy.title || "\u8FD9\u9996\u6B4C"}\u300B\u7684\u504F\u597D\u2026`) : null,
+          feedback ? h("div", { ref: feedbackRef, className: `echo-mini-feedback ${feedback.failed ? "is-error" : ""}`, role: feedback.failed ? "alert" : "status" }, h("p", null, feedback.message), undo ? h("button", { type: "button", onClick: undoDislike, disabled: !!busy }, `\u64A4\u9500\u5BF9\u300A${undo.track.title}\u300B\u7684\u4E0D\u559C\u6B22`) : null) : null,
+          more ? h(
+            "div",
+            { className: "echo-mini-more" },
+            h("label", { className: "echo-mini-range" }, h("span", null, "\u8FDB\u5EA6", h("time", null, `${formatTime2(seekDraft ?? playPosition)} / ${formatTime2(duration)}`)), h("input", { type: "range", min: 0, max: duration || 1, step: 0.1, value: Math.min(seekDraft ?? playPosition, duration || 1), disabled: !track2 || !duration, "aria-label": "\u4F34\u751F\u64AD\u653E\u8FDB\u5EA6", onChange: (event) => setSeekDraft(Number(event.target.value)), onPointerUp: commitSeek, onKeyUp: commitSeek, onBlur: commitSeek })),
+            h("div", { className: "echo-mini-volume" }, iconButton(muted ? "\u53D6\u6D88\u9759\u97F3" : "\u9759\u97F3", "sound", player.toggleMute, { "aria-pressed": !!muted }), h("input", { type: "range", min: 0, max: 1, step: 0.01, value: muted ? 0 : volume, onChange: (event) => player.setVolume(Number(event.target.value)), "aria-label": "\u4F34\u751F\u97F3\u91CF" })),
+            h("div", { className: "echo-mini-secondary" }, h("button", { type: "button", onClick: player.cycleMode, "aria-label": `\u64AD\u653E\u6A21\u5F0F\uFF1A${modeName}` }, modeName), h("button", { type: "button", ref: queueRef, onClick: () => setShowQueue((value) => !value), "aria-expanded": showQueue }, `\u961F\u5217 \xB7 ${count}`)),
+            showQueue ? h("ol", { className: "echo-mini-queue", "aria-label": "\u5F53\u524D\u64AD\u653E\u961F\u5217" }, queue.map((item, index) => h("li", { key: `${identity2(item)}-${index}` }, h("button", { type: "button", "aria-current": index === queueIndex ? "true" : void 0, onClick: () => player.jumpTo(index) }, h("span", null, item.title || "\u672A\u547D\u540D\u97F3\u4E50"), h("small", null, item.artist || ""))))) : null,
+            h("div", { className: "echo-mini-window-actions" }, h("button", { type: "button", onClick: () => setMiniCollapsed(!collapsed), "aria-label": collapsed ? "\u5C55\u5F00\u4F34\u751F\u7A97" : "\u6536\u62E2\u4F34\u751F\u7A97" }, h(Icon, { name: collapsed ? "sun" : "moon", size: 15 }), collapsed ? "\u8212\u5C55\u8EAB\u4F53" : "\u5B89\u9759\u6816\u606F"), h("button", { type: "button", onClick: openHome }, "\u56DE\u5230\u4E3B\u821E\u53F0"), h("button", { type: "button", onClick: () => setMiniHidden(true), "aria-label": "\u9690\u85CF\u4F34\u751F\u7A97", title: "\u9690\u85CF\u4F34\u751F\u7A97\uFF0C\u97F3\u4E50\u7EE7\u7EED\u64AD\u653E" }, "\u9690\u85CF\u4F34\u751F\u7A97"))
+          ) : null
+        ) : null
+      );
+    };
   }
 
   // src/client/echo/ui.js
@@ -813,7 +1337,12 @@
     grid: "M3 3h5v5H3ZM12 3h5v5h-5ZM3 12h5v5H3ZM12 12h5v5h-5Z",
     info: "M10 9v5M10 6v.1M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z",
     greet: "M3 10c3-8 4 8 7 0s4 8 7 0",
-    fold: "m3 6 7 7 7-7M5 3l5 5 5-5"
+    fold: "m3 6 7 7 7-7M5 3l5 5 5-5",
+    heart: "M10 17 3.7 11C-1 6.5 5 1 10 6c5-5 11 .5 6.3 5Z",
+    dislike: "M14 3H7L3 8v4h5l-1 4c0 2 2 2 3 0l4-5ZM14 3h3v9h-3",
+    lyrics: "M3 3h14v11H9l-4 3v-3H3ZM6 7h8M6 10h5",
+    more: "M4 10h.1M10 10h.1M16 10h.1",
+    loading: "M17 10a7 7 0 1 1-7-7"
   };
   function createEchoUI(React) {
     const h = React.createElement;
@@ -836,6 +1365,7 @@
       }, [service]);
       return state;
     }
+    const EchoMini = createEchoMiniComponent(React, { Creature, Icon, useLife, formatTime });
     function Dialog({ title, subtitle, children, close, wide = false }) {
       const ref = useRef(null);
       useEffect(() => {
@@ -1190,89 +1720,6 @@
         h("div", { className: "echo-dock-center" }, h("div", { className: "echo-play-controls" }, h("button", { type: "button", disabled: !track2, onClick: player.prev, "aria-label": "\u4E0A\u4E00\u9996" }, h(Icon, { name: "previous" })), h("button", { type: "button", className: "echo-play-main", disabled: !track2, onClick: player.toggle, "aria-label": playing ? "\u6682\u505C" : "\u64AD\u653E" }, h(Icon, { name: playing ? "pause" : "play", size: 20 })), h("button", { type: "button", disabled: !track2, onClick: player.next, "aria-label": "\u4E0B\u4E00\u9996" }, h(Icon, { name: "next" }))), h("div", { className: "echo-dock-progress" }, h("time", null, formatTime(position)), h("input", { type: "range", min: 0, max: duration || 1, step: 0.1, value: Math.min(position || 0, duration || 1), disabled: !track2 || !duration, onChange: (e) => player.seek(Number(e.target.value)), "aria-label": "\u64AD\u653E\u8FDB\u5EA6" }), h("time", null, formatTime(duration)))),
         h("div", { className: "echo-dock-volume" }, h("button", { type: "button", onClick: player.toggleMute, "aria-label": muted ? "\u53D6\u6D88\u9759\u97F3" : "\u9759\u97F3", "aria-pressed": muted }, h(Icon, { name: "sound" })), h("input", { type: "range", min: 0, max: 1, step: 0.01, value: muted ? 0 : volume, onChange: (e) => player.setVolume(Number(e.target.value)), "aria-label": "\u97F3\u91CF" })),
         error ? h("span", { className: "echo-playback-error", role: "alert" }, error) : null
-      );
-    }
-    function EchoMini({ lifeService, player, usePlayer, useUi, openHome, setMiniHidden, setMiniCollapsed }) {
-      const state = useLife(lifeService);
-      const hidden = useUi((s) => s.miniHidden || s.dockVisible);
-      const collapsed = useUi((s) => s.miniCollapsed);
-      const playing = usePlayer((s) => s.playing), track2 = usePlayer((s) => s.track);
-      const [position, setPosition] = useState(() => {
-        try {
-          const saved = JSON.parse(window.localStorage.getItem("dsh-music.echo.mini-position"));
-          return saved && Number.isFinite(saved.x) && Number.isFinite(saved.y) ? saved : null;
-        } catch {
-          return null;
-        }
-      });
-      const miniRef = useRef(null);
-      const positionRef = useRef(position);
-      const drag = useRef(null);
-      const clampPosition = (next) => {
-        const box = miniRef.current?.getBoundingClientRect();
-        return { x: Math.max(0, Math.min(window.innerWidth - (box?.width || 280), next.x)), y: Math.max(0, Math.min(window.innerHeight - (box?.height || 115), next.y)) };
-      };
-      const moveTo = (next) => {
-        const value = clampPosition(next);
-        positionRef.current = value;
-        setPosition(value);
-      };
-      const remember = () => {
-        if (positionRef.current) {
-          try {
-            window.localStorage.setItem("dsh-music.echo.mini-position", JSON.stringify(positionRef.current));
-          } catch {
-          }
-        }
-      };
-      useEffect(() => {
-        const move = (e) => {
-          if (drag.current) moveTo({ x: e.clientX - drag.current.x, y: e.clientY - drag.current.y });
-        };
-        const end = () => {
-          if (drag.current) remember();
-          drag.current = null;
-        };
-        const resize = () => {
-          if (positionRef.current) {
-            moveTo(positionRef.current);
-            remember();
-          }
-        };
-        window.addEventListener("pointermove", move);
-        window.addEventListener("pointerup", end);
-        window.addEventListener("pointercancel", end);
-        window.addEventListener("resize", resize);
-        return () => {
-          window.removeEventListener("pointermove", move);
-          window.removeEventListener("pointerup", end);
-          window.removeEventListener("pointercancel", end);
-          window.removeEventListener("resize", resize);
-        };
-      }, []);
-      useEffect(() => {
-        if (!hidden && positionRef.current) moveTo(positionRef.current);
-      }, [collapsed, hidden, !!state.life]);
-      if (!state.life || hidden) return null;
-      return h(
-        "aside",
-        { ref: miniRef, className: `echo-mini ${collapsed ? "is-compact" : ""}`, "aria-label": "\u97F3\u7075\u4F34\u751F\u7A97", style: position ? { left: position.x, top: position.y, right: "auto", bottom: "auto" } : void 0 },
-        h("div", { className: "echo-mini-grip", title: "\u62D6\u52A8\u4F34\u751F\u7A97\uFF0C\u6216\u7528\u65B9\u5411\u952E\u79FB\u52A8", role: "button", tabIndex: 0, "aria-label": "\u79FB\u52A8\u4F34\u751F\u7A97\uFF0C\u4F7F\u7528\u65B9\u5411\u952E", onPointerDown: (e) => {
-          if (e.button !== 0) return;
-          const box = e.currentTarget.parentElement.getBoundingClientRect();
-          drag.current = { x: e.clientX - box.left, y: e.clientY - box.top };
-          e.preventDefault();
-        }, onKeyDown: (e) => {
-          const delta = { ArrowLeft: [-12, 0], ArrowRight: [12, 0], ArrowUp: [0, -12], ArrowDown: [0, 12] }[e.key];
-          if (!delta) return;
-          e.preventDefault();
-          const box = miniRef.current.getBoundingClientRect();
-          moveTo({ x: box.left + delta[0], y: box.top + delta[1] });
-          remember();
-        } }, h("i"), h("i"), h("i")),
-        h("div", { className: "echo-mini-creature" }, h(Creature, { life: state.life, morphology: state.morphology, compact: collapsed, active: playing, onTouch: openHome, label: "\u56DE\u5230\u97F3\u7075\u4E3B\u821E\u53F0" })),
-        !collapsed ? h("div", { className: "echo-mini-copy" }, h("strong", null, state.life.name === "\u672A\u547D\u540D" ? "\u4F60\u7684\u97F3\u7075" : state.life.name), h("span", null, track2?.title || "\u5B89\u9759\u966A\u4F60\u5F85\u4E00\u4F1A\u513F")) : null,
-        h("div", { className: "echo-mini-controls" }, track2 ? h("button", { type: "button", onClick: player.toggle, "aria-label": playing ? "\u6682\u505C" : "\u64AD\u653E" }, h(Icon, { name: playing ? "pause" : "play", size: 16 })) : null, h("button", { type: "button", onClick: () => setMiniCollapsed(!collapsed), "aria-label": collapsed ? "\u5C55\u5F00\u4F34\u751F\u7A97" : "\u6536\u62E2\u4F34\u751F\u7A97" }, h(Icon, { name: "fold", size: 15 })), h("button", { type: "button", onClick: () => setMiniHidden(true), "aria-label": "\u9690\u85CF\u4F34\u751F\u7A97" }, h(Icon, { name: "close", size: 14 })))
       );
     }
     return { EchoHome, EchoMemories, EchoGallery, EchoDock, EchoMini, Creature };
@@ -2122,19 +2569,7 @@
 .echo-specimen-caption{display:flex;justify-content:space-between;align-items:center;padding:15px 18px;border-top:1px solid #ecf0e5;color:#929e86;font-size:10px;}
 .echo-specimen-caption>span:first-child{font-family:Georgia,serif;font-size:18px;color:#758566;}
 .echo-specimen-grid.is-silhouette .echo-creature svg{filter:brightness(0) opacity(.7);}
-.echo-mini{position:fixed;right:25px;bottom:28px;z-index:2147482000;pointer-events:auto;display:flex;align-items:center;gap:4px;min-width:255px;border:1px solid #d8dfcc;border-radius:17px;background:#fafcf5f5;box-shadow:0 9px 35px #243e2b16;padding:7px 11px 7px 5px;transition:min-width .5s,width .5s;}
-.echo-mini.is-compact{min-width:105px;width:105px;flex-wrap:wrap;justify-content:center;padding:5px 5px 8px;}
-.echo-mini-grip{position:absolute;top:5px;left:50%;transform:translateX(-50%);display:flex;gap:3px;padding:5px 12px;cursor:grab;z-index:1;touch-action:none;}
-.echo-mini-grip i{height:2px;width:2px;border-radius:50%;background:#a9b69a;}
-.echo-mini-creature{width:100px;height:90px;flex:none;}
-.echo-mini-creature>.echo-creature{width:100%;height:100%;}
-.echo-mini-copy{display:flex;flex-direction:column;gap:7px;min-width:0;max-width:125px;}
-.echo-mini-copy strong{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.echo-mini-copy span{font-size:10px;color:#88987a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.echo-mini-controls{display:flex;align-items:center;gap:3px;}
-.echo-mini:not(.is-compact) .echo-mini-controls{flex-direction:column;margin-left:8px;}
-.echo-mini-controls button{display:flex;background:none;border:0;color:#819573;cursor:pointer;padding:5px;border-radius:4px;}
-.echo-mini-controls button:hover{background:#e6eddd;}
+
 .echo-shell .dshm-console-card,.echo-shell .dshm-feature{background:#fafbf5;border-color:#dbe2d0;}
 .echo-shell .dshm-command-form{background:#fafcf5;border-color:#bdcdb0;}
 .echo-shell .dshm-feature svg,.echo-shell .dshm-command-form>svg{color:#718e5c;}
@@ -2203,11 +2638,80 @@
  .echo-dialog{padding:30px 24px;}
  .echo-notice{bottom:100px;font-size:11px;width:max-content;}
 }
-@media(prefers-reduced-motion:reduce){.echo-button,.echo-mini{transition:none;}.echo-tap-pad:active{transform:none;}}
+/* A free silhouette owns the companion. Controls have their own fixed anchor. */
+.echo-mini-presence{--echo-soft:#e8ecdf;--echo-inverse:#fafbf5;--echo-danger:#974c3b;position:fixed;right:20px;bottom:20px;z-index:2147482000;width:320px;max-width:calc(100vw - 24px);padding:18px 0 0;background:none;border:0;border-radius:0;box-shadow:none;pointer-events:none;line-height:1.5;isolation:isolate;}
+.echo-mini-presence button,.echo-mini-presence input{font:inherit;pointer-events:auto;}
+.echo-mini-presence button{appearance:none;border:0;background:none;color:inherit;cursor:pointer;}
+.echo-mini-presence button:disabled{cursor:default;opacity:.38;}
+.echo-mini-presence button:not(:disabled):active{transform:translateY(1px);}
+.echo-mini-presence[data-tone="dark"]{--echo-paper:#222920;--echo-ink:#e4ebdd;--echo-muted:#adbba5;--echo-line:#46513f;--echo-accent:#b3cda3;--echo-surface:#293126;--echo-soft:#35402f;--echo-inverse:#1d2a18;--echo-danger:#e3a18e;color-scheme:dark;}
+.echo-mini-grip{position:absolute;top:0;left:50%;transform:translateX(-50%);display:flex;justify-content:center;align-items:center;gap:4px;width:56px;height:24px;padding:0;cursor:grab!important;touch-action:none;border-radius:12px;}
+.echo-mini-grip i{height:2px;width:3px;border-radius:50%;background:var(--echo-muted);opacity:.55;}
+.echo-mini-grip:hover i,.echo-mini-grip:focus-visible i{opacity:1;}
+.echo-mini-creature{position:relative;width:100%;}
+.echo-mini-creature>.echo-creature{width:100%;pointer-events:auto;}
+.echo-mini-memory-button{position:absolute;right:14%;bottom:18%;display:grid;place-items:center;width:36px;height:36px;border-radius:50%;color:#a08256!important;opacity:.65;}
+.echo-mini-memory-button:hover,.echo-mini-memory-button:focus-visible{opacity:1;background:var(--echo-surface);}
+.echo-mini-memory-button svg{width:13px;height:13px;}
+.echo-mini-foot{display:flex;justify-content:center;align-items:center;gap:7px;height:44px;margin:0;pointer-events:none;}
+.echo-mini-quiet{display:grid;place-items:center;width:40px;height:40px;padding:0;border-radius:50%;color:var(--echo-muted)!important;}
+.echo-mini-music{display:inline-flex;justify-content:center;align-items:center;gap:6px;min-height:40px;padding:0 12px;border-radius:20px;font-size:12px!important;color:var(--echo-muted)!important;}
+.echo-mini-quiet:not(:disabled):hover,.echo-mini-music:hover,.echo-mini-music[aria-expanded="true"]{background:var(--echo-soft);color:var(--echo-accent)!important;}
+.echo-mini-playback-status{display:block;width:max-content;max-width:100%;margin:2px auto 0;padding:4px 9px;font-size:11px!important;color:var(--echo-muted)!important;pointer-events:auto;text-align:center;border-radius:8px;}
+.echo-mini-playback-status.is-error{color:var(--echo-danger)!important;background:var(--echo-surface);}
+.echo-mini-tools{position:fixed;width:286px;max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);overflow:auto;overscroll-behavior:contain;padding:14px;background:var(--echo-surface);border:1px solid var(--echo-line);border-radius:18px;box-shadow:0 12px 36px #1b2e2317;pointer-events:auto;scrollbar-width:thin;z-index:3;font-size:12px;}
+.echo-mini-tools-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.echo-mini-tools-head>div{min-width:0;}
+.echo-mini-tools-head strong{display:block;font-size:13px;font-weight:500;overflow-wrap:anywhere;line-height:1.55;}
+.echo-mini-tools-head small{display:block;font-size:11px;color:var(--echo-muted);margin-top:3px;overflow-wrap:anywhere;}
+.echo-mini-close{width:32px;height:32px;flex:none;display:grid;place-items:center;border-radius:50%;color:var(--echo-muted)!important;}
+.echo-mini-close:hover,.echo-mini-paper-close:hover{background:var(--echo-soft);}
+.echo-mini-transport{display:flex;justify-content:center;align-items:center;gap:15px;margin:14px 0 12px;}
+.echo-mini-transport button{display:grid;place-items:center;width:44px;height:44px;padding:0;border-radius:50%;}
+.echo-mini-transport .echo-mini-play-main{background:var(--echo-accent);color:var(--echo-inverse);width:48px;height:48px;}
+.echo-mini-transport button:not(.echo-mini-play-main):not(:disabled):hover{background:var(--echo-soft);}
+.echo-mini [aria-busy="true"] svg{animation:echo-mini-loading 1s linear infinite;}
+.echo-mini-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;}
+.echo-mini-actions>button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:52px;padding:5px 2px;border-radius:9px;font-size:11px;}
+.echo-mini-actions>button[aria-pressed="true"],.echo-mini-actions>button[aria-expanded="true"],.echo-mini-actions>button:not(:disabled):hover{background:var(--echo-soft);color:var(--echo-accent);}
+.echo-mini-hint{margin:9px 0;font-size:11px;color:var(--echo-muted);overflow-wrap:anywhere;}
+.echo-mini-feedback{margin-top:11px;padding:10px 0 0;border-top:1px solid var(--echo-line);font-size:11px;overflow-wrap:anywhere;}
+.echo-mini-feedback p,.echo-mini-error p{margin:0;line-height:1.7;}
+.echo-mini-feedback.is-error,.echo-mini-error{color:var(--echo-danger);}
+.echo-mini-feedback button,.echo-mini-error button,.echo-mini-text,.echo-mini-select-track{min-height:36px;padding:7px 0;text-align:left;color:var(--echo-accent)!important;font-size:11px!important;text-decoration:underline;text-underline-offset:4px;}
+.echo-mini-select-track{display:block;width:100%;text-align:center;}
+.echo-mini-more{margin-top:12px;padding-top:12px;border-top:1px solid var(--echo-line);}
+.echo-mini-range{display:block;}
+.echo-mini-range>span{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:11px;color:var(--echo-muted);}
+.echo-mini-range time{font-variant-numeric:tabular-nums;}
+.echo-mini input[type="range"]{display:block;width:100%;min-width:0;height:28px;padding:0;margin:3px 0 0;accent-color:var(--echo-accent);}
+.echo-mini-volume{display:flex;align-items:center;gap:8px;margin-top:6px;}
+.echo-mini-volume button{width:36px;height:36px;flex:none;display:grid;place-items:center;border-radius:50%;}
+.echo-mini-volume input{flex:1;}
+.echo-mini-secondary{display:flex;justify-content:space-between;gap:8px;margin-top:4px;}
+.echo-mini-secondary button{min-height:36px;padding:5px 8px;font-size:11px;border-radius:8px;color:var(--echo-muted);}
+.echo-mini-secondary button:hover,.echo-mini-window-actions button:hover{background:var(--echo-soft);color:var(--echo-accent);}
+.echo-mini-queue{padding:4px;margin:8px 0 0;list-style:none;border-radius:10px;background:var(--echo-paper);max-height:190px;overflow:auto;scrollbar-width:thin;}
+.echo-mini-queue button{display:block;width:100%;text-align:left;padding:9px 8px;border-radius:7px;font-size:12px;}
+.echo-mini-queue button[aria-current="true"]{background:var(--echo-soft);color:var(--echo-accent);}
+.echo-mini-queue span,.echo-mini-queue small{display:block;overflow-wrap:anywhere;}
+.echo-mini-queue small{font-size:11px;color:var(--echo-muted);margin-top:3px;}
+.echo-mini-window-actions{display:flex;flex-wrap:wrap;justify-content:space-between;gap:3px;padding-top:8px;margin-top:8px;border-top:1px solid var(--echo-line);}
+.echo-mini-window-actions button{display:flex;align-items:center;gap:5px;min-height:36px;padding:5px 6px;border-radius:7px;font-size:11px;color:var(--echo-muted);}
+.echo-mini-paper{position:fixed;width:280px;max-width:calc(100vw - 24px);padding:12px 37px 12px 15px;max-height:calc(100vh - 24px);overflow:auto;overscroll-behavior:contain;background:var(--echo-surface);border:1px solid var(--echo-line);border-radius:4px 14px 14px 14px;box-shadow:0 5px 20px #1b2e2310;pointer-events:auto;z-index:2;}
+.echo-mini-paper-title{font-size:10px;color:var(--echo-muted);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.echo-mini-paper p{font-size:13px;line-height:1.7;margin:5px 0 0;overflow-wrap:anywhere;}
+.echo-mini-paper.is-lyrics p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;}
+.echo-mini-paper.is-memory p{max-height:180px;overflow:auto;white-space:pre-wrap;scrollbar-width:thin;}
+.echo-mini-paper small{display:block;margin-top:10px;font-size:11px;color:var(--echo-muted);overflow-wrap:anywhere;}
+.echo-mini-paper-close{position:absolute;right:3px;top:3px;width:30px;height:30px;display:grid;place-items:center;padding:0;border-radius:50%;color:var(--echo-muted)!important;}
+@keyframes echo-mini-loading{to{transform:rotate(360deg);}}
+@media(pointer:coarse){.echo-mini-quiet{width:44px;height:44px;}.echo-mini-music{min-height:44px;}.echo-mini-close,.echo-mini-paper-close{width:40px;height:40px;}.echo-mini-paper{padding-right:47px;}.echo-mini-grip{height:30px;top:-4px;}.echo-mini-window-actions button,.echo-mini-secondary button,.echo-mini-text{min-height:44px;}}
+@media(prefers-reduced-motion:reduce){.echo-button,.echo-mini{transition:none;}.echo-tap-pad:active{transform:none;}.echo-mini [aria-busy="true"] svg{animation:none;}}
 `;
 
   // src/client/echo/creature.css
-  var creature_default = '.echo-creature {\n  position: relative;\n  width: 100%;\n  min-width: 0;\n  isolation: isolate;\n  --echo-look-x: 0px;\n  --echo-look-y: 0px;\n  --echo-look-r: 0deg;\n  -webkit-tap-highlight-color: transparent;\n}\n\n.echo-creature-svg {\n  display: block;\n  width: 100%;\n  height: auto;\n  overflow: visible;\n  user-select: none;\n}\n\n.echo-creature-drift,\n.echo-creature-breath,\n.echo-creature-response,\n.echo-creature-attention {\n  transform-box: view-box;\n  transform-origin: 50% 67%;\n}\n\n.echo-creature-drift {\n  animation: echo-drift var(--echo-drift-duration, 11s) ease-in-out infinite;\n}\n\n.echo-creature-breath {\n  animation: echo-breathe var(--echo-breath-duration, 6.5s) ease-in-out infinite;\n}\n\n.echo-creature-attention {\n  transform: translate(var(--echo-look-x), var(--echo-look-y)) rotate(var(--echo-look-r));\n  transition: transform 850ms cubic-bezier(.18, .7, .2, 1);\n}\n\n.echo-creature-shadow {\n  opacity: var(--echo-shadow-opacity, .17);\n  transform-origin: 50% 80%;\n  animation: echo-contact var(--echo-drift-duration, 11s) ease-in-out infinite;\n}\n\n.echo-creature[data-active="true"] .echo-creature-breath {\n  animation-name: echo-listen;\n  animation-duration: var(--echo-listen-duration, 2.1s);\n}\n\n.echo-creature[data-responding="true"] .echo-creature-response {\n  animation: echo-response var(--echo-response-duration, 1.3s) cubic-bezier(.22, .68, .18, 1) both;\n}\n\n.echo-creature[data-structure="shell"] .echo-creature-drift {\n  animation-name: echo-shell-drift;\n}\n\n.echo-creature[data-structure="ribbon"] .echo-creature-drift {\n  animation-name: echo-ribbon-drift;\n}\n\n.echo-creature[data-structure="shell"][data-responding="true"] .echo-creature-response {\n  animation-name: echo-shell-response;\n}\n\n.echo-creature[data-structure="ribbon"][data-responding="true"] .echo-creature-response {\n  animation-name: echo-ribbon-response;\n}\n\n.echo-fold-leaf,\n.echo-shell-feet,\n.echo-body-ribbon {\n  transition: transform 1100ms cubic-bezier(.2, .75, .15, 1), opacity 600ms ease;\n}\n\n.echo-creature[data-compact="true"] .echo-creature-drift {\n  animation-duration: 13s;\n}\n\n.echo-creature[data-compact="true"] .echo-creature-breath {\n  animation-duration: 8s;\n}\n\n.echo-creature-touch-target[role="button"] { cursor: pointer; outline: none; }\n.echo-creature-focus-ring { stroke: transparent; stroke-width: 1.25; }\n.echo-creature-touch-target:focus-visible .echo-creature-focus-ring { stroke: #718274; stroke-dasharray: 3 5; }\n.echo-creature-touch-target:focus-visible .echo-creature-surface { opacity: .94; }\n.echo-memory-mark[role="button"] { cursor: pointer; outline: none; }\n.echo-memory-halo { opacity: 0; transition: opacity 220ms ease; }\n.echo-memory-mark:hover .echo-memory-halo,\n.echo-memory-mark:focus-visible .echo-memory-halo { opacity: .75; }\n.echo-memory-mark:focus-visible .echo-memory-hit { fill: #b5905e16; }\n\n.echo-creature[data-motion="off"] .echo-creature-drift,\n.echo-creature[data-motion="off"] .echo-creature-breath,\n.echo-creature[data-motion="off"] .echo-creature-shadow,\n.echo-creature[data-motion="off"] .echo-creature-response { animation: none !important; }\n.echo-creature[data-motion="off"] .echo-creature-attention { transform: none; transition: none; }\n.echo-creature[data-motion="off"] .echo-fold-leaf,\n.echo-creature[data-motion="off"] .echo-shell-feet,\n.echo-creature[data-motion="off"] .echo-body-ribbon { transition: none; }\n\n@keyframes echo-breathe {\n  0%, 100% { transform: scale(1, 1); }\n  48% { transform: scale(1.006, var(--echo-inhale, 1.017)); }\n}\n\n@keyframes echo-drift {\n  0%, 100% { transform: translate(0, 0) rotate(-.35deg); }\n  48% { transform: translate(1px, -3.4px) rotate(.35deg); }\n}\n\n@keyframes echo-shell-drift {\n  0%, 100% { transform: rotate(-.3deg) translate(0, 0); }\n  55% { transform: rotate(.5deg) translate(.8px, -.6px); }\n}\n\n@keyframes echo-ribbon-drift {\n  0%, 100% { transform: translate(0, 0) rotate(-1deg); }\n  50% { transform: translate(2px, -5px) rotate(.7deg); }\n}\n\n@keyframes echo-contact {\n  0%, 100% { transform: scaleX(1); opacity: var(--echo-shadow-opacity, .17); }\n  50% { transform: scaleX(.97); opacity: calc(var(--echo-shadow-opacity, .17) * .85); }\n}\n\n@keyframes echo-listen {\n  0%, 100% { transform: scale(1) rotate(0deg); }\n  30% { transform: scale(1.006, 1.02) rotate(.5deg); }\n  62% { transform: scale(.997, 1.009) rotate(-.35deg); }\n}\n\n@keyframes echo-response {\n  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }\n  20% { transform: translateY(3px) rotate(-1.5deg) scale(1.02, .97); }\n  48% { transform: translateY(-8px) rotate(2deg) scale(.985, 1.035); }\n  72% { transform: translateY(-2px) rotate(-.7deg) scale(1); }\n}\n\n@keyframes echo-shell-response {\n  0%, 100% { transform: translate(0, 0) rotate(0deg); }\n  20% { transform: translate(-2px, 2px) rotate(-2.2deg); }\n  52% { transform: translate(5px, -3px) rotate(2deg); }\n  73% { transform: translate(2px, 0) rotate(-.7deg); }\n}\n\n@keyframes echo-ribbon-response {\n  0%, 100% { transform: rotate(0deg) scale(1); }\n  25% { transform: rotate(-5deg) scale(.98, 1.02); }\n  55% { transform: rotate(6deg) scale(1.02, .99); }\n  79% { transform: rotate(-1.5deg) scale(1); }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .echo-creature *, .echo-creature *::before, .echo-creature *::after {\n    animation: none !important;\n    transition: none !important;\n  }\n  .echo-creature-attention { transform: none !important; }\n}\n';
+  var creature_default = '.echo-creature {\n  position: relative;\n  width: 100%;\n  min-width: 0;\n  isolation: isolate;\n  --echo-look-x: 0px;\n  --echo-look-y: 0px;\n  --echo-look-r: 0deg;\n  -webkit-tap-highlight-color: transparent;\n}\n\n.echo-creature-svg {\n  display: block;\n  width: 100%;\n  height: auto;\n  overflow: visible;\n  user-select: none;\n}\n\n.echo-creature-drift,\n.echo-creature-breath,\n.echo-creature-response,\n.echo-creature-attention {\n  transform-box: view-box;\n  transform-origin: var(--echo-origin-x, 50.5%) var(--echo-origin-y, 73%);\n}\n\n.echo-creature-drift {\n  animation: echo-drift var(--echo-drift-duration, 15s) ease-in-out infinite;\n}\n\n.echo-creature-breath {\n  animation: echo-breathe var(--echo-breath-duration, 8.5s) ease-in-out infinite;\n}\n\n.echo-creature-attention {\n  transform: translate(var(--echo-look-x), var(--echo-look-y)) rotate(var(--echo-look-r));\n  transition: transform 650ms cubic-bezier(.18, .7, .2, 1);\n}\n\n.echo-creature-shadow {\n  opacity: var(--echo-shadow-opacity, .21);\n  transform-box: fill-box;\n  transform-origin: center;\n  animation: echo-contact var(--echo-drift-duration, 15s) ease-in-out infinite;\n}\n\n.echo-creature-contact { animation: none; opacity: calc(var(--echo-shadow-opacity, .21) * 1.12); }\n\n.echo-creature[data-active="true"] .echo-creature-breath {\n  animation-name: echo-listen;\n  /* This conveys listening, not beat detection. Actual audio drives growth. */\n  animation-duration: var(--echo-listen-duration, 4.6s);\n}\n\n.echo-creature[data-responding="true"] .echo-creature-response {\n  animation: echo-response var(--echo-response-duration, 1.3s) cubic-bezier(.22, .68, .18, 1) both;\n}\n\n.echo-creature[data-structure="shell"] .echo-creature-drift {\n  animation-name: echo-shell-drift;\n}\n\n.echo-creature[data-structure="ribbon"] .echo-creature-drift {\n  animation-name: echo-ribbon-drift;\n}\n\n.echo-creature[data-structure="shell"][data-responding="true"] .echo-creature-response {\n  animation-name: echo-shell-response;\n}\n\n.echo-creature[data-structure="ribbon"][data-responding="true"] .echo-creature-response {\n  animation-name: echo-ribbon-response;\n}\n\n.echo-fold-leaf,\n.echo-shell-feet,\n.echo-body-shell,\n.echo-memory-pose,\n.echo-body-ribbon {\n  transition: transform 1300ms cubic-bezier(.2, .75, .15, 1), opacity 600ms ease;\n}\n\n.echo-creature[data-compact="true"] .echo-creature-drift {\n  animation-duration: 17s;\n}\n\n.echo-creature[data-compact="true"] .echo-creature-breath {\n  animation-duration: 10s;\n}\n\n.echo-creature-touch-target[role="button"] { cursor: pointer; outline: none; }\n.echo-creature-focus-ring { stroke: transparent; stroke-width: 1.25; }\n.echo-creature-touch-target:focus-visible .echo-creature-focus-ring { stroke: #718274; stroke-dasharray: 3 5; }\n.echo-creature-touch-target:focus-visible .echo-creature-surface { opacity: .94; }\n.echo-memory-mark[role="button"] { cursor: pointer; outline: none; }\n.echo-memory-halo { opacity: 0; transition: opacity 220ms ease; }\n.echo-memory-mark:hover .echo-memory-halo,\n.echo-memory-mark:focus-visible .echo-memory-halo { opacity: .75; }\n.echo-memory-mark:focus-visible .echo-memory-hit { fill: #b5905e16; }\n\n.echo-creature[data-motion="off"] .echo-creature-drift,\n.echo-creature[data-motion="off"] .echo-creature-breath,\n.echo-creature[data-motion="off"] .echo-creature-shadow,\n.echo-creature[data-motion="off"] .echo-creature-response { animation: none !important; }\n.echo-creature[data-motion="off"] .echo-creature-attention { transform: none; transition: none; }\n.echo-creature[data-motion="off"] .echo-fold-leaf,\n.echo-creature[data-motion="off"] .echo-shell-feet,\n.echo-creature[data-motion="off"] .echo-body-shell,\n.echo-creature[data-motion="off"] .echo-memory-pose,\n.echo-creature[data-motion="off"] .echo-body-ribbon { transition: none; }\n\n@keyframes echo-breathe {\n  0%, 100% { transform: scale(1, 1); }\n  48% { transform: scale(1.003, var(--echo-inhale, 1.01)); }\n}\n\n@keyframes echo-drift {\n  0%, 100% { transform: translate(0, 0) rotate(-.14deg); }\n  48% { transform: translate(.4px, -1.1px) rotate(.14deg); }\n}\n\n@keyframes echo-shell-drift {\n  0%, 100% { transform: rotate(-.12deg) translate(0, 0); }\n  55% { transform: rotate(.18deg) translate(.4px, -.3px); }\n}\n\n@keyframes echo-ribbon-drift {\n  0%, 100% { transform: translate(0, 0) rotate(-.4deg); }\n  50% { transform: translate(.8px, -2.2px) rotate(.35deg); }\n}\n\n@keyframes echo-contact {\n  0%, 100% { transform: scaleX(1); opacity: var(--echo-shadow-opacity, .21); }\n  50% { transform: scaleX(.985); opacity: calc(var(--echo-shadow-opacity, .21) * .92); }\n}\n\n@keyframes echo-listen {\n  0%, 100% { transform: scale(1) rotate(0deg); }\n  30% { transform: scale(1.003, 1.012) rotate(.22deg); }\n  62% { transform: scale(.999, 1.005) rotate(-.15deg); }\n}\n\n@keyframes echo-response {\n  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }\n  20% { transform: translateY(1.5px) rotate(-1deg) scale(1.01, .985); }\n  48% { transform: translateY(-4.5px) rotate(1.4deg) scale(.994, 1.018); }\n  72% { transform: translateY(-1px) rotate(-.5deg) scale(1); }\n}\n\n@keyframes echo-shell-response {\n  0%, 100% { transform: translate(0, 0) rotate(0deg); }\n  20% { transform: translate(-1px, 1px) rotate(-1.3deg); }\n  52% { transform: translate(2.5px, -1.5px) rotate(1.3deg); }\n  73% { transform: translate(1px, 0) rotate(-.4deg); }\n}\n\n@keyframes echo-ribbon-response {\n  0%, 100% { transform: rotate(0deg) scale(1); }\n  25% { transform: rotate(-3deg) scale(.99, 1.012); }\n  55% { transform: rotate(3.5deg) scale(1.012, .995); }\n  79% { transform: rotate(-1deg) scale(1); }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .echo-creature *, .echo-creature *::before, .echo-creature *::after {\n    animation: none !important;\n    transition: none !important;\n  }\n  .echo-creature-attention { transform: none !important; }\n}\n';
 
   // src/client/index.js
   window.__ModuleLoader__.load({
@@ -3088,6 +3592,13 @@
         for (const ch of lower) out += T2S[ch] || ch;
         return out;
       }
+      function isLibraryTrackId(id) {
+        return typeof id === "string" && /^[0-9a-f]{16}$/.test(id);
+      }
+      function libraryTrackId(item) {
+        if (isLibraryTrackId(item?.id)) return item.id;
+        return isLibraryTrackId(item?.trackId) ? item.trackId : null;
+      }
       function readPrefs() {
         try {
           const raw = localStorage.getItem("dsh-music.prefs");
@@ -3940,21 +4451,34 @@
       function createLyricsService(api) {
         const store = createStore({ trackId: null, status: "idle", data: null, error: null });
         let inflightFor = null;
+        let revision = 0;
         async function load(trackId) {
           if (!trackId || inflightFor === trackId) return;
           const cur = store.getSnapshot();
           if (cur.trackId === trackId && (cur.status === "ready" || cur.status === "loading")) return;
+          const request = ++revision;
+          if (!isLibraryTrackId(trackId)) {
+            inflightFor = null;
+            store.set({ trackId, status: "ready", error: null, data: {
+              source: "none",
+              synced: false,
+              lines: [],
+              plain: "",
+              message: String(trackId).startsWith("preview:") ? "\u8BD5\u542C\u66F2\u76EE\u6682\u4E0D\u63D0\u4F9B\u540C\u6B65\u6B4C\u8BCD\u3002\u52A0\u5165\u66F2\u5E93\u540E\u53EF\u91CD\u65B0\u83B7\u53D6\u3002" : "\u8FD9\u9996\u6B4C\u66F2\u6682\u65E0\u53EF\u7528\u6B4C\u8BCD\u3002"
+            } });
+            return;
+          }
           inflightFor = trackId;
           store.set({ trackId, status: "loading", data: null, error: null });
           try {
             const data = await api.lyrics(trackId);
-            if (store.getSnapshot().trackId !== trackId) return;
+            if (request !== revision) return;
             store.set({ status: "ready", data });
           } catch (err) {
-            if (store.getSnapshot().trackId !== trackId) return;
+            if (request !== revision) return;
             store.set({ status: "error", error: err && err.message || String(err) });
           } finally {
-            if (inflightFor === trackId) inflightFor = null;
+            if (request === revision) inflightFor = null;
           }
         }
         return { source: store, load };
@@ -4381,37 +4905,60 @@
         }
         return { source: store, load };
       }
-      function likeKey(o) {
-        return normalizeZh(o.artist) + "::" + normalizeZh(o.title);
+      function likeKey(o = {}) {
+        return normalizeZh(o.artist).trim() + "::" + normalizeZh(o.title).trim();
+      }
+      function previewTrack(item, audioUrl) {
+        return {
+          id: "preview:" + likeKey(item),
+          preview: true,
+          title: item.title,
+          artist: item.artist,
+          album: item.album,
+          coverUrl: item.coverUrl || null,
+          audioUrl,
+          duration: null,
+          durationMs: item.durationMs,
+          verification: item.verification,
+          source: item.source || "preview",
+          sourceUrl: item.sourceUrl
+        };
       }
       function createLikesService(api, onAutoDownload) {
         const store = createStore({ keys: {}, dislikes: {}, items: [], dislikeItems: [], loaded: false, error: null });
+        let revision = 0;
+        let refreshSequence = 0;
         async function load() {
+          const atRevision = revision, sequence = ++refreshSequence;
+          const current = () => revision === atRevision && sequence === refreshSequence;
           try {
             const data = await api.likes();
             const keys = {};
             for (const it of data && data.items || []) if (it.liked !== false) keys[likeKey(it)] = it;
-            store.set({ keys, items: data && data.items || [], loaded: true, error: null });
+            if (current()) store.set({ keys, items: data && data.items || [], loaded: true, error: null });
           } catch (err) {
-            store.set({ loaded: true, error: err && err.message || String(err) });
+            if (current()) store.set({ loaded: true, error: err && err.message || String(err) });
           }
           try {
             const d = await api.dislikes();
             const dislikes = {};
             for (const it of d && d.items || []) dislikes[likeKey(it)] = it;
-            store.set({ dislikes, dislikeItems: d && d.items || [] });
+            if (current()) store.set({ dislikes, dislikeItems: d && d.items || [] });
           } catch {
           }
         }
         async function toggle(item, liked) {
-          const body = item.id ? { trackId: item.id, liked } : { artist: item.artist, title: item.title, album: item.album, durationMs: item.durationMs, coverUrl: item.coverUrl, verification: item.verification, liked };
+          revision++;
+          const trackId = libraryTrackId(item);
+          const body = trackId ? { trackId, liked } : { artist: item.artist, title: item.title, album: item.album, durationMs: item.durationMs, coverUrl: item.coverUrl, verification: item.verification, liked };
           let res = null;
           try {
             res = await api.like(body);
           } catch (err) {
             return { error: err && err.message || String(err) };
           }
-          const key = likeKey(res && res.key ? { artist: res.key.split("::")[0], title: res.key.split("::")[1] } : item);
+          if (res?.error) return res;
+          const key = res?.key || likeKey(item);
           const keys = { ...store.getSnapshot().keys };
           const dislikes = { ...store.getSnapshot().dislikes };
           if (liked) keys[key] = { artist: item.artist, title: item.title, trackId: res && res.trackId, inLibrary: res && res.inLibrary };
@@ -4423,13 +4970,16 @@
           return res || {};
         }
         async function setDislike(item, disliked) {
-          const body = item.id ? { trackId: item.id, disliked } : { artist: item.artist, title: item.title, album: item.album, durationMs: item.durationMs, disliked };
+          revision++;
+          const trackId = libraryTrackId(item);
+          const body = trackId ? { trackId, disliked } : { artist: item.artist, title: item.title, album: item.album, durationMs: item.durationMs, disliked };
           let res = null;
           try {
             res = await api.dislike(body);
           } catch (err) {
             return { error: err && err.message || String(err) };
           }
+          if (res?.error) return res;
           const key = res && res.key ? res.key : likeKey(item);
           const keys = { ...store.getSnapshot().keys };
           const dislikes = { ...store.getSnapshot().dislikes };
@@ -4525,17 +5075,6 @@
           }
           store.set({ pending: next });
         }
-        function trackOf(item, audioUrl) {
-          return {
-            id: "preview:" + likeKey(item),
-            title: item.title,
-            artist: item.artist,
-            album: item.album,
-            coverUrl: item.coverUrl || null,
-            audioUrl,
-            duration: null
-          };
-        }
         function warmOne(item) {
           return new Promise((resolve) => {
             preview.start(item, (res) => resolve(res || {}));
@@ -4543,7 +5082,7 @@
         }
         function handle(item, res) {
           if (!res || !res.audioUrl) return;
-          const tr = trackOf(item, res.audioUrl);
+          const tr = previewTrack(item, res.audioUrl);
           if (!player.source.getSnapshot().track) player.playTracks([tr], 0);
           else player.appendTrack(tr);
         }
@@ -4627,11 +5166,8 @@
         }
         const set = (patch) => store.set(patch);
         const snap = () => store.getSnapshot();
-        function isLibraryId(id) {
-          return typeof id === "string" && /^[0-9a-f]{8,}$/.test(id);
-        }
         function report(track2, skipped) {
-          if (!track2 || !track2.id || !isLibraryId(track2.id)) return;
+          if (!track2 || !isLibraryTrackId(track2.id)) return;
           const s = snap();
           const completion = s.duration > 0 ? Math.min(1, Math.max(0, s.position / s.duration)) : 0;
           try {
@@ -4668,13 +5204,7 @@
           updateMediaSession(track2);
           audio.src = resolveUrl(track2.audioUrl);
           audio.load();
-          if (autoplay) {
-            const p = startPlayback();
-            if (p && p.catch) p.catch((err) => {
-              if (err && err.name === "AbortError") return;
-              set({ playing: false, loading: false, error: t("audioError") });
-            });
-          }
+          if (autoplay) play();
         }
         function hostMode() {
           const s = snap();
@@ -4685,10 +5215,12 @@
           const s = snap();
           const patch = {
             mode: hostMode(),
-            trackId: s.track && isLibraryId(s.track.id) ? s.track.id : null,
-            queue: (s.queue || []).map((tr) => tr && tr.id).filter((id) => id && isLibraryId(id)),
+            trackId: s.track?.id || null,
+            queue: (s.queue || []).map((tr) => tr && tr.id),
             ...extra
           };
+          patch.trackId = isLibraryTrackId(patch.trackId) ? patch.trackId : null;
+          patch.queue = (Array.isArray(patch.queue) ? patch.queue : []).filter(isLibraryTrackId);
           api.playback(patch).catch(() => {
           });
         }
@@ -4748,9 +5280,7 @@
           if (auto && repeat === "one") {
             if (audio) {
               audio.currentTime = 0;
-              const p = startPlayback();
-              if (p && p.catch) p.catch(() => {
-              });
+              play();
             }
             return;
           }
@@ -4776,7 +5306,8 @@
         async function advance(auto) {
           const cur = snap().track;
           if (cur) report(cur, !auto);
-          if (auto && cur && api && api.playbackNext) {
+          const libraryOnly = snap().queue.every((track2) => isLibraryTrackId(track2?.id));
+          if (auto && cur && isLibraryTrackId(cur.id) && libraryOnly && api && api.playbackNext) {
             try {
               const data = await api.playbackNext(cur.id);
               if (!data || !data.trackId) {
@@ -4786,9 +5317,7 @@
               if (data.reason === "replay" || data.trackId === cur.id) {
                 if (audio) {
                   audio.currentTime = 0;
-                  const p = startPlayback();
-                  if (p && p.catch) p.catch(() => {
-                  });
+                  play();
                 }
                 return;
               }
@@ -4819,16 +5348,26 @@
           set({ queueIndex: index });
           loadTrack(queue[index], true);
         }
-        function toggle() {
-          if (!audio || !snap().track) return;
-          if (snap().playing) audio.pause();
-          else {
-            const p = startPlayback();
-            if (p && p.catch) p.catch((err) => {
-              if (err && err.name === "AbortError") return;
-              set({ error: t("audioError"), playing: false });
-            });
+        function play() {
+          if (!audio || !snap().track || !audio.paused && !audio.ended) return;
+          const track2 = snap().track;
+          const failed = (err) => {
+            if (err?.name === "AbortError" || snap().track !== track2) return;
+            set({ error: t("audioError"), playing: false, loading: false });
+          };
+          try {
+            const pending = startPlayback();
+            if (pending?.catch) return pending.catch(failed);
+          } catch (err) {
+            failed(err);
           }
+        }
+        function pause() {
+          if (audio && !audio.paused) audio.pause();
+        }
+        function toggle() {
+          if (snap().playing) pause();
+          else return play();
         }
         function seek(seconds) {
           if (!audio || !snap().track) return;
@@ -4909,10 +5448,8 @@
           if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
             const ms = navigator.mediaSession;
             const handlers = {
-              play: () => toggle(),
-              pause: () => {
-                if (audio) audio.pause();
-              },
+              play,
+              pause,
               previoustrack: () => prev(),
               nexttrack: () => advance(false),
               seekto: (d) => {
@@ -4955,6 +5492,8 @@
           appendTrack,
           playAll: (tracks, opts) => playTracks(tracks, 0, opts),
           jumpTo,
+          play,
+          pause,
           toggle,
           next: () => advance(false),
           prev,
@@ -6099,15 +6638,7 @@
             return;
           }
           setNotice("");
-          player.playTracks([{
-            id: "preview:" + likeKey(item),
-            title: item.title,
-            artist: item.artist,
-            album: item.album,
-            coverUrl: item.coverUrl || null,
-            audioUrl: res.audioUrl,
-            duration: null
-          }], 0);
+          player.playTracks([previewTrack(item, res.audioUrl)], 0);
         });
       }
       function imgUrl(url) {
@@ -8359,12 +8890,17 @@
           inject: () => ({
             lifeService,
             player,
+            likes: likesService,
             lyrics: lyricsService,
             artistImages: artistImageService,
             setMiniHidden,
             setMiniCollapsed,
             openHome: () => {
               openView("home");
+              ctx.layout.selectPanel(PANEL_ID);
+            },
+            openLibrary: () => {
+              openView("library");
               ctx.layout.selectPanel(PANEL_ID);
             },
             openNow: () => {
@@ -8376,7 +8912,7 @@
               openArtistPage(name);
               ctx.layout.selectPanel(PANEL_ID);
             },
-            hooks: { player: player.source, ui, lyrics: lyricsService.source, artistImages: artistImageService.source }
+            hooks: { player: player.source, ui, lyrics: lyricsService.source, likes: likesService.source, artistImages: artistImageService.source }
           })
         }, (props) => portalToBody(h(EchoMini, props)))), "dsh-music: mini player");
         library.load();

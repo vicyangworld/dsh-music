@@ -22,15 +22,17 @@ function normalizeMorphology(input) {
 function palette(m, tone) {
   const hue = round(34 + m.accent * 114);
   const warm = m.warmth;
-  const sat = round(10 + warm * 12);
+  const sat = round(8 + warm * 10);
   return {
-    light: `hsl(${hue} ${sat}% ${tone === 'dark' ? 91 : 94}%)`,
-    paper: `hsl(${hue} ${sat + 1}% 84%)`,
-    middle: `hsl(${hue} ${sat}% ${68 + warm * 7}%)`,
-    shade: `hsl(${hue} ${sat - 3}% 44%)`,
-    dark: `hsl(${hue} 13% 28%)`,
-    line: `hsl(${hue} 12% 37%)`,
-    copper: `hsl(${30 + warm * 10} 40% 52%)`,
+    hue,
+    saturation: sat,
+    light: `hsl(${hue} ${sat - 2}% ${tone === 'dark' ? 95 : 97}%)`,
+    paper: `hsl(${hue} ${sat}% 86%)`,
+    middle: `hsl(${hue} ${sat}% ${70 + warm * 6}%)`,
+    shade: `hsl(${hue} ${sat - 3}% ${49 + warm * 4}%)`,
+    dark: `hsl(${hue} 10% 33%)`,
+    line: `hsl(${hue} 10% 39%)`,
+    copper: `hsl(${30 + warm * 10} 31% 51%)`,
   };
 }
 
@@ -44,6 +46,17 @@ function random(seed, offset) {
 function cubic(a, b, c, d, t) {
   const u = 1 - t;
   return [u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * c[0] + t * t * t * d[0], u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * c[1] + t * t * t * d[1]];
+}
+
+// Quadratic joins stay inside the sampled control-point hull. They remove the
+// faceted edge of the ribbon without changing its seed, winding or opening.
+function smoothPath(points, closed = false) {
+  if (!points.length) return '';
+  const middle = (a, b) => a.map((value, index) => (value + b[index]) / 2);
+  if (closed) {
+    return `M ${point(middle(points.at(-1), points[0]))} ${points.map((p, index) => `Q ${point(p)} ${point(middle(p, points[(index + 1) % points.length]))}`).join(' ')} Z`;
+  }
+  return `M ${point(points[0])} ${points.slice(1, -1).map((p, index) => `Q ${point(p)} ${point(middle(p, points[index + 2]))}`).join(' ')} Q ${point(points.at(-1))} ${point(points.at(-1))}`;
 }
 
 // Shrink only when necessary, around the body's fixed attachment point. Using
@@ -107,7 +120,7 @@ function ribbonShape(points, m) {
     left.push([p[0] - dy / length * width, p[1] + dx / length * width]);
     right.push([p[0] + dy / length * width, p[1] - dx / length * width]);
   });
-  return { path: `M ${left.map(point).join(' L ')} L ${[...right].reverse().map(point).join(' L ')} Z`, left, right };
+  return { path: smoothPath([...left, ...right.slice().reverse()], true), left, right };
 }
 
 function foldGeometry(m) {
@@ -144,35 +157,47 @@ function foldGeometry(m) {
   return { root, leaves: leaves.map(leaf => ({ ...leaf, outline: leaf.outline.map(fit), vein: leaf.vein.map(fit), edge: fit(leaf.edge), detail: fit(leaf.detail) })) };
 }
 
-function renderFold(h, m, ids, colors, compact) {
-  const { root, leaves } = foldGeometry(m);
+function foldTransforms({ root, leaves }, compact) {
   const rotatePoint = (p, leaf) => {
     const rad = -leaf.angle * 36 * Math.PI / 180;
     const x = p[0] - root[0], y = p[1] - root[1];
     return [root[0] + (Math.cos(rad) * x - Math.sin(rad) * y) * 0.8, root[1] + (Math.sin(rad) * x + Math.cos(rad) * y) * 0.8];
   };
   const compactFit = compact ? fitScale(leaves.flatMap(leaf => [...leaf.outline, ...leaf.vein, leaf.detail].map(p => rotatePoint(p, leaf))), root, [132, 468, 90, 394]) : 1;
+  return leaves.map(leaf => {
+    const rad = (compact ? -leaf.angle * 36 : 0) * Math.PI / 180, scale = compact ? 0.8 * compactFit : 1;
+    const a = Math.cos(rad) * scale, b = Math.sin(rad) * scale, c = -Math.sin(rad) * scale, d = Math.cos(rad) * scale;
+    return [a, b, c, d, root[0] - a * root[0] - c * root[1], root[1] - b * root[0] - d * root[1]].map(round);
+  });
+}
+
+function renderFold(h, m, ids, colors, compact) {
+  const geometry = foldGeometry(m);
+  const { leaves } = geometry;
+  const transforms = foldTransforms(geometry, compact);
   const petals = leaves.map(leaf => {
-    const { index, angle, side, outline, vein: line, edge, detail } = leaf;
+    const { index, side, outline, vein: line } = leaf;
     const d = `M ${point(outline[0])} C ${outline.slice(1, 4).map(point).join(' ')} C ${outline.slice(4, 7).map(point).join(' ')} C ${outline.slice(7).map(point).join(' ')} Z`;
     const vein = `M ${point(line[0])} C ${line.slice(1).map(point).join(' ')}`;
-    const rad = (compact ? -angle * 36 : 0) * Math.PI / 180, scale = compact ? 0.8 * compactFit : 1;
-    const a = Math.cos(rad) * scale, b = Math.sin(rad) * scale, c = -Math.sin(rad) * scale, dMatrix = Math.cos(rad) * scale;
-    const e = root[0] - a * root[0] - c * root[1], fMatrix = root[1] - b * root[0] - dMatrix * root[1];
-    const matrix = `matrix(${[a, b, c, dMatrix, e, fMatrix].map(round).join(',')})`;
+    const matrix = `matrix(${transforms[index].join(',')})`;
+    const clip = `${ids.leafClip}-${index}`;
     return h('g', { key: `fold-${index}`, className: 'echo-fold-leaf', style: { transform: matrix, transformOrigin: '0 0', transitionDelay: `${Math.abs(index - leaves.length / 2) * 14}ms` } },
-      h('path', { d, fill: `url(#${ids[`leaf${index % 3}`]})`, stroke: colors.paper, strokeWidth: 0.8, strokeLinejoin: 'round', opacity: 0.98 }),
-      h('path', { d: vein, fill: 'none', stroke: colors.line, strokeWidth: 0.72 + m.texture * 0.7, opacity: 0.19 }),
-      h('path', { d: vein, transform: `translate(${side * 1.8} -0.5)`, fill: 'none', stroke: colors.light, strokeWidth: 1.2, opacity: 0.6 }),
-      h('path', { d: `M ${point(root)} Q ${point(detail)} ${point(edge)}`, fill: 'none', stroke: colors.light, strokeWidth: 0.65, opacity: 0.35 + m.texture * 0.15 }),
+      h('defs', null, h('clipPath', { id: clip }, h('path', { d }))),
+      h('path', { d, fill: `url(#${ids[`leaf${index % 3}`]})` }),
+      h('g', { clipPath: `url(#${clip})` },
+        h('path', { d, fill: `url(#${ids.surfaceLight})`, opacity: 0.2 }),
+        h('path', { d, fill: `url(#${ids.rootShade})` }),
+        h('path', { d: vein, fill: 'none', stroke: colors.line, strokeWidth: 1.1 + m.texture * 0.6, opacity: 0.075 + m.texture * 0.035 }),
+        h('path', { d: vein, transform: `translate(${side * 1.4} -0.5)`, fill: 'none', stroke: colors.light, strokeWidth: 1, opacity: 0.32 }),
+      ),
     );
   });
   return h('g', { className: 'echo-body-fold' },
     h('path', { d: 'M 274 345 C 281 321 312 318 329 341 C 347 359 334 376 309 379 C 282 381 261 365 274 345 Z', fill: `url(#${ids.underside})`, className: 'echo-fold-foot' }),
     ...petals,
-    h('path', { d: 'M 293 346 C 293 321 303 297 314 276 C 323 296 330 323 323 347 C 315 365 300 365 293 346 Z', fill: `url(#${ids.ceramic})`, stroke: colors.paper, strokeWidth: 0.8 }),
+    h('path', { d: 'M 293 346 C 293 321 303 297 314 276 C 323 296 330 323 323 347 C 315 365 300 365 293 346 Z', fill: `url(#${ids.ceramic})` }),
     h('path', { d: `M ${301 + m.seed * 5} 334 Q 309 326 318 333`, fill: 'none', stroke: colors.dark, strokeWidth: 2, strokeLinecap: 'round', opacity: 0.65 }),
-    h('path', { d: 'M 305 353 Q 310 358 315 352', fill: 'none', stroke: colors.light, strokeWidth: 1.1, opacity: 0.7 }),
+    h('path', { d: 'M 305 353 Q 310 358 315 352', fill: 'none', stroke: colors.light, strokeWidth: 1, opacity: 0.4 }),
   );
 }
 
@@ -204,11 +229,24 @@ function shellSurface(shell, at, inset = 0) {
   return p.map((v, i) => mix(v, center[i], inset));
 }
 
+function shellFootReach(m) {
+  const count = 2 + Math.min(2, Math.floor(random(m.seed, 309) * 3));
+  return Math.max(...Array.from({ length: count }, (_, index) => mix(21, 38, random(m.seed, 330 + index))));
+}
+
+function shellTransform(m, compact, shell = shellGeometry(m)) {
+  if (!compact) return [1, 0, 0, 1, 0, 0];
+  const floor = shell.base + shellFootReach(m);
+  // Tuck the feet while keeping their ground plane fixed, so resting does not
+  // make a grounded life levitate above its own contact shadow.
+  return [0.72, 0, 0, 0.72, shell.cx * 0.28, floor - (floor - 13) * 0.72].map(round);
+}
+
 function renderShell(h, m, ids, colors, compact) {
   const shell = shellGeometry(m);
   const { cx, base, width, height } = shell;
   const plates = [];
-  const plateCount = 7 + Math.min(4, Math.floor(random(m.seed, 308) * 5));
+  const plateCount = 3 + Math.min(2, Math.floor(random(m.seed, 308) * 3));
   for (let i = 0; i < plateCount; i += 1) {
     const at = (i + 1) / (plateCount + 1);
     const top = shellSurface(shell, at);
@@ -217,7 +255,7 @@ function renderShell(h, m, ids, colors, compact) {
     plates.push(h('path', {
       key: `plate-${i}`,
       d: `M ${point(top)} C ${point([top[0] + bend, top[1] + height * 0.32])} ${point([end[0] - bend, base - height * 0.18])} ${point(end)}`,
-      fill: 'none', stroke: i % 2 ? colors.light : colors.line, strokeWidth: i % 2 ? 2.2 : 1.15, opacity: i % 2 ? 0.38 : 0.1 + m.texture * 0.12,
+      fill: 'none', stroke: i % 2 ? colors.light : colors.line, strokeWidth: i % 2 ? 1.5 : 0.9, opacity: i % 2 ? 0.19 : 0.045 + m.texture * 0.045,
     }));
   }
   const feet = [];
@@ -233,55 +271,89 @@ function renderShell(h, m, ids, colors, compact) {
   const eye = [cx - width * 0.83, base - height * 0.13];
   const scar = shellSurface(shell, mix(0.24, 0.7, m.seed), 0.16);
   const gleam = Array.from({ length: 17 }, (_, i) => shellSurface(shell, 0.1 + i / 16 * 0.48, 0.1));
-  return h('g', { className: 'echo-body-shell', transform: compact ? 'translate(84 98) scale(0.72)' : undefined },
+  return h('g', { className: 'echo-body-shell', style: { transform: `matrix(${shellTransform(m, compact, shell).join(',')})`, transformOrigin: '0 0' } },
     h('g', { className: 'echo-shell-feet', style: { transform: `translateY(${compact ? -13 : 0}px)` } },
       ...feet,
     ),
-    h('path', { d: shell.path, transform: 'translate(0 7)', fill: `url(#${ids.underside})` }),
-    h('path', { d: shell.path, fill: `url(#${ids.ceramic})`, stroke: colors.paper, strokeWidth: 1.2 }),
-    h('g', { clipPath: `url(#${ids.shellClip})` }, ...plates,
-      h('path', { d: `M ${point([cx - width, base - height * 0.22])} Q ${point([cx, base - height * 0.7])} ${point([cx + width, base - height * 0.22])}`, fill: 'none', stroke: colors.light, strokeWidth: 1.2, opacity: 0.45 }),
-      h('path', { d: `M ${point([cx - width, base - 18])} Q ${point([cx, base + 21])} ${point([cx + width, base - 24])}`, fill: 'none', stroke: colors.shade, strokeWidth: 0.8, opacity: 0.2 }),
+    h('path', { d: shell.path, transform: 'translate(0 3.5)', fill: `url(#${ids.underside})`, opacity: 0.8 }),
+    h('path', { d: shell.path, fill: `url(#${ids.ceramic})` }),
+    h('g', { clipPath: `url(#${ids.shellClip})` },
+      h('path', { d: shell.path, fill: `url(#${ids.surfaceLight})`, opacity: 0.24 }),
+      ...plates,
+      h('path', { d: `M ${point([cx - width, base - 13])} Q ${point([cx, base + 21])} ${point([cx + width, base - 16])}`, fill: 'none', stroke: colors.shade, strokeWidth: 4.5, opacity: 0.08 }),
     ),
     h('path', { d: `M ${point(eye)} q 7 11 19 7`, fill: 'none', stroke: colors.dark, strokeWidth: 3.4, strokeLinecap: 'round', opacity: 0.84 }),
-    h('path', { d: `M ${point(scar)} q 3 12 10 17`, fill: 'none', stroke: colors.copper, strokeWidth: 1.5, opacity: 0.55 }),
-    h('path', { d: `M ${gleam.map(point).join(' L ')}`, fill: 'none', stroke: colors.light, strokeWidth: 2.3, strokeLinecap: 'round', opacity: 0.65 }),
+    h('path', { d: `M ${point(scar)} q 3 12 10 17`, fill: 'none', stroke: colors.copper, strokeWidth: 1.3, opacity: 0.42 }),
+    h('path', { d: smoothPath(gleam), fill: 'none', stroke: colors.light, strokeWidth: 1.6, strokeLinecap: 'round', opacity: 0.25 }),
   );
 }
 
 function renderRibbon(h, m, ids, colors, compact) {
   const points = ribbonPoints(m);
   const outline = ribbonShape(points, m);
-  const ridge = points.slice(0, 65).map(point).join(' L ');
-  const edge = outline.left.slice(1, 65).map(point).join(' L ');
+  const ridge = smoothPath(points.slice(0, 65));
+  const edge = smoothPath(outline.left.slice(2, 50));
   const veins = [];
-  const count = 12;
+  const surfaces = [], lights = [];
+  // Light each short surface patch across the band. A single whole-object
+  // gradient makes a winding ribbon read as a flat cutout; these bounded
+  // patches retain its width and twist while sharing the upper-left key light.
+  for (let start = 0; start < points.length - 1; start += 4) {
+    const end = Math.min(points.length - 1, start + 4), middle = Math.round((start + end) / 2);
+    const left = outline.left[middle], right = outline.right[middle];
+    const width = Math.hypot(left[0] - right[0], left[1] - right[1]) || 1;
+    const key = clamp(0.5 + ((left[0] - right[0]) * -0.6 + (left[1] - right[1]) * -0.8) / width * 0.5);
+    const color = lightness => `hsl(${colors.hue} ${colors.saturation}% ${round(lightness)}%)`;
+    const id = `${ids.ribbon}-surface-${start}`;
+    lights.push(h('linearGradient', { key: id, id, gradientUnits: 'userSpaceOnUse', x1: left[0], y1: left[1], x2: right[0], y2: right[1] },
+      h('stop', { offset: '0%', stopColor: color(61 + key * 27) }),
+      h('stop', { offset: '42%', stopColor: color(82 + Math.sin(middle / points.length * Math.PI) * 3) }),
+      h('stop', { offset: '100%', stopColor: color(88 - key * 25) }),
+    ));
+    // Neighbouring opaque patches overlap by a sample. Without the overlap,
+    // antialiasing exposes the darker base as an unwanted segmented grid.
+    const from = Math.max(0, start - 1), to = Math.min(points.length - 1, end + 1);
+    const contour = [...outline.left.slice(from, to + 1), ...outline.right.slice(from, to + 1).reverse()];
+    surfaces.push(h('path', { key: start, d: `M ${contour.map(point).join(' L ')} Z`, fill: `url(#${id})` }));
+  }
+  const count = 5 + Math.round(m.texture * 2);
   for (let i = 0; i < count; i += 1) {
-    const index = 12 + i * 5;
-    veins.push(h('path', { key: `ribbon-rib-${i}`, d: `M ${point(outline.left[index])} Q ${point(points[index + 1])} ${point(outline.right[index + 2])}`, fill: 'none', stroke: colors.line, strokeWidth: 0.65 + m.texture * 0.55, opacity: 0.12 + m.texture * 0.08 }));
+    const index = 12 + i * 9;
+    veins.push(h('path', { key: `ribbon-rib-${i}`, d: `M ${point(outline.left[index])} Q ${point(points[index + 1])} ${point(outline.right[index + 2])}`, fill: 'none', stroke: colors.line, strokeWidth: 0.7 + m.texture * 0.3, opacity: 0.06 + m.texture * 0.055 }));
   }
   return h('g', { className: 'echo-body-ribbon', style: { transform: compact ? 'matrix(0.78, 0, 0, 0.72, 66, 89.6)' : 'matrix(1, 0, 0, 1, 0, 0)', transformOrigin: '0 0' } },
-    h('path', { d: outline.path, fill: `url(#${ids.ribbon})`, stroke: colors.paper, strokeWidth: 0.9, strokeLinejoin: 'round' }),
-    h('path', { d: `M ${edge}`, fill: 'none', stroke: colors.light, strokeWidth: 2.2, strokeLinejoin: 'round', strokeLinecap: 'round', opacity: 0.7 }),
-    h('path', { d: `M ${ridge}`, fill: 'none', stroke: colors.light, strokeWidth: 0.7, opacity: 0.32 }),
-    ...veins,
+    h('defs', null,
+      h('clipPath', { id: ids.ribbonClip }, h('path', { d: outline.path })),
+      h('filter', { id: `${ids.ribbon}-softness`, x: '-10%', y: '-10%', width: '120%', height: '120%', colorInterpolationFilters: 'sRGB' }, h('feGaussianBlur', { stdDeviation: 4.5 })),
+      ...lights,
+    ),
+    h('path', { d: outline.path, fill: `url(#${ids.ribbon})` }),
+    h('g', { clipPath: `url(#${ids.ribbonClip})` },
+      h('g', { filter: `url(#${ids.ribbon}-softness)` }, ...surfaces),
+      h('path', { d: outline.path, fill: `url(#${ids.surfaceLight})`, opacity: 0.18 }),
+      h('path', { d: edge, fill: 'none', stroke: colors.light, strokeWidth: 1.5, strokeLinecap: 'round', opacity: 0.43 }),
+      h('path', { d: ridge, fill: 'none', stroke: colors.shade, strokeWidth: 1.5, opacity: 0.09 }),
+      ...veins,
+    ),
     h('path', { d: `M ${point(points[75])} Q ${point(points[78])} ${point(points[81])}`, fill: 'none', stroke: colors.dark, strokeWidth: 2.8, strokeLinecap: 'round', opacity: 0.65 }),
-    h('path', { d: `M ${point(outline.right[20])} L ${point(points[22])} L ${point(outline.left[23])}`, fill: 'none', stroke: colors.copper, strokeWidth: 1.4, opacity: 0.52 }),
+    h('path', { d: `M ${point(outline.right[20])} Q ${point(points[22])} ${point(outline.left[23])}`, fill: 'none', stroke: colors.copper, strokeWidth: 1.25, opacity: 0.42 }),
   );
 }
 
-function markerPosition(m, mark) {
+function markerPlacement(m, mark, compact = false) {
   const at = clamp(mark.position);
   if (m.structure === 'ribbon') {
     const points = ribbonPoints(m);
-    return points[Math.round(mix(9, 62, at))];
+    return { position: points[Math.round(mix(9, 62, at))], matrix: compact ? [0.78, 0, 0, 0.72, 66, 89.6] : [1, 0, 0, 1, 0, 0], delay: 0 };
   }
   if (m.structure === 'shell') {
-    return shellSurface(shellGeometry(m), mix(0.12, 0.88, at), 0.32);
+    const shell = shellGeometry(m);
+    return { position: shellSurface(shell, mix(0.12, 0.88, at), 0.32), matrix: shellTransform(m, compact, shell), delay: 0 };
   }
-  const { leaves } = foldGeometry(m);
+  const geometry = foldGeometry(m);
+  const { leaves } = geometry;
   const leaf = leaves[Math.min(leaves.length - 1, Math.floor(at * leaves.length))];
-  return cubic(...leaf.vein, mix(0.58, 0.74, at));
+  return { position: cubic(...leaf.vein, mix(0.58, 0.74, at)), matrix: foldTransforms(geometry, compact)[leaf.index], delay: Math.abs(leaf.index - leaves.length / 2) * 14 };
 }
 
 export function createCreatureComponents(React) {
@@ -289,7 +361,7 @@ export function createCreatureComponents(React) {
   const { useRef, useState, useEffect, useMemo } = React;
   let sequence = 0;
 
-  function Creature({ life, morphology, active = false, compact = false, gesture = 0, onTouch, onMemorySelect, className = '', label, motionEnabled = true, tone = 'light' }) {
+  function Creature({ life, morphology, active = false, compact = false, gesture = 0, onTouch, onMemorySelect, className = '', label, motionEnabled = true, tone = 'light', framing = 'stage' }) {
     const instance = useRef(null);
     if (!instance.current) instance.current = `echo-being-${++sequence}`;
     const root = useRef(null);
@@ -301,8 +373,10 @@ export function createCreatureComponents(React) {
     const [responding, setResponding] = useState(false);
     const m = useMemo(() => normalizeMorphology(morphology || (life ? getMorphology(life) : defaults)), [life, morphology]);
     const colors = useMemo(() => palette(m, tone), [m, tone]);
-    const ids = useMemo(() => Object.fromEntries(['ceramic', 'underside', 'ribbon', 'leaf0', 'leaf1', 'leaf2', 'contact', 'grain', 'shellClip', 'title', 'desc'].map((key) => [key, `${instance.current}-${key}`])), []);
+    const ids = useMemo(() => Object.fromEntries(['ceramic', 'underside', 'ribbon', 'leaf0', 'leaf1', 'leaf2', 'surfaceLight', 'rootShade', 'leafClip', 'ribbonClip', 'contact', 'grain', 'shellClip', 'title', 'desc'].map((key) => [key, `${instance.current}-${key}`])), []);
     const canMove = motionEnabled && visible;
+    const presence = framing === 'presence';
+    const viewport = presence ? [52, 48, 496, 388] : compact ? [120, 70, 360, 340] : [0, 0, 600, 480];
 
     useEffect(() => {
       if (typeof document === 'undefined') return undefined;
@@ -362,14 +436,15 @@ export function createCreatureComponents(React) {
       touch(event);
     };
     const look = (event) => {
-      if (!canMove || compact || !root.current) return;
+      if (!canMove || (compact && !presence) || !root.current) return;
+      if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
       const rect = root.current.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
       const x = Math.max(-1, Math.min(1, (event.clientX - rect.left) / rect.width * 2 - 1));
       const y = Math.max(-1, Math.min(1, (event.clientY - rect.top) / rect.height * 2 - 1));
-      root.current.style.setProperty('--echo-look-x', `${round(x * 5)}px`);
-      root.current.style.setProperty('--echo-look-y', `${round(y * 3)}px`);
-      root.current.style.setProperty('--echo-look-r', `${round(x * 1.1)}deg`);
+      root.current.style.setProperty('--echo-look-x', `${round(x * 2.7)}px`);
+      root.current.style.setProperty('--echo-look-y', `${round(y * 1.6)}px`);
+      root.current.style.setProperty('--echo-look-r', `${round(x * 0.75)}deg`);
     };
     const lookAway = () => {
       if (!root.current) return;
@@ -378,10 +453,13 @@ export function createCreatureComponents(React) {
       root.current.style.setProperty('--echo-look-r', '0deg');
     };
     const name = label || life?.name || '你的音灵';
-    const body = m.structure === 'shell' ? renderShell(h, m, ids, colors, compact) : m.structure === 'ribbon' ? renderRibbon(h, m, ids, colors, compact) : renderFold(h, m, ids, colors, compact);
+    const body = useMemo(() => m.structure === 'shell' ? renderShell(h, m, ids, colors, compact) : m.structure === 'ribbon' ? renderRibbon(h, m, ids, colors, compact) : renderFold(h, m, ids, colors, compact), [m, colors, compact]);
+    const marks = useMemo(() => m.marks.map(mark => ({ mark, ...markerPlacement(m, mark, compact) })), [m, compact]);
     const stops = (items) => items.map(([offset, color, opacity]) => h('stop', { key: offset, offset, stopColor: color, ...(opacity == null ? {} : { stopOpacity: opacity }) }));
     const gradient = (id, x1, y1, x2, y2, items) => h('linearGradient', { id, x1, y1, x2, y2 }, ...stops(items));
     const memoryName = (mark) => life?.memories?.find((memory) => memory.id === mark.id)?.title || '共同记忆';
+    const shell = m.structure === 'shell' ? shellGeometry(m) : null;
+    const shadow = shell ? { x: shell.cx, y: shell.base + shellFootReach(m) + 2, width: shell.width * (compact ? 0.68 : 0.9) } : { x: 303, y: m.structure === 'ribbon' ? 397 : 383, width: m.structure === 'ribbon' ? 102 : 91 };
 
     return h('div', {
       ref: root,
@@ -392,30 +470,34 @@ export function createCreatureComponents(React) {
       'data-motion': canMove ? 'on' : 'off',
       'data-responding': responding ? 'true' : 'false',
       'data-tone': tone,
+      'data-framing': presence ? 'presence' : 'stage',
       onPointerMove: look,
       onPointerLeave: lookAway,
-      style: { '--echo-breath-duration': `${round(5.2 + m.phase * 3.1)}s`, '--echo-drift-duration': `${round(8 + m.seed * 5)}s`, '--echo-listen-duration': `${round(1.45 + (1 - m.buoyancy) * 1.1)}s`, '--echo-response-duration': `${responseDuration}ms`, '--echo-inhale': String(round(1.008 + m.buoyancy * 0.012)), '--echo-shadow-opacity': tone === 'dark' ? 0.32 : 0.17 },
-    }, h('svg', { viewBox: compact ? '120 70 360 340' : '0 0 600 480', className: 'echo-creature-svg', role: 'group', 'aria-labelledby': `${ids.title} ${ids.desc}`, focusable: false },
+      style: { '--echo-breath-duration': `${round(6.8 + m.phase * 3.6)}s`, '--echo-drift-duration': `${round(12 + m.seed * 6)}s`, '--echo-listen-duration': `${round(3.8 + (1 - m.buoyancy) * 1.6)}s`, '--echo-response-duration': `${responseDuration}ms`, '--echo-inhale': String(Number((1.006 + m.buoyancy * 0.008).toFixed(3))), '--echo-shadow-opacity': tone === 'dark' ? 0.31 : 0.21, '--echo-origin-x': `${round((303 - viewport[0]) / viewport[2] * 100)}%`, '--echo-origin-y': `${round((350 - viewport[1]) / viewport[3] * 100)}%` },
+    }, h('svg', { viewBox: viewport.join(' '), className: 'echo-creature-svg', role: 'group', 'aria-labelledby': `${ids.title} ${ids.desc}`, focusable: false },
       h('title', { id: ids.title }, name),
       h('desc', { id: ids.desc }, compact ? '收拢身体，安静陪伴。' : '由共同经历塑造的生命。轻触身体与它打招呼，触摸身体上的小标记可以回看记忆。'),
       h('defs', null,
-        gradient(ids.ceramic, '9%', '0%', '81%', '100%', [['0%', colors.light], ['28%', colors.paper], ['62%', colors.middle], ['88%', colors.shade], ['100%', colors.dark]]),
-        gradient(ids.underside, '0%', '0%', '75%', '100%', [['0%', colors.middle], ['48%', colors.shade], ['100%', colors.dark]]),
-        gradient(ids.leaf0, '0%', '3%', '100%', '100%', [['0%', colors.light], ['30%', colors.paper], ['58%', colors.middle], ['79%', colors.paper], ['100%', colors.shade]]),
-        gradient(ids.leaf1, '94%', '0%', '0%', '100%', [['0%', colors.light], ['35%', colors.paper], ['64%', colors.middle], ['100%', colors.shade]]),
-        gradient(ids.leaf2, '10%', '0%', '92%', '100%', [['0%', colors.paper], ['20%', colors.light], ['52%', colors.middle], ['82%', colors.paper], ['100%', colors.shade]]),
-        gradient(ids.ribbon, '7%', '0%', '91%', '100%', [['0%', colors.light], ['22%', colors.paper], ['39%', colors.shade], ['51%', colors.middle], ['66%', colors.light], ['78%', colors.paper], ['94%', colors.shade], ['100%', colors.dark]]),
-        h('radialGradient', { id: ids.contact }, ...stops([['0%', '#263a31', 0.8], ['42%', '#263a31', 0.3], ['100%', '#263a31', 0]])),
+        h('radialGradient', { id: ids.ceramic, cx: '26%', cy: '18%', r: '96%', fx: '24%', fy: '15%' }, ...stops([['0%', colors.light], ['25%', colors.paper], ['62%', colors.middle], ['86%', colors.shade], ['100%', colors.dark]])),
+        gradient(ids.underside, '8%', '0%', '74%', '100%', [['0%', colors.middle], ['62%', colors.shade], ['100%', colors.dark]]),
+        gradient(ids.leaf0, '5%', '0%', '84%', '100%', [['0%', colors.light], ['29%', colors.paper], ['66%', colors.middle], ['100%', colors.shade]]),
+        gradient(ids.leaf1, '8%', '0%', '88%', '100%', [['0%', colors.light], ['40%', colors.paper], ['76%', colors.middle], ['100%', colors.shade]]),
+        gradient(ids.leaf2, '5%', '0%', '84%', '100%', [['0%', colors.paper], ['16%', colors.light], ['54%', colors.paper], ['79%', colors.middle], ['100%', colors.shade]]),
+        gradient(ids.ribbon, '7%', '0%', '88%', '100%', [['0%', colors.light], ['26%', colors.paper], ['53%', colors.middle], ['76%', colors.shade], ['100%', colors.dark]]),
+        h('radialGradient', { id: ids.surfaceLight, cx: '25%', cy: '18%', r: '83%' }, ...stops([['0%', colors.light, 0.72], ['46%', colors.light, 0.12], ['100%', colors.light, 0]])),
+        h('linearGradient', { id: ids.rootShade, gradientUnits: 'userSpaceOnUse', x1: 304, y1: 351, x2: 303, y2: 180 }, ...stops([['0%', colors.dark, 0.2], ['44%', colors.dark, 0.035], ['100%', colors.dark, 0]])),
+        h('radialGradient', { id: ids.contact }, ...stops([['0%', '#26362c', 0.75], ['36%', '#26362c', 0.27], ['100%', '#26362c', 0]])),
         h('clipPath', { id: ids.shellClip }, h('path', { d: shellOutline(m) })),
         h('filter', { id: ids.grain, x: '-8%', y: '-8%', width: '116%', height: '116%', colorInterpolationFilters: 'sRGB' },
           h('feTurbulence', { type: 'fractalNoise', baseFrequency: 0.67, numOctaves: 2, seed: Math.floor(m.seed * 1000), stitchTiles: 'stitch', result: 'noise' }),
           h('feColorMatrix', { in: 'noise', type: 'saturate', values: 0, result: 'mono' }),
-          h('feComponentTransfer', { in: 'mono', result: 'fine' }, h('feFuncA', { type: 'linear', slope: 0.055 + m.texture * 0.045 })),
+          h('feComponentTransfer', { in: 'mono', result: 'fine' }, h('feFuncA', { type: 'linear', slope: 0.025 + m.texture * 0.02 })),
           h('feComposite', { in: 'fine', in2: 'SourceGraphic', operator: 'in', result: 'surface' }),
           h('feBlend', { in: 'SourceGraphic', in2: 'surface', mode: 'multiply' }),
         ),
       ),
-      h('ellipse', { cx: 303, cy: m.structure === 'ribbon' ? 397 : 387, rx: m.structure === 'shell' ? 173 : 127, ry: 28, fill: `url(#${ids.contact})`, className: 'echo-creature-shadow' }),
+      h('ellipse', { cx: shadow.x, cy: shadow.y, rx: shadow.width, ry: m.structure === 'ribbon' ? 15 : 18, fill: `url(#${ids.contact})`, className: 'echo-creature-shadow' }),
+      m.structure !== 'ribbon' ? h('ellipse', { cx: shadow.x, cy: shadow.y - 3, rx: shell ? shadow.width * 0.52 : 35, ry: 5.5, fill: `url(#${ids.contact})`, className: 'echo-creature-shadow echo-creature-contact' }) : null,
       h('g', { className: 'echo-creature-drift' },
         h('g', { className: 'echo-creature-attention' },
           h('g', { className: 'echo-creature-breath' },
@@ -429,22 +511,21 @@ export function createCreatureComponents(React) {
                 onKeyDown: onTouch ? keyboardTouch : undefined,
               },
                 h('rect', { x: 119, y: 67, width: 364, height: 326, rx: 80, fill: 'transparent', pointerEvents: onTouch ? 'all' : 'none', className: 'echo-creature-focus-ring' }),
-                h('g', { filter: compact ? undefined : `url(#${ids.grain})`, className: 'echo-creature-surface' }, body),
+                h('g', { filter: compact && !presence ? undefined : `url(#${ids.grain})`, className: 'echo-creature-surface' }, body),
               ),
-              !compact ? h('g', { className: 'echo-creature-memories' }, ...m.marks.map((mark) => {
-                const [x, y] = markerPosition(m, mark);
+              !compact || presence ? h('g', { className: 'echo-creature-memories' }, ...marks.map(({ mark, position: [x, y], matrix, delay }) => {
                 const click = (event) => { event.stopPropagation(); if (onMemorySelect) onMemorySelect(mark.id); };
-                return h('g', {
-                  key: mark.id, className: 'echo-memory-mark', transform: `translate(${round(x)} ${round(y)})`,
+                return h('g', { key: mark.id, className: 'echo-memory-pose', style: { transform: `matrix(${matrix.join(',')})`, transformOrigin: '0 0', transitionDelay: `${delay}ms` } }, h('g', {
+                  className: 'echo-memory-mark', transform: `translate(${round(x)} ${round(y)})`,
                   role: onMemorySelect ? 'button' : undefined, tabIndex: onMemorySelect ? 0 : undefined,
                   'aria-label': `回看记忆：${memoryName(mark)}`,
                   onClick: onMemorySelect ? click : undefined,
                   onKeyDown: onMemorySelect ? (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); click(event); } } : undefined,
                 },
-                  h('circle', { r: 14, fill: 'transparent', className: 'echo-memory-hit' }),
+                  h('circle', { r: presence ? 24 : 14, fill: 'transparent', className: 'echo-memory-hit' }),
                   h('path', { d: 'M -4 -3 Q -1 3 4 5 M -1 -5 Q 1 0 6 1', fill: 'none', stroke: colors.copper, strokeWidth: 1.6 + clamp(mark.strength) * 0.5, strokeLinecap: 'round' }),
                   h('circle', { r: 10, fill: 'none', stroke: colors.copper, strokeWidth: 0.8, className: 'echo-memory-halo' }),
-                );
+                ));
               })) : null,
             ),
           ),

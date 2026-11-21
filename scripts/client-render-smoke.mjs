@@ -191,8 +191,8 @@ const expand = (node) => {
   // React normally attaches DOM refs before user input. The geometry stub is
   // only used by pointer/keyboard tests; SVG paths are still the real renderer.
   if (node.props.ref && typeof node.props.ref === 'object') node.props.ref.current = {
-    getBoundingClientRect: () => ({ left: 100, top: 150, width: 280, height: 115 }),
-    style: { setProperty: noop }, querySelector: () => null, querySelectorAll: () => [],
+    getBoundingClientRect: () => ({ left: 100, top: 150, right: 380, bottom: 265, width: 280, height: 115 }),
+    style: { setProperty: noop }, querySelector: () => null, querySelectorAll: () => [], focus: noop,
   };
   return { ...node, children: node.children.map(expand).flat(Infinity) };
 };
@@ -425,7 +425,7 @@ const expanded = expand(mini(miniProps));
 check('companion renders the stored life in a body portal', !!expanded && portalTargets.at(-1) === documentMock.body
   && has(expanded, n => cls(n) === 'echo-creature' && n.props['data-structure'] === lifeState.genome.structure));
 const grip = walk(expanded).find(n => cls(n) === 'echo-mini-grip');
-check('companion grip supports pointer and keyboard access', grip?.props.role === 'button' && grip.props.tabIndex === 0
+check('companion grip supports pointer and keyboard access', grip?.type === 'button' && grip.props.type === 'button'
   && typeof grip.props.onPointerDown === 'function' && typeof grip.props.onKeyDown === 'function');
 let prevented = 0;
 grip.props.onKeyDown({ key: 'ArrowRight', preventDefault: () => prevented++ });
@@ -445,38 +445,33 @@ const pauseButton = walk(playingMini).find(n => n.props['aria-label'] === '暂�
 pauseButton?.props.onClick();
 check('companion controls the shared player', !!pauseButton && toggleCount === 1);
 playerSvc.toggle = savedToggle;
-const collapseButton = walk(expanded).find(n => n.props['aria-label'] === '收拢伴生窗');
-collapseButton?.props.onClick();
-check('companion collapse writes the real UI preference', !!collapseButton && svc.hooks.ui.getSnapshot().miniCollapsed === true
-  && JSON.parse(localStorage.getItem('dsh-music.prefs')).miniCollapsed === true);
+check('companion keeps music tools closed until explicitly requested', !has(expanded, n => cls(n) === 'echo-mini-tools')
+  && has(expanded, n => n.props['aria-label'] === '音乐操作' && n.props['aria-expanded'] === false));
 
 state.miniCollapsed = true;
 const collapsedTree = expand(mini(miniProps));
-check('compact companion preserves a compact life body', has(collapsedTree, n => cls(n).includes('echo-mini is-compact'))
+check('compact companion preserves a compact life body', has(collapsedTree, n => cls(n).includes('echo-mini-presence') && cls(n).includes('is-compact'))
   && has(collapsedTree, n => cls(n) === 'echo-creature' && n.props['data-compact'] === 'true'));
 check('compact companion keeps its accessible grip', has(collapsedTree, n => cls(n) === 'echo-mini-grip' && typeof n.props.onKeyDown === 'function'));
-check('compact companion hides expanded copy', !has(collapsedTree, n => cls(n) === 'echo-mini-copy'));
-const expandButton = walk(collapsedTree).find(n => n.props['aria-label'] === '展开伴生窗');
-expandButton?.props.onClick();
-check('compact companion expands through the real UI store', !!expandButton && svc.hooks.ui.getSnapshot().miniCollapsed === false);
+check('companion keeps the life free of permanent card copy', !has(expanded, n => cls(n) === 'echo-mini-copy')
+  && !has(collapsedTree, n => cls(n) === 'echo-mini-copy'));
+const navigationBeforeTouch = { view: svc.hooks.ui.getSnapshot().view, panels: selectedPanels.length, plays: plays.length };
 const touchTarget = walk(collapsedTree).find(n => cls(n) === 'echo-creature-touch-target');
 touchTarget?.props.onKeyDown({ key: 'Enter', preventDefault: noop });
-check('keyboard activation of its body opens the main habitat', svc.hooks.ui.getSnapshot().view === 'home' && selectedPanels.at(-1) === 'music');
+check('keyboard activation of its body keeps navigation and playback intact', !!touchTarget
+  && svc.hooks.ui.getSnapshot().view === navigationBeforeTouch.view && selectedPanels.length === navigationBeforeTouch.panels
+  && plays.length === navigationBeforeTouch.plays);
 
 state.miniCollapsed = false;
 const savedTrack = playerState.track, savedPlaying = playerState.playing;
 playerState.track = null; playerState.playing = false;
 const silentCompanion = expand(mini(miniProps));
 check('companion stays present when no song is loaded', has(silentCompanion, n => cls(n) === 'echo-creature')
-  && has(silentCompanion, n => n.children.includes('安静陪你待一会儿')));
+  && has(silentCompanion, n => n.props['aria-label'] === '选一首歌'));
 check('companion without a song does not expose a false play control', !has(silentCompanion, n => ['播放', '暂停'].includes(n.props['aria-label'])));
 playerState.track = savedTrack; playerState.playing = savedPlaying;
-const hideButton = walk(expanded).find(n => n.props['aria-label'] === '隐藏伴生窗');
-hideButton?.props.onClick();
-check('hiding the companion saves visibility without changing the queue', !!hideButton && svc.hooks.ui.getSnapshot().miniHidden === true && plays.length === beforeOff);
-
 state.miniHidden = true;
-check('hidden companion renders nothing', expand(mini(miniProps)) === null);
+check('hidden companion renders nothing without changing the queue', expand(mini(miniProps)) === null && plays.length === beforeOff);
 
 /* 5c) artist-image service: debounce coalescing + memory cache */
 const svcImgs = (services['music'] || {}).artistImages;

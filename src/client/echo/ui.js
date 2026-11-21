@@ -1,5 +1,6 @@
 import { createLife, applyLifeEvent, getMorphology } from '../../../bundle/shared/life-core.js';
 import { createCreatureComponents } from './creature.js';
+import { createEchoMiniComponent } from './mini.js';
 
 const shortDate = at => new Date(at).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' });
 const formatTime = seconds => `${Math.floor((seconds || 0) / 60)}:${String(Math.floor((seconds || 0) % 60)).padStart(2, '0')}`;
@@ -26,6 +27,11 @@ const paths = {
   info: 'M10 9v5M10 6v.1M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z',
   greet: 'M3 10c3-8 4 8 7 0s4 8 7 0',
   fold: 'm3 6 7 7 7-7M5 3l5 5 5-5',
+  heart: 'M10 17 3.7 11C-1 6.5 5 1 10 6c5-5 11 .5 6.3 5Z',
+  dislike: 'M14 3H7L3 8v4h5l-1 4c0 2 2 2 3 0l4-5ZM14 3h3v9h-3',
+  lyrics: 'M3 3h14v11H9l-4 3v-3H3ZM6 7h8M6 10h5',
+  more: 'M4 10h.1M10 10h.1M16 10h.1',
+  loading: 'M17 10a7 7 0 1 1-7-7',
 };
 
 export function createEchoUI(React) {
@@ -48,6 +54,7 @@ export function createEchoUI(React) {
     }, [service]);
     return state;
   }
+  const EchoMini = createEchoMiniComponent(React, { Creature, Icon, useLife, formatTime });
   function Dialog({ title, subtitle, children, close, wide = false }) {
     const ref = useRef(null);
     useEffect(() => {
@@ -263,41 +270,6 @@ export function createEchoUI(React) {
       h('div', { className: 'echo-dock-center' }, h('div', { className: 'echo-play-controls' }, h('button', { type: 'button', disabled: !track, onClick: player.prev, 'aria-label': '上一首' }, h(Icon, { name: 'previous' })), h('button', { type: 'button', className: 'echo-play-main', disabled: !track, onClick: player.toggle, 'aria-label': playing ? '暂停' : '播放' }, h(Icon, { name: playing ? 'pause' : 'play', size: 20 })), h('button', { type: 'button', disabled: !track, onClick: player.next, 'aria-label': '下一首' }, h(Icon, { name: 'next' }))), h('div', { className: 'echo-dock-progress' }, h('time', null, formatTime(position)), h('input', { type: 'range', min: 0, max: duration || 1, step: 0.1, value: Math.min(position || 0, duration || 1), disabled: !track || !duration, onChange: e => player.seek(Number(e.target.value)), 'aria-label': '播放进度' }), h('time', null, formatTime(duration)))),
       h('div', { className: 'echo-dock-volume' }, h('button', { type: 'button', onClick: player.toggleMute, 'aria-label': muted ? '取消静音' : '静音', 'aria-pressed': muted }, h(Icon, { name: 'sound' })), h('input', { type: 'range', min: 0, max: 1, step: 0.01, value: muted ? 0 : volume, onChange: e => player.setVolume(Number(e.target.value)), 'aria-label': '音量' })),
       error ? h('span', { className: 'echo-playback-error', role: 'alert' }, error) : null);
-  }
-  function EchoMini({ lifeService, player, usePlayer, useUi, openHome, setMiniHidden, setMiniCollapsed }) {
-    const state = useLife(lifeService);
-    const hidden = useUi(s => s.miniHidden || s.dockVisible);
-    const collapsed = useUi(s => s.miniCollapsed);
-    const playing = usePlayer(s => s.playing), track = usePlayer(s => s.track);
-    const [position, setPosition] = useState(() => {
-      try {
-        const saved = JSON.parse(window.localStorage.getItem('dsh-music.echo.mini-position'));
-        return saved && Number.isFinite(saved.x) && Number.isFinite(saved.y) ? saved : null;
-      } catch { return null; }
-    });
-    const miniRef = useRef(null);
-    const positionRef = useRef(position);
-    const drag = useRef(null);
-    const clampPosition = next => {
-      const box = miniRef.current?.getBoundingClientRect();
-      return { x: Math.max(0, Math.min(window.innerWidth - (box?.width || 280), next.x)), y: Math.max(0, Math.min(window.innerHeight - (box?.height || 115), next.y)) };
-    };
-    const moveTo = next => { const value = clampPosition(next); positionRef.current = value; setPosition(value); };
-    const remember = () => { if (positionRef.current) { try { window.localStorage.setItem('dsh-music.echo.mini-position', JSON.stringify(positionRef.current)); } catch {} } };
-    useEffect(() => {
-      const move = e => { if (drag.current) moveTo({ x: e.clientX - drag.current.x, y: e.clientY - drag.current.y }); };
-      const end = () => { if (drag.current) remember(); drag.current = null; };
-      const resize = () => { if (positionRef.current) { moveTo(positionRef.current); remember(); } };
-      window.addEventListener('pointermove', move); window.addEventListener('pointerup', end); window.addEventListener('pointercancel', end); window.addEventListener('resize', resize);
-      return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', end); window.removeEventListener('pointercancel', end); window.removeEventListener('resize', resize); };
-    }, []);
-    useEffect(() => { if (!hidden && positionRef.current) moveTo(positionRef.current); }, [collapsed, hidden, !!state.life]);
-    if (!state.life || hidden) return null;
-    return h('aside', { ref: miniRef, className: `echo-mini ${collapsed ? 'is-compact' : ''}`, 'aria-label': '音灵伴生窗', style: position ? { left: position.x, top: position.y, right: 'auto', bottom: 'auto' } : undefined },
-      h('div', { className: 'echo-mini-grip', title: '拖动伴生窗，或用方向键移动', role: 'button', tabIndex: 0, 'aria-label': '移动伴生窗，使用方向键', onPointerDown: e => { if (e.button !== 0) return; const box = e.currentTarget.parentElement.getBoundingClientRect(); drag.current = { x: e.clientX - box.left, y: e.clientY - box.top }; e.preventDefault(); }, onKeyDown: e => { const delta = { ArrowLeft: [-12, 0], ArrowRight: [12, 0], ArrowUp: [0, -12], ArrowDown: [0, 12] }[e.key]; if (!delta) return; e.preventDefault(); const box = miniRef.current.getBoundingClientRect(); moveTo({ x: box.left + delta[0], y: box.top + delta[1] }); remember(); } }, h('i'), h('i'), h('i')),
-      h('div', { className: 'echo-mini-creature' }, h(Creature, { life: state.life, morphology: state.morphology, compact: collapsed, active: playing, onTouch: openHome, label: '回到音灵主舞台' })),
-      !collapsed ? h('div', { className: 'echo-mini-copy' }, h('strong', null, state.life.name === '未命名' ? '你的音灵' : state.life.name), h('span', null, track?.title || '安静陪你待一会儿')) : null,
-      h('div', { className: 'echo-mini-controls' }, track ? h('button', { type: 'button', onClick: player.toggle, 'aria-label': playing ? '暂停' : '播放' }, h(Icon, { name: playing ? 'pause' : 'play', size: 16 })) : null, h('button', { type: 'button', onClick: () => setMiniCollapsed(!collapsed), 'aria-label': collapsed ? '展开伴生窗' : '收拢伴生窗' }, h(Icon, { name: 'fold', size: 15 })), h('button', { type: 'button', onClick: () => setMiniHidden(true), 'aria-label': '隐藏伴生窗' }, h(Icon, { name: 'close', size: 14 }))));
   }
   return { EchoHome, EchoMemories, EchoGallery, EchoDock, EchoMini, Creature };
 }

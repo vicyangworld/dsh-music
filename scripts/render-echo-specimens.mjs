@@ -138,7 +138,8 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
   <style>
     text { font-family: "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif; }
     .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
-    .echo-creature-shadow { opacity: .17; }
+    .echo-creature-shadow { opacity: .21; }
+    .echo-creature-contact { opacity: .2352; }
     .echo-creature-focus-ring { stroke: transparent; stroke-width: 1.25; }
     .echo-memory-halo { opacity: 0; }
     .echo-creature * { animation: none !important; transition: none !important; }

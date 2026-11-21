@@ -746,6 +746,17 @@ window.__ModuleLoader__.load({
       return out;
     }
 
+    // Host library, lyrics and playback routes accept only real library IDs.
+    // Preview/liked-list keys remain useful client identities, never Host IDs.
+    function isLibraryTrackId(id) {
+      return typeof id === 'string' && /^[0-9a-f]{16}$/.test(id);
+    }
+
+    function libraryTrackId(item) {
+      if (isLibraryTrackId(item?.id)) return item.id;
+      return isLibraryTrackId(item?.trackId) ? item.trackId : null;
+    }
+
     function readPrefs() {
       try {
         const raw = localStorage.getItem('dsh-music.prefs');
@@ -1593,23 +1604,35 @@ window.__ModuleLoader__.load({
     function createLyricsService(api) {
       const store = createStore({ trackId: null, status: 'idle', data: null, error: null });
       let inflightFor = null;
+      let revision = 0;
       async function load(trackId) {
         if (!trackId || inflightFor === trackId) return;
         /* Mini player + now-playing panel both mount for the same track: keep
          * the ready/loading result instead of firing a second request. */
         const cur = store.getSnapshot();
         if (cur.trackId === trackId && (cur.status === 'ready' || cur.status === 'loading')) return;
+        const request = ++revision;
+        if (!isLibraryTrackId(trackId)) {
+          inflightFor = null;
+          store.set({ trackId, status: 'ready', error: null, data: {
+            source: 'none', synced: false, lines: [], plain: '',
+            message: String(trackId).startsWith('preview:')
+              ? '试听曲目暂不提供同步歌词。加入曲库后可重新获取。'
+              : '这首歌曲暂无可用歌词。',
+          } });
+          return;
+        }
         inflightFor = trackId;
         store.set({ trackId, status: 'loading', data: null, error: null });
         try {
           const data = await api.lyrics(trackId);
-          if (store.getSnapshot().trackId !== trackId) return; // user moved on
+          if (request !== revision) return; // user moved on, possibly back again
           store.set({ status: 'ready', data });
         } catch (err) {
-          if (store.getSnapshot().trackId !== trackId) return;
+          if (request !== revision) return;
           store.set({ status: 'error', error: (err && err.message) || String(err) });
         } finally {
-          if (inflightFor === trackId) inflightFor = null;
+          if (request === revision) inflightFor = null;
         }
       }
       return { source: store, load };
@@ -1999,37 +2022,57 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 6d. V3 services: likes (♥才入库) + preview (试听不入库)
      * ================================================================ */
-    function likeKey(o) {
-      return normalizeZh(o.artist) + '::' + normalizeZh(o.title);
+    function likeKey(o = {}) {
+      return normalizeZh(o.artist).trim() + '::' + normalizeZh(o.title).trim();
+    }
+
+    function previewTrack(item, audioUrl) {
+      // Keep verified recommendation metadata all the way to the companion:
+      // liking a preview may save it to the library, subject to Host checks.
+      return {
+        id: 'preview:' + likeKey(item), preview: true,
+        title: item.title, artist: item.artist, album: item.album,
+        coverUrl: item.coverUrl || null, audioUrl, duration: null,
+        durationMs: item.durationMs,
+        verification: item.verification,
+        source: item.source || 'preview', sourceUrl: item.sourceUrl,
+      };
     }
 
     function createLikesService(api, onAutoDownload) {
       /* keys/dislikes are mutually exclusive on the host: a dislike clears the
        * like and vice versa, so both maps are refreshed after every action. */
       const store = createStore({ keys: {}, dislikes: {}, items: [], dislikeItems: [], loaded: false, error: null });
+      let revision = 0;
+      let refreshSequence = 0;
       async function load() {
+        const atRevision = revision, sequence = ++refreshSequence;
+        const current = () => revision === atRevision && sequence === refreshSequence;
         try {
           const data = await api.likes();
           const keys = {};
           for (const it of (data && data.items) || []) if (it.liked !== false) keys[likeKey(it)] = it;
-          store.set({ keys, items: (data && data.items) || [], loaded: true, error: null });
+          if (current()) store.set({ keys, items: (data && data.items) || [], loaded: true, error: null });
         } catch (err) {
-          store.set({ loaded: true, error: (err && err.message) || String(err) });
+          if (current()) store.set({ loaded: true, error: (err && err.message) || String(err) });
         }
         try {
           const d = await api.dislikes();
           const dislikes = {};
           for (const it of (d && d.items) || []) dislikes[likeKey(it)] = it;
-          store.set({ dislikes, dislikeItems: (d && d.items) || [] });
+          if (current()) store.set({ dislikes, dislikeItems: (d && d.items) || [] });
         } catch { /* dislikes are optional: an older host just has no such route */ }
       }
       async function toggle(item, liked) {
-        const body = item.id
-          ? { trackId: item.id, liked }
+        revision++;
+        const trackId = libraryTrackId(item);
+        const body = trackId
+          ? { trackId, liked }
           : { artist: item.artist, title: item.title, album: item.album, durationMs: item.durationMs, coverUrl: item.coverUrl, verification: item.verification, liked };
         let res = null;
         try { res = await api.like(body); } catch (err) { return { error: (err && err.message) || String(err) }; }
-        const key = likeKey(res && res.key ? { artist: res.key.split('::')[0], title: res.key.split('::')[1] } : item);
+        if (res?.error) return res;
+        const key = res?.key || likeKey(item);
         const keys = { ...store.getSnapshot().keys };
         const dislikes = { ...store.getSnapshot().dislikes };
         if (liked) keys[key] = { artist: item.artist, title: item.title, trackId: res && res.trackId, inLibrary: res && res.inLibrary };
@@ -2044,11 +2087,14 @@ window.__ModuleLoader__.load({
         return res || {};
       }
       async function setDislike(item, disliked) {
-        const body = item.id
-          ? { trackId: item.id, disliked }
+        revision++;
+        const trackId = libraryTrackId(item);
+        const body = trackId
+          ? { trackId, disliked }
           : { artist: item.artist, title: item.title, album: item.album, durationMs: item.durationMs, disliked };
         let res = null;
         try { res = await api.dislike(body); } catch (err) { return { error: (err && err.message) || String(err) }; }
+        if (res?.error) return res;
         const key = res && res.key ? res.key : likeKey(item);
         const keys = { ...store.getSnapshot().keys };
         const dislikes = { ...store.getSnapshot().dislikes };
@@ -2130,19 +2176,12 @@ window.__ModuleLoader__.load({
         }
         store.set({ pending: next });
       }
-      function trackOf(item, audioUrl) {
-        return {
-          id: 'preview:' + likeKey(item),
-          title: item.title, artist: item.artist, album: item.album,
-          coverUrl: item.coverUrl || null, audioUrl, duration: null,
-        };
-      }
       function warmOne(item) {
         return new Promise((resolve) => { preview.start(item, (res) => resolve(res || {})); });
       }
       function handle(item, res) {
         if (!res || !res.audioUrl) return;
-        const tr = trackOf(item, res.audioUrl);
+        const tr = previewTrack(item, res.audioUrl);
         if (!player.source.getSnapshot().track) player.playTracks([tr], 0);
         else player.appendTrack(tr);
       }
@@ -2238,12 +2277,8 @@ window.__ModuleLoader__.load({
       /* Preview tracks carry a synthetic "preview:" id — never report them to
        * history or push them into the Host playback queue (S1-003 validates
        * real library ids only). */
-      function isLibraryId(id) {
-        return typeof id === 'string' && /^[0-9a-f]{8,}$/.test(id);
-      }
-
       function report(track, skipped) {
-        if (!track || !track.id || !isLibraryId(track.id)) return;
+        if (!track || !isLibraryTrackId(track.id)) return;
         const s = snap();
         const completion = s.duration > 0
           ? Math.min(1, Math.max(0, s.position / s.duration))
@@ -2282,13 +2317,7 @@ window.__ModuleLoader__.load({
         updateMediaSession(track);
         audio.src = resolveUrl(track.audioUrl);
         audio.load();
-        if (autoplay) {
-          const p = startPlayback();
-          if (p && p.catch) p.catch((err) => {
-            if (err && err.name === 'AbortError') return; // superseded by a newer load
-            set({ playing: false, loading: false, error: t('audioError') });
-          });
-        }
+        if (autoplay) play();
       }
 
       function hostMode() {
@@ -2301,10 +2330,14 @@ window.__ModuleLoader__.load({
         const s = snap();
         const patch = {
           mode: hostMode(),
-          trackId: s.track && isLibraryId(s.track.id) ? s.track.id : null,
-          queue: (s.queue || []).map((tr) => tr && tr.id).filter((id) => id && isLibraryId(id)),
+          trackId: s.track?.id || null,
+          queue: (s.queue || []).map((tr) => tr && tr.id),
           ...extra,
         };
+        // append/jump callers may supply overrides. Sanitize the final payload
+        // so synthetic preview IDs cannot bypass this boundary.
+        patch.trackId = isLibraryTrackId(patch.trackId) ? patch.trackId : null;
+        patch.queue = (Array.isArray(patch.queue) ? patch.queue : []).filter(isLibraryTrackId);
         api.playback(patch).catch(() => { /* Host not installed yet — local playback still works */ });
       }
 
@@ -2366,7 +2399,7 @@ window.__ModuleLoader__.load({
         const { queue, queueIndex, shuffle, repeat } = snap();
         if (!queue.length) return;
         if (auto && repeat === 'one') {
-          if (audio) { audio.currentTime = 0; const p = startPlayback(); if (p && p.catch) p.catch(() => {}); }
+          if (audio) { audio.currentTime = 0; play(); }
           return;
         }
         let next;
@@ -2387,12 +2420,15 @@ window.__ModuleLoader__.load({
       async function advance(auto) {
         const cur = snap().track;
         if (cur) report(cur, !auto);
-        if (auto && cur && api && api.playbackNext) {
+        // The Host only knows library IDs. Mixed queues must advance locally
+        // or an intervening preview would be skipped by the filtered queue.
+        const libraryOnly = snap().queue.every(track => isLibraryTrackId(track?.id));
+        if (auto && cur && isLibraryTrackId(cur.id) && libraryOnly && api && api.playbackNext) {
           try {
             const data = await api.playbackNext(cur.id);
             if (!data || !data.trackId) { set({ playing: false }); return; }
             if (data.reason === 'replay' || data.trackId === cur.id) {
-              if (audio) { audio.currentTime = 0; const p = startPlayback(); if (p && p.catch) p.catch(() => {}); }
+              if (audio) { audio.currentTime = 0; play(); }
               return;
             }
             if (playById(data.trackId)) return;
@@ -2417,16 +2453,26 @@ window.__ModuleLoader__.load({
         loadTrack(queue[index], true);
       }
 
+      function play() {
+        if (!audio || !snap().track || (!audio.paused && !audio.ended)) return;
+        const track = snap().track;
+        const failed = (err) => {
+          if (err?.name === 'AbortError' || snap().track !== track) return;
+          set({ error: t('audioError'), playing: false, loading: false });
+        };
+        try {
+          const pending = startPlayback();
+          if (pending?.catch) return pending.catch(failed);
+        } catch (err) { failed(err); }
+      }
+
+      function pause() {
+        if (audio && !audio.paused) audio.pause();
+      }
+
       function toggle() {
-        if (!audio || !snap().track) return;
-        if (snap().playing) audio.pause();
-        else {
-          const p = startPlayback();
-          if (p && p.catch) p.catch((err) => {
-            if (err && err.name === 'AbortError') return;
-            set({ error: t('audioError'), playing: false });
-          });
-        }
+        if (snap().playing) pause();
+        else return play();
       }
 
       function seek(seconds) {
@@ -2503,8 +2549,8 @@ window.__ModuleLoader__.load({
         if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
           const ms = navigator.mediaSession;
           const handlers = {
-            play: () => toggle(),
-            pause: () => { if (audio) audio.pause(); },
+            play,
+            pause,
             previoustrack: () => prev(),
             nexttrack: () => advance(false),
             seekto: (d) => { if (d && typeof d.seekTime === 'number') seek(d.seekTime); },
@@ -2529,6 +2575,8 @@ window.__ModuleLoader__.load({
         appendTrack,
         playAll: (tracks, opts) => playTracks(tracks, 0, opts),
         jumpTo,
+        play,
+        pause,
         toggle,
         next: () => advance(false),
         prev,
@@ -3400,11 +3448,7 @@ window.__ModuleLoader__.load({
       preview.start(item, (res) => {
         if (res.error) { setNotice(t('previewFail') + '：' + res.error); return; }
         setNotice('');
-        player.playTracks([{
-          id: 'preview:' + likeKey(item),
-          title: item.title, artist: item.artist, album: item.album,
-          coverUrl: item.coverUrl || null, audioUrl: res.audioUrl, duration: null,
-        }], 0);
+        player.playTracks([previewTrack(item, res.audioUrl)], 0);
       });
     }
 
@@ -5065,11 +5109,12 @@ window.__ModuleLoader__.load({
         id: 'dsh-music.mini-player',
         locale: NS,
         inject: () => ({
-          lifeService, player, lyrics: lyricsService, artistImages: artistImageService, setMiniHidden, setMiniCollapsed,
+          lifeService, player, likes: likesService, lyrics: lyricsService, artistImages: artistImageService, setMiniHidden, setMiniCollapsed,
           openHome: () => { openView('home'); ctx.layout.selectPanel(PANEL_ID); },
+          openLibrary: () => { openView('library'); ctx.layout.selectPanel(PANEL_ID); },
           openNow: () => { openView('now'); ctx.layout.selectPanel(PANEL_ID); },
           openArtistPage: (name) => { if (!name) return; openArtistPage(name); ctx.layout.selectPanel(PANEL_ID); },
-          hooks: { player: player.source, ui, lyrics: lyricsService.source, artistImages: artistImageService.source },
+          hooks: { player: player.source, ui, lyrics: lyricsService.source, likes: likesService.source, artistImages: artistImageService.source },
         }),
       }, (props) => portalToBody(h(EchoMini, props)))), 'dsh-music: mini player');
 
