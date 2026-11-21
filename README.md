@@ -55,7 +55,7 @@ npm run preview -- --data-dir /绝对路径/echo-preview-data
 | 分发包文件、文档和资源检查 | 15 项通过 |
 | 实际 tgz 解包后的入口、模块图、生命规则和清单检查 | 23 项通过 |
 
-在当前开发环境中执行 `npm test` 可重跑前三项。冷装检查针对 `npm pack` 得到的包，命令见 `tests/cold-install-smoke.mjs`。`npm run habitat-demo` 从实际主组件生成可交互演示，使用本地内存中的示例曲目和模拟经历，不输出音频、不写正式档案；`npm run specimens` 重建九个生命样张，`npm run material-study` 重建固定个体的版本对照 SVG。形态样张由实际渲染器生成并进行了静态检查；它不代替真实浏览器的布局测试。
+在当前开发环境中执行 `npm test` 可重跑前三项。冷装检查针对 `npm pack` 得到的包，命令见 `tests/cold-install-smoke.mjs`。`npm run habitat-demo` 从实际主组件生成 `dist/echo-continuous-world.html` 交互演示，也可通过 `npm run habitat-demo -- /绝对路径/demo.html` 指定输出。演示使用本地内存中的示例曲目和模拟经历，不输出音频、不写正式档案。`npm run specimens` 重建九个生命样张，`npm run material-study` 重建固定个体的版本对照 SVG。形态样张由实际渲染器生成并进行了静态检查；它不代替真实浏览器的布局测试。
 
 本轮尚未完成用户设备上的 Harness 安装、真实音频输出/FFT、窄屏布局和动画性能验收。DOM 集成测试使用媒体替身，未将其表述成真实声卡验证。伴生目前位于 Harness 应用内，尚无跨应用的原生桌面窗口。三个形态语法提供连续变化，但不保证任意两个生命永远肉眼可区分。多标签页共写、档案导入和跨设备同步尚未实现。
 

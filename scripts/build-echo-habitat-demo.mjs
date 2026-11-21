@@ -1,10 +1,10 @@
 import { build } from 'esbuild';
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const output = process.argv[2] ? resolve(process.cwd(), process.argv[2]) : '/workspace/echo-continuous-world.html';
+const output = process.argv[2] ? resolve(process.cwd(), process.argv[2]) : resolve(root, 'dist/echo-continuous-world.html');
 const result = await build({ entryPoints: [resolve(root, 'src/preview/habitat-demo.jsx')], bundle: true, write: false, format: 'iife', minify: true, platform: 'browser', target: ['chrome110', 'safari16'], define: { 'process.env.NODE_ENV': '"production"' }, legalComments: 'none' });
 const script = result.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
 const css = (await Promise.all(['ui', 'creature', 'habitat'].map(name => readFile(resolve(root, `src/client/echo/${name}.css`), 'utf8')))).join('\n');
@@ -22,5 +22,6 @@ const previewCSS = `
 const template = await readFile(resolve(root, 'src/preview/habitat-fragment.html'), 'utf8');
 const html = template.replace('/* ECHO_PREVIEW_CSS */', css + previewCSS).replace('/* ECHO_PREVIEW_SCRIPT */', script);
 if (Buffer.byteLength(html) > 1024 * 1024) throw new Error('Conversation preview exceeds 1 MiB');
+await mkdir(dirname(output), { recursive: true });
 await writeFile(output, html);
 console.log(`Wrote actual-component interaction preview: ${output} (${Buffer.byteLength(html)} bytes). All adapters are local; audio is intentionally disabled.`);
