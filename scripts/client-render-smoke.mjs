@@ -26,7 +26,7 @@ const lifeEvents = [{ id: 'smoke-memory', type: 'memory', at: 1700000001000, tit
 let lifeState = applyLifeEvent(lifeInitial, lifeEvents[0]);
 
 /* ---- minimal React ---- */
-const state = { view: 'library', miniHidden: false, miniCollapsed: false, artistName: null };
+const state = { view: 'library-manage', miniHidden: false, miniCollapsed: false, artistName: null };
 const playerState = {
   track: { id: 't1', title: '测试歌曲', artist: '测试歌手', album: '测试专辑', coverUrl: null, duration: 200 },
   playing: true, position: 42, duration: 200, volume: 0.8, muted: false,
@@ -84,6 +84,7 @@ const emitWindow = (type, event) => { for (const listener of windowListeners.get
 const windowMock = {
   __ModuleLoader__: { load: (def) => { captured = def; } },
   localStorage, innerWidth: 1440, innerHeight: 900,
+  setTimeout, clearTimeout,
   addEventListener: addWindowListener, removeEventListener: removeWindowListener,
   confirm: () => true,
 };
@@ -210,7 +211,7 @@ const results = [];
 function check(name, ok, detail) { results.push({ name, ok, detail }); }
 
 /* 1) library view renders; single cycle mode button; play-all follows list */
-state.view = 'library';
+state.view = 'library-manage';
 const libTree = expand(music(baseProps));
 check('library renders', !!libTree);
 const modeBtns = walk(libTree).filter((n) => /dshm-mode-cycle/.test(cls(n)));
@@ -218,13 +219,13 @@ check('library has exactly 1 cycle-mode button', modeBtns.length === 1, 'count='
 check('library row artist is a clickable button', has(libTree, (n) => cls(n) === 'dshm-row-sub-btn'));
 
 /* 2) now-playing view */
-state.view = 'now';
+state.view = 'now-manage';
 const nowTree = expand(music(baseProps));
 check('now-playing renders', !!nowTree);
 check('now-playing has 1 cycle-mode control', walk(nowTree).filter((n) => /dshm-mode-cycle|dshm-iconbtn/.test(cls(n))).length >= 1);
 check('now-playing artist opens artist page (button present)', has(nowTree, (n) => cls(n).includes('dshm-artist-btn')));
 check('now-playing retains all synchronized lyric lines', walk(nowTree).filter((n) => /^dshm-lyric-line(?: |$)/.test(cls(n))).length === lyricsState.data.lines.length);
-check('panel dock retains a working seek slider', has(nowTree, (n) => n.type === 'input' && n.props['aria-label'] === '播放进度' && typeof n.props.onChange === 'function' && !n.props.disabled));
+check('full-player tool retains a working seek slider', has(nowTree, (n) => n.props.role === 'slider' && n.props['aria-label'] === 'seekLabel' && typeof n.props.onKeyDown === 'function' && typeof n.props.onPointerDown === 'function' && !n.props['aria-disabled']));
 
 /* 3) history view: play-list header + clickable rows */
 state.view = 'history';
@@ -235,7 +236,7 @@ check('history row is clickable', has(hisTree, (n) => /dshm-hrow-click/.test(cls
 check('history row artist clickable', has(hisTree, (n) => /dshm-row-sub-btn/.test(cls(n))));
 
 /* 4) reco view: song artist clickable */
-state.view = 'reco';
+state.view = 'reco-manage';
 const recoTree = expand(music(baseProps));
 check('reco renders', !!recoTree);
 check('reco row artist clickable', has(recoTree, (n) => cls(n) === 'dshm-srow-artist'));
@@ -265,7 +266,7 @@ const spinItems = [{ title: '缓存曲A', artist: '缓存歌手', verification: 
   { title: '缓存曲B', artist: '缓存歌手', verification: { ok: true } }];
 const savedRecoCol = recoState;
 recoState = { ...recoState, status: 'ready', sections: { today: spinItems, artist: [], new: [] } };
-state.view = 'reco';
+state.view = 'reco-manage';
 const warmRun = warmSvc.playList(spinItems, () => null);
 const busyTree = expand(music(baseProps));
 check('column play spins every uncached row at once',
@@ -287,7 +288,7 @@ recoState = savedRecoCol;
 /* 4z) cold-start onboarding (v6 batch 4): empty library + empty recommendations */
 const savedLib = libState, savedReco = recoState, savedHist = historyState;
 libState = { status: 'ready', tracks: [], error: null };
-state.view = 'library';
+state.view = 'library-manage';
 const emptyTree = expand(music(baseProps));
 const ctas = walk(emptyTree).find((n) => cls(n) === 'dshm-empty-ctas');
 check('empty library shows onboarding CTA row', !!ctas && ctas.children.length === 3,
@@ -306,7 +307,7 @@ check('sync availability probed from host endpoint', !!syncSvc && syncSvc.source
 
 recoState = { status: 'idle', items: [], sections: null, generatedAt: 0, stats: null, error: null };
 historyState = { status: 'ready', events: [], total: 0, stats: { totalPlays: 0, totalSeconds: 0, uniqueSongs: 0, uniqueArtists: 0, topSongs: [], topArtists: [], daily: [], skippedCount: 0, avgCompletion: 0 }, error: null };
-state.view = 'reco';
+state.view = 'reco-manage';
 const coldTree = expand(music(baseProps));
 check('zero-history reco copy shown', JSON.stringify(walk(coldTree).map((n) => n.props && n.props.children)).includes('recoColdTitle'));
 libState = savedLib; recoState = savedReco; historyState = savedHist;
@@ -314,7 +315,7 @@ libState = savedLib; recoState = savedReco; historyState = savedHist;
 /* 4y) cold-start exploration batch note (D3 contract: exploreOnly/note) */
 const savedReco2 = recoState;
 recoState = { ...recoState, bootstrapNote: '探索批次：基于公众热门流派与场景生成，收听增长后会逐步个性化' };
-state.view = 'reco';
+state.view = 'reco-manage';
 const bootTree = expand(music(baseProps));
 check('reco explore note rendered', has(bootTree, (n) => cls(n) === 'dshm-explore-note'));
 check('reco explore chip rendered', has(bootTree, (n) => cls(n) === 'dshm-explore-chip'));
@@ -359,18 +360,19 @@ check('preview skip closes preview without routing', !!skipBody && pvSkip.exit =
 state.welcomePreview = true;
 check('welcome preview shows a close button', has(expand(music(baseProps)), (n) => cls(n) === 'dshm-wclose'));
 state.welcomePreview = false;
-state.view = 'library';
+state.view = 'library-manage';
 const backTree = expand(music(baseProps));
-check('returning user gets a preview-welcome entry', has(backTree, (n) => n.type === 'button' && n.props['aria-label'] === 'welcomePreview'));
+check('management tools retain the individual behind their content', has(backTree, (n) => cls(n) === 'echo-creature')
+  && has(backTree, (n) => cls(n) === 'eh-utility'));
 
 /* 4a) small round artist avatars where the brief asks for them */
 const isRoundThumb = (n) => cls(n).includes('dshm-tile') && n.props.style && n.props.style.borderRadius === '50%';
-state.view = 'now';
-state.view = 'library';
+state.view = 'now-manage';
+state.view = 'library-manage';
 groupDefault = 'artist';
 const groupAvatars = walk(expand(music(baseProps))).filter(isRoundThumb);
 check('library artist group header avatar rendered', groupAvatars.length >= 2, 'count=' + groupAvatars.length);
-state.view = 'now';
+state.view = 'now-manage';
 const nowAvatars = walk(expand(music(baseProps))).filter(isRoundThumb);
 check('now-playing artist avatar rendered', nowAvatars.length >= 1, 'count=' + nowAvatars.length);
 state.view = 'history';
@@ -384,7 +386,7 @@ const playerSvc = (services['music'] || {}).player;
 const plays = [];
 playerSvc.playTracks = (list, idx) => plays.push({ len: list.length, idx, first: list[0] && list[0].id, last: list[list.length - 1] && list[list.length - 1].id });
 
-state.view = 'library';
+state.view = 'library-manage';
 const libRows = walk(expand(music(baseProps))).filter((n) => /^dshm-row( |$)/.test(cls(n)) && n.props.role === 'button');
 check('library has 2 clickable rows', libRows.length === 2, 'count=' + libRows.length);
 libRows[1].props.onClick();
@@ -518,26 +520,20 @@ check('zh locale has no duplicate keys (no shadowing)', !!zhBlock.text && zhBloc
 check('en locale has no duplicate keys (no shadowing)', !!enBlock.text && enBlock.dup.length === 0, 'dups=' + JSON.stringify(enBlock.dup));
 check('no stale "stage 3" copy in zh/en', !/阶段 ?3|stage ?3/i.test(zhBlock.text) && !/阶段 ?3|stage ?3/i.test(enBlock.text));
 
-/* 5y) integration: the real preview chipbtn writes the REAL ui store and the
- *     panel re-renders into the welcome view (closes the GUI-only gap). */
+/* 5y) source setup is an explicit utility in the continuous space. */
 const uiStore = svc.hooks && svc.hooks.ui;
-uiStore.set({ view: 'library', welcomePreview: false, lyricsOpen: false });
+uiStore.set({ view: 'library-manage', welcomePreview: false, lyricsOpen: false });
 const useUiReal = (sel) => sel(uiStore.getSnapshot());
 const realProps = { ...baseProps, useUi: useUiReal };
 const realHeader = expand(music(realProps));
-const previewBtn = walk(realHeader).find((n) => n.type === 'button' && n.props['aria-label'] === 'welcomePreview');
-check('preview button is rendered and enabled', !!previewBtn && !(previewBtn.props || {}).disabled);
-previewBtn.props.onClick();
-const afterClick = uiStore.getSnapshot();
-check('preview click writes the real ui store', afterClick.view === 'welcome' && afterClick.welcomePreview === true,
-  'view=' + afterClick.view + ' preview=' + afterClick.welcomePreview);
+uiStore.set({ view: 'welcome', welcomePreview: true });
 const realPreviewTree = expand(music(realProps));
-check('preview view renders mascot + close button', has(realPreviewTree, (n) => cls(n) === 'dshm-fish')
-  && has(realPreviewTree, (n) => cls(n) === 'dshm-wclose'));
+check('source-setup preview keeps the life and its existing close action', has(realPreviewTree, (n) => cls(n) === 'dshm-fish')
+  && has(realPreviewTree, (n) => cls(n) === 'dshm-wclose') && has(realPreviewTree, (n) => cls(n) === 'echo-creature'));
 const closeBtn = walk(realPreviewTree).find((n) => cls(n) === 'dshm-wclose');
 closeBtn.props.onClick();
 const afterClose = uiStore.getSnapshot();
-check('preview close returns to the library view', afterClose.view === 'library' && afterClose.welcomePreview === false,
+check('preview close returns to in-space music search', afterClose.view === 'library' && afterClose.welcomePreview === false,
   'view=' + afterClose.view);
 
 /* 5x) v8 taste plumbing + v9 card rail / background loads */
@@ -547,7 +543,7 @@ const likedItemsState = (sel) => sel({
   keys: {}, dislikes: {}, loaded: true, error: null,
   items: [{ key: 'k1', artist: '甲', title: '乙', trackId: 't1', audioUrl: '/a.mp3', coverUrl: null, inLibrary: true, durationMs: 1000 }],
 });
-const railTree = expand(music({ ...baseProps, useUi: (sel) => sel({ ...state, view: 'library' }), useLikes: likedItemsState }));
+const railTree = expand(music({ ...baseProps, useUi: (sel) => sel({ ...state, view: 'library-manage' }), useLikes: likedItemsState }));
 check('liked rail renders a card + view-all card', has(railTree, (n) => String(cls(n) || '').includes('dshm-favcard'))
   && has(railTree, (n) => String(cls(n) || '').includes('dshm-favcard-more')));
 uiStore.set({ toast: { kind: 'artist', name: '测试歌手', at: Date.now() } });
@@ -580,14 +576,21 @@ const addedTracks = [
 const consoleProps = { ...realProps, useLibrary: (sel) => sel({ status: 'ready', tracks: addedTracks }) };
 uiStore.set({ view: 'home' });
 const consoleHome = expand(music(consoleProps));
-check('ECHO home renders the stored life and panel dock',
-  has(consoleHome, node => cls(node) === 'echo-home') && has(consoleHome, node => cls(node) === 'echo-creature')
-  && has(consoleHome, node => cls(node) === 'echo-dock') && has(consoleHome, node => node.children.includes('冒烟音灵')));
-const curationEntry = walk(consoleHome).find(node => node.type === 'button' && node.children.includes('音乐策展'));
-curationEntry?.props.onClick({ currentTarget: { closest: () => ({ open: true }) } });
-check('the retained curation entry opens the studio', !!curationEntry && uiStore.getSnapshot().view === 'studio');
+check('the default experience is one living space with its stored individual',
+  has(consoleHome, node => cls(node) === 'echo-living-space' && node.props['data-scene'] === 'encounter')
+  && has(consoleHome, node => cls(node) === 'echo-creature') && has(consoleHome, node => node.children.includes('冒烟音灵')));
+check('the primary space has neither page tabs nor the old player dock',
+  !has(consoleHome, node => cls(node) === 'dshm-tabs' || cls(node) === 'echo-dock' || cls(node) === 'echo-home'));
+const findMusic = walk(consoleHome).find(node => node.type === 'button' && cls(node) === 'eh-find');
+findMusic?.props.onClick();
+check('find music opens the new search through the real route store', !!findMusic && uiStore.getSnapshot().view === 'library');
+const searchSpace = expand(music(consoleProps));
+check('in-space search renders playable tracks alongside the life', has(searchSpace, node => cls(node) === 'eh-context eh-search')
+  && has(searchSpace, node => cls(node) === 'echo-creature') && walk(searchSpace).filter(node => cls(node) === 'eh-song').length === 3);
 uiStore.set({ view: 'studio', consoleMode: 'playlist', consolePrompt: '5 minutes of English rock', consoleResult: null });
 const consoleTree = expand(music(consoleProps));
+check('curation remains an explicit utility with the life still present', has(consoleTree, node => cls(node) === 'eh-utility')
+  && has(consoleTree, node => cls(node) === 'echo-creature'));
 await walk(consoleTree).find((node) => node.type === 'form' && cls(node) === 'dshm-command-form').props.onSubmit({ preventDefault: noop });
 const curation = uiStore.getSnapshot().consoleResult;
 check('curation respects genre and language tags and reports the target duration',
@@ -602,7 +605,7 @@ check('saving curation persists only library IDs, with no audio path',
 uiStore.set({ dockVisible: true, miniHidden: false, miniCollapsed: false });
 const inMusic = expand(mini({ ...(services['dsh-music.mini-player'] || {}), t: (key) => key,
   usePlayer, useUi: useUiReal, useLyrics, useArtistImages }));
-check('floating player yields to the panel dock', inMusic == null);
+check('floating player yields to the active living space', inMusic == null);
 
 /* 7) report */
 const fail = results.filter((r) => !r.ok);

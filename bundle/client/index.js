@@ -918,7 +918,7 @@
       const lyricState = useSource(lyrics?.source);
       useSource(likes?.source);
       const { track: track2, playing, loading, position: playPosition = 0, duration = 0, volume = 1, muted, queue = [], queueIndex = -1, shuffle, repeat, error } = playback;
-      const trackKey = identity2(track2);
+      const trackKey2 = identity2(track2);
       const [position, setPosition] = useState(() => {
         const saved = preference(POSITION_KEY, null);
         return saved && Number.isFinite(saved.x) && Number.isFinite(saved.y) ? saved : null;
@@ -1032,7 +1032,7 @@
       useEffect(() => {
         setSeekDraft(null);
         if (paper?.kind === "greeting") setPaper(null);
-      }, [trackKey]);
+      }, [trackKey2]);
       useEffect(() => {
         if (showLyrics && track2?.id && lyrics) Promise.resolve(lyrics.load(track2.id)).catch(() => {
         });
@@ -1303,6 +1303,460 @@
             h("div", { className: "echo-mini-window-actions" }, h("button", { type: "button", onClick: () => setMiniCollapsed(!collapsed), "aria-label": collapsed ? "\u5C55\u5F00\u4F34\u751F\u7A97" : "\u6536\u62E2\u4F34\u751F\u7A97" }, h(Icon, { name: collapsed ? "sun" : "moon", size: 15 }), collapsed ? "\u8212\u5C55\u8EAB\u4F53" : "\u5B89\u9759\u6816\u606F"), h("button", { type: "button", onClick: openHome }, "\u56DE\u5230\u4E3B\u821E\u53F0"), h("button", { type: "button", onClick: () => setMiniHidden(true), "aria-label": "\u9690\u85CF\u4F34\u751F\u7A97", title: "\u9690\u85CF\u4F34\u751F\u7A97\uFF0C\u97F3\u4E50\u7EE7\u7EED\u64AD\u653E" }, "\u9690\u85CF\u4F34\u751F\u7A97"))
           ) : null
         ) : null
+      );
+    };
+  }
+
+  // src/client/echo/habitat.js
+  var SCENES = { home: "encounter", library: "search", reco: "discover", "echo-memory": "memory", now: "listening" };
+  var UTILITIES = {
+    "library-manage": "\u7BA1\u7406\u66F2\u5E93",
+    "reco-manage": "\u5728\u7EBF\u53D1\u73B0",
+    studio: "\u7B56\u5C55",
+    history: "\u8046\u542C\u5386\u53F2",
+    artist: "\u97F3\u4E50\u4EBA",
+    "echo-gallery": "\u751F\u547D\u5F62\u6001\u793A\u4F8B",
+    welcome: "\u97F3\u4E50\u6765\u6E90",
+    command: "\u97F3\u4E50\u6307\u4EE4",
+    "now-manage": "\u5B8C\u6574\u6B4C\u8BCD\u4E0E\u961F\u5217"
+  };
+  var normalize = (value) => String(value || "").normalize("NFKC").toLocaleLowerCase().trim();
+  var trackKey = (track2) => String(track2?.id || `${track2?.artist || ""}::${track2?.title || ""}`);
+  var sameTrack = (a, b) => !!a && !!b && trackKey(a) === trackKey(b);
+  function readPreference(key, fallback) {
+    try {
+      return window.localStorage.getItem(key) || fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  function storePreference(key, value) {
+    try {
+      window.localStorage.setItem(key, value);
+    } catch {
+    }
+  }
+  function createHabitatComponent(React, { Creature, Icon, useLife, EditDialog, GreetingDialog, MemoryDialog, Status, EmptyLife, formatTime: formatTime2, shortDate: shortDate2, downloadJSON: downloadJSON2 }) {
+    const h = React.createElement;
+    const { useState, useEffect, useMemo, useRef } = React;
+    function QuietButton({ icon, children, className = "", ...props }) {
+      return h("button", { type: "button", className: `eh-action ${className}`, ...props }, icon ? h(Icon, { name: icon, size: 17 }) : null, children);
+    }
+    return function EchoHabitat({ lifeService, player, library, lyrics, likes, usePlayer, useLibrary, useLyrics, useLikes, openView, openArtistPage, setMiniHidden, renderUtility, requestedView = "home", commandRequest = 0 }) {
+      const state = useLife(lifeService);
+      const playback = usePlayer((s) => s);
+      const collection = useLibrary((s) => s);
+      const lyricState = useLyrics((s) => s);
+      const taste = useLikes((s) => s);
+      const [query, setQuery] = useState("");
+      const [limit, setLimit] = useState(40);
+      const [discoveryOffset, setDiscoveryOffset] = useState(0);
+      const [dialog, setDialog] = useState(null);
+      const [menu, setMenu] = useState(false);
+      const [resting, setResting] = useState(false);
+      const [gesture, setGesture] = useState(0);
+      const [reviewIndex, setReviewIndex] = useState(null);
+      const [feedback, setFeedback] = useState(null);
+      const [preferencePending, setPreferencePending] = useState(false);
+      const [undo, setUndo] = useState(null);
+      const [seekDraft, setSeekDraft] = useState(null);
+      const [tone, setTone] = useState(() => readPreference("dsh-music.echo.habitat-tone", "dark"));
+      const [lyricVisible, setLyricVisible] = useState(() => readPreference("dsh-music.echo.habitat-lyrics", "false") === "true");
+      const rootRef = useRef(null), searchRef = useRef(null), findRef = useRef(null), menuRef = useRef(null), menuButtonRef = useRef(null), layerRef = useRef(null);
+      const touchAt = useRef(0), pendingRef = useRef(false), commandSeen = useRef(commandRequest), seekRef = useRef(null);
+      const scene = SCENES[requestedView] || "utility";
+      const life = state.life;
+      const name = life?.name && life.name !== "\u672A\u547D\u540D" ? life.name : "\u4F60\u7684\u97F3\u7075";
+      const { track: track2, playing, loading, position = 0, duration = 0, volume = 1, muted, queue = [], shuffle, repeat, error: playbackError } = playback;
+      const tracks = collection.tracks || [];
+      const timeline = life?.timeline || [];
+      const reviewing = scene === "memory" && reviewIndex != null && !!timeline.length;
+      const snapshot = reviewing ? timeline[Math.min(reviewIndex, timeline.length - 1)] : null;
+      const selectedMorphology = snapshot?.morphology || state.morphology;
+      const tokens = normalize(query).split(/\s+/).filter(Boolean);
+      const results = useMemo(() => tracks.filter((item) => {
+        const text2 = normalize(`${item.title} ${item.artist} ${item.album || ""}`);
+        return tokens.every((token) => text2.includes(token));
+      }), [tracks, query]);
+      const discoveries = useMemo(() => {
+        const available = tracks.filter((item) => item.audioUrl && !likes.isDisliked(item));
+        const ordered = [...available.filter((item) => likes.isLiked(item)), ...available.filter((item) => !likes.isLiked(item))];
+        if (!ordered.length) return [];
+        return Array.from({ length: Math.min(3, ordered.length) }, (_, i) => ordered[(discoveryOffset * 3 + i) % ordered.length]);
+      }, [tracks, taste, discoveryOffset, likes]);
+      const liked = !!track2 && likes.isLiked(track2), disliked = !!track2 && likes.isDisliked(track2);
+      const currentLyrics = track2 && lyricState.trackId === track2.id ? lyricState : null;
+      const lyricData = currentLyrics?.data;
+      let activeLine = "";
+      if (lyricData?.synced && lyricData.lines?.length) {
+        for (const line of lyricData.lines) {
+          if (line.time > position + 0.2) break;
+          if (line.text?.trim()) activeLine = line.text;
+        }
+      }
+      function go(route) {
+        setMenu(false);
+        if (route !== "echo-memory") setReviewIndex(null);
+        openView(route);
+      }
+      function returnHome() {
+        go("home");
+        window.setTimeout(() => findRef.current?.focus(), 0);
+      }
+      function report(message, isError = false) {
+        setFeedback({ message, isError });
+      }
+      function action(fn) {
+        try {
+          Promise.resolve(fn()).catch((err) => report(err.message || "\u8FD9\u6B21\u64CD\u4F5C\u672A\u80FD\u5B8C\u6210\u3002", true));
+        } catch (err) {
+          report(err.message || "\u8FD9\u6B21\u64CD\u4F5C\u672A\u80FD\u5B8C\u6210\u3002", true);
+        }
+      }
+      useEffect(() => {
+        if (collection.status === "idle") action(() => library.load());
+        if (!taste.loaded && likes.load) action(() => likes.load());
+      }, [library, likes]);
+      useEffect(() => {
+        if (scene !== "memory") setReviewIndex(null);
+      }, [scene]);
+      useEffect(() => {
+        seekRef.current = null;
+        setSeekDraft(null);
+      }, [track2?.id]);
+      useEffect(() => {
+        if (scene === "encounter") return;
+        const id = window.setTimeout(() => {
+          if (scene === "search") searchRef.current?.focus();
+          else layerRef.current?.querySelector("[data-eh-heading]")?.focus();
+        }, 0);
+        return () => window.clearTimeout(id);
+      }, [scene, requestedView]);
+      useEffect(() => {
+        if (commandSeen.current === commandRequest) return;
+        commandSeen.current = commandRequest;
+        setMenu(false);
+        setDialog(null);
+        if (scene !== "search") openView("library");
+        const id = window.setTimeout(() => searchRef.current?.focus(), 0);
+        return () => window.clearTimeout(id);
+      }, [commandRequest, scene, openView]);
+      useEffect(() => {
+        if (!menu) return;
+        const outside = (event) => {
+          if (!menuRef.current?.contains(event.target) && !menuButtonRef.current?.contains(event.target)) setMenu(false);
+        };
+        document.addEventListener("pointerdown", outside);
+        return () => document.removeEventListener("pointerdown", outside);
+      }, [menu]);
+      useEffect(() => {
+        storePreference("dsh-music.echo.habitat-lyrics", String(lyricVisible));
+        if (lyricVisible && track2?.id) action(() => lyrics.load(track2.id));
+      }, [lyricVisible, track2?.id, lyrics]);
+      useEffect(() => {
+        storePreference("dsh-music.echo.habitat-tone", tone);
+      }, [tone]);
+      useEffect(() => {
+        if (!feedback || feedback.isError) return;
+        const id = window.setTimeout(() => setFeedback(null), 7e3);
+        return () => window.clearTimeout(id);
+      }, [feedback]);
+      async function save(type, payload) {
+        try {
+          await lifeService.dispatch(type, payload);
+          report(type === "rename" ? "\u5B83\u8BB0\u4F4F\u4E86\u8FD9\u4E2A\u540D\u5B57\u3002" : type === "greeting" ? "\u5B83\u8BB0\u4F4F\u4E86\u4F60\u4EEC\u7684\u62DB\u547C\u3002" : "\u8FD9\u4E00\u523B\uFF0C\u5DF2\u7ECF\u7559\u4E0B\u3002");
+        } catch (err) {
+          if (!err.queued) throw err;
+          report("\u8FD9\u6BB5\u7ECF\u5386\u5DF2\u5728\u672C\u673A\u6682\u5B58\uFF0C\u8FDE\u63A5\u6062\u590D\u540E\u4F1A\u7EE7\u7EED\u4FDD\u5B58\u3002");
+        }
+      }
+      function touch() {
+        if (reviewing || Date.now() - touchAt.current < 1200) return;
+        touchAt.current = Date.now();
+        setGesture((value) => value + 1);
+        action(() => lifeService.dispatch("interaction", { action: life?.greeting ? "greet" : "touch" }));
+      }
+      function greet() {
+        setMenu(false);
+        if (!life?.greeting) setDialog({ kind: "greeting" });
+        else {
+          setGesture((value) => value + 1);
+          action(() => lifeService.dispatch("interaction", { action: "greet" }));
+        }
+      }
+      function rest() {
+        setResting((value) => !value);
+        setMenu(false);
+        if (!resting) action(() => lifeService.dispatch("interaction", { action: "rest" }));
+      }
+      function playSelection(list, index) {
+        const playable = list.filter((item) => item.audioUrl), selected = list[index], playableIndex = playable.indexOf(selected);
+        if (playableIndex < 0) {
+          report("\u8FD9\u9996\u6B4C\u6682\u65F6\u6CA1\u6709\u53EF\u64AD\u653E\u7684\u97F3\u9891\u3002\u53EF\u4EE5\u5728\u66F2\u5E93\u7BA1\u7406\u4E2D\u91CD\u65B0\u626B\u63CF\u3002", true);
+          return;
+        }
+        action(async () => {
+          await player.playTracks(playable, playableIndex, { shuffle: false, ordered: true });
+          go("home");
+        });
+      }
+      function commitSeek() {
+        const draft = seekRef.current;
+        seekRef.current = null;
+        setSeekDraft(null);
+        if (draft && sameTrack(player.source.getSnapshot().track, draft.track)) action(() => player.seek(draft.value));
+      }
+      async function preference2(kind) {
+        if (!track2 || pendingRef.current) return;
+        const original = track2, before = likes.isLiked(original) ? "like" : likes.isDisliked(original) ? "dislike" : "none";
+        const target = kind === "like" ? before !== "like" : before !== "dislike";
+        pendingRef.current = true;
+        setPreferencePending(true);
+        try {
+          const result = kind === "like" ? await likes.toggle(original, target) : await likes.setDislike(original, target);
+          if (result?.error) throw new Error(result.error);
+          if (kind === "dislike" && target) {
+            setUndo({ track: original, before });
+            const current = player.source.getSnapshot();
+            if (sameTrack(current.track, original)) {
+              let next = -1;
+              for (let step = 1; step <= current.queue.length; step++) {
+                const index = (current.queueIndex + step) % current.queue.length, candidate = current.queue[index];
+                if (!sameTrack(candidate, original) && !likes.isDisliked(candidate)) {
+                  next = index;
+                  break;
+                }
+              }
+              if (next >= 0) {
+                player.jumpTo(next);
+                report(`\u4E0D\u559C\u6B22\u5DF2\u4FDD\u5B58\uFF0C\u5DF2\u8DF3\u8FC7\u300A${original.title}\u300B\u3002`);
+              } else {
+                player.pause();
+                report("\u4E0D\u559C\u6B22\u5DF2\u4FDD\u5B58\u3002\u961F\u5217\u91CC\u6CA1\u6709\u5176\u4ED6\u53EF\u64AD\u653E\u7684\u6B4C\uFF0C\u5DF2\u6682\u505C\u3002");
+              }
+            } else report("\u4E0D\u559C\u6B22\u5DF2\u4FDD\u5B58\uFF0C\u6CA1\u6709\u6253\u65AD\u4F60\u540E\u6765\u9009\u62E9\u7684\u6B4C\u3002");
+          } else {
+            setUndo(null);
+            report(result?.downloading ? "\u559C\u6B22\u5DF2\u4FDD\u5B58\uFF0C\u6B63\u5728\u52A0\u5165\u66F2\u5E93\uFF1B\u5165\u5E93\u7ED3\u679C\u53EF\u5728\u66F2\u5E93\u7BA1\u7406\u67E5\u770B\u3002" : result?.message || (target ? "\u559C\u6B22\u5DF2\u4FDD\u5B58\u3002" : "\u5DF2\u53D6\u6D88\u8FD9\u9879\u504F\u597D\u3002"));
+          }
+        } catch (err) {
+          report(`\u504F\u597D\u672A\u80FD\u4FDD\u5B58\uFF1A${err.message}`, true);
+        } finally {
+          pendingRef.current = false;
+          setPreferencePending(false);
+        }
+      }
+      async function undoPreference() {
+        if (!undo || pendingRef.current) return;
+        const original = undo;
+        if (!likes.isDisliked(original.track)) {
+          setUndo(null);
+          report("\u8FD9\u9996\u6B4C\u7684\u504F\u597D\u5DF2\u66F4\u65B0\u3002");
+          return;
+        }
+        pendingRef.current = true;
+        setPreferencePending(true);
+        try {
+          const result = original.before === "like" ? await likes.toggle({ ...original.track, verification: void 0 }, true) : await likes.setDislike(original.track, false);
+          if (result?.error) throw new Error(result.error);
+          setUndo(null);
+          report("\u5DF2\u6062\u590D\u539F\u6765\u7684\u504F\u597D\uFF0C\u5F53\u524D\u64AD\u653E\u4FDD\u6301\u4E0D\u53D8\u3002");
+        } catch (err) {
+          report(`\u6682\u672A\u64A4\u9500\uFF1A${err.message}`, true);
+        } finally {
+          pendingRef.current = false;
+          setPreferencePending(false);
+        }
+      }
+      function readMemory(id) {
+        const memory = life?.memories?.find((item) => item.id === id);
+        if (memory) setDialog({ kind: "read", memory });
+      }
+      function onKeyDown(event) {
+        if (event.key === "Escape" && !dialog) {
+          event.preventDefault();
+          if (menu) {
+            setMenu(false);
+            menuButtonRef.current?.focus();
+          } else if (scene !== "encounter") returnHome();
+        }
+        if (event.key === "Tab" && scene === "utility" && !dialog && layerRef.current) {
+          const focusable = [...layerRef.current.querySelectorAll('button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),a[href],[tabindex="0"]')].filter((node) => !node.closest("[hidden]"));
+          const first = focusable[0], last = focusable.at(-1);
+          if (event.shiftKey && (document.activeElement === first || document.activeElement?.hasAttribute("data-eh-heading"))) {
+            event.preventDefault();
+            last?.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first?.focus();
+          }
+        }
+      }
+      function openDialog(kind) {
+        setMenu(false);
+        setDialog({ kind });
+      }
+      function heading(title, note) {
+        return h(
+          "header",
+          { className: "eh-context-heading" },
+          h("div", null, h("h2", { tabIndex: -1, "data-eh-heading": true }, title), note ? h("p", null, note) : null),
+          h(QuietButton, { icon: "close", onClick: returnHome, "aria-label": "\u56DE\u5230\u751F\u547D\u7A7A\u95F4", title: "\u56DE\u5230\u751F\u547D\u7A7A\u95F4" })
+        );
+      }
+      function songRows(list, kind) {
+        return h("ol", { className: `eh-song-list eh-song-list-${kind}` }, list.map((item, index) => h(
+          "li",
+          { key: `${item.id}-${index}` },
+          h(
+            "button",
+            { type: "button", className: "eh-song", disabled: !item.audioUrl, onClick: () => playSelection(kind === "search" ? results : list, index), "aria-label": item.audioUrl ? `\u64AD\u653E ${item.title} \xB7 ${item.artist || "\u672A\u77E5\u97F3\u4E50\u4EBA"}` : `${item.title} \xB7 \u97F3\u9891\u6682\u4E0D\u53EF\u7528` },
+            h("span", { className: "eh-song-index", "aria-hidden": true }, sameTrack(item, track2) && playing ? h(Icon, { name: "sound", size: 16 }) : String(index + 1).padStart(2, "0")),
+            h("span", { className: "eh-song-copy" }, h("strong", null, item.title || "\u672A\u547D\u540D\u66F2\u76EE"), h("small", null, item.artist || "\u672A\u77E5\u97F3\u4E50\u4EBA", kind === "discover" ? ` \xB7 ${likes.isLiked(item) ? "\u4F60\u559C\u6B22\u7684\u6B4C" : "\u6765\u81EA\u4F60\u7684\u66F2\u5E93"}` : item.album ? ` \xB7 ${item.album}` : "")),
+            h("span", { className: "eh-song-tail", "aria-hidden": true }, h("time", null, !item.audioUrl ? "\u97F3\u9891\u4E0D\u53EF\u7528" : item.duration ? formatTime2(item.duration) : ""), h(Icon, { name: "play", size: 15 }))
+          )
+        )));
+      }
+      function lyricContent(compact = false) {
+        if (!track2) return h("p", { className: "eh-lyric-note" }, "\u5F00\u59CB\u64AD\u653E\u540E\uFF0C\u8FD9\u91CC\u4F1A\u51FA\u73B0\u6B4C\u8BCD\u3002");
+        if (!currentLyrics || currentLyrics.status === "loading" || currentLyrics.status === "idle") return h("p", { className: "eh-lyric-note", role: "status" }, "\u6B63\u5728\u5BFB\u627E\u8FD9\u9996\u6B4C\u7684\u6B4C\u8BCD\u2026");
+        if (currentLyrics.error || currentLyrics.status === "error") return h("div", { className: "eh-lyric-note", role: "alert" }, h("p", null, currentLyrics.error || "\u6B4C\u8BCD\u6682\u65F6\u672A\u80FD\u8F7D\u5165\u3002"), h(QuietButton, { onClick: () => action(() => lyrics.load(track2.id)) }, "\u91CD\u8BD5\u6B4C\u8BCD"));
+        if (lyricData?.synced && lyricData.lines?.length) return h("p", { className: "eh-lyric-line", "aria-label": "\u5F53\u524D\u6B4C\u8BCD" }, activeLine || "\u524D\u594F \xB7 \u7B49\u5F85\u7B2C\u4E00\u53E5");
+        if (lyricData?.plain?.trim()) return h("div", { className: "eh-plain-lyrics" }, h("small", null, "\u7EAF\u6587\u672C\u6B4C\u8BCD \xB7 \u6CA1\u6709\u65F6\u95F4\u6807\u8BB0"), h("p", null, compact ? lyricData.plain.split(/\r?\n/).find((line) => line.trim()) : lyricData.plain));
+        return h("p", { className: "eh-lyric-note" }, lyricData?.message || "\u6682\u672A\u627E\u5230\u8FD9\u9996\u6B4C\u7684\u6B4C\u8BCD\u3002");
+      }
+      let content = null;
+      if (scene === "search") content = h(
+        "section",
+        { className: "eh-context eh-search", ref: layerRef, "aria-label": "\u627E\u97F3\u4E50" },
+        heading("\u60F3\u4E00\u8D77\u542C\u4EC0\u4E48\uFF1F", "\u4ECE\u4F60\u7684\u66F2\u5E93\uFF0C\u9009\u4E00\u9996\u5F00\u59CB\u3002"),
+        h("label", { className: "eh-search-field" }, h("span", { className: "eh-sr-only" }, "\u641C\u7D22\u66F2\u5E93"), h("input", { ref: searchRef, value: query, type: "search", placeholder: "\u6B4C\u540D\u3001\u97F3\u4E50\u4EBA\u6216\u4E13\u8F91", onChange: (event) => {
+          setQuery(event.target.value);
+          setLimit(40);
+        }, autoComplete: "off" }), h("kbd", { "aria-hidden": true }, "esc")),
+        collection.status === "loading" ? h("p", { className: "eh-empty", role: "status" }, "\u6B63\u5728\u6253\u5F00\u66F2\u5E93\u2026") : collection.error ? h("div", { className: "eh-empty", role: "alert" }, h("p", null, collection.error), h(QuietButton, { onClick: () => action(() => library.load()) }, "\u91CD\u8BD5\u6253\u5F00\u66F2\u5E93")) : null,
+        tracks.length ? h(
+          React.Fragment,
+          null,
+          h("div", { className: "eh-list-caption" }, h("span", null, query.trim() ? `\u627E\u5230 ${results.length} \u9996` : `${tracks.length} \u9996\u672C\u5730\u97F3\u4E50`), h(QuietButton, { onClick: () => go("reco") }, "\u5E2E\u6211\u6311\u51E0\u9996", h(Icon, { name: "arrow", size: 14 }))),
+          results.length ? songRows(results.slice(0, limit), "search") : h("p", { className: "eh-empty" }, "\u66F2\u5E93\u91CC\u8FD8\u6CA1\u6709\u5339\u914D\u7684\u97F3\u4E50\u3002\u53EF\u4EE5\u6362\u4E00\u4E2A\u8BCD\uFF0C\u6216\u6253\u5F00\u5728\u7EBF\u53D1\u73B0\u3002"),
+          results.length > limit ? h(QuietButton, { onClick: () => setLimit((value) => value + 40), className: "eh-load-more" }, `\u518D\u770B\u4E00\u4E9B \xB7 \u8FD8\u6709 ${results.length - limit} \u9996`) : null
+        ) : collection.status !== "loading" && !collection.error ? h("div", { className: "eh-empty" }, h("p", null, "\u8FD9\u91CC\u8FD8\u6CA1\u6709\u97F3\u4E50\u3002\u6DFB\u52A0\u97F3\u4E50\u6765\u6E90\u540E\uFF0C\u5C31\u80FD\u4E00\u8D77\u542C\u3002"), h(QuietButton, { onClick: () => go("welcome"), icon: "arrow" }, "\u6DFB\u52A0\u97F3\u4E50\u6765\u6E90")) : null,
+        h("footer", { className: "eh-context-foot" }, h(QuietButton, { onClick: () => go("reco-manage") }, "\u5728\u7EBF\u53D1\u73B0"), h(QuietButton, { onClick: () => go("library-manage") }, "\u7BA1\u7406\u66F2\u5E93"))
+      );
+      if (scene === "discover") content = h(
+        "section",
+        { className: "eh-context eh-discover", ref: layerRef, "aria-label": "\u9009\u51E0\u9996\u4E00\u8D77\u542C" },
+        heading("\u4ECE\u719F\u6089\u7684\u58F0\u97F3\u5F00\u59CB\u3002", "\u4ECE\u559C\u6B22\u7684\u6B4C\u548C\u672C\u5730\u66F2\u5E93\u4E2D\u6311\u9009\u3002"),
+        collection.status === "loading" ? h("p", { className: "eh-empty", role: "status" }, "\u6B63\u5728\u6253\u5F00\u66F2\u5E93\u2026") : collection.error ? h("div", { className: "eh-empty", role: "alert" }, h("p", null, collection.error), h(QuietButton, { onClick: () => action(() => library.load()) }, "\u91CD\u8BD5")) : null,
+        discoveries.length ? songRows(discoveries, "discover") : collection.status !== "loading" ? h("p", { className: "eh-empty" }, tracks.length ? "\u6682\u65F6\u6CA1\u6709\u5176\u4ED6\u5019\u9009\u3002\u53EF\u4EE5\u53BB\u66F2\u5E93\u91CD\u65B0\u6311\u9009\u3002" : "\u6DFB\u52A0\u4E00\u4E9B\u672C\u5730\u97F3\u4E50\uFF0C\u719F\u6089\u7684\u58F0\u97F3\u5C31\u4F1A\u51FA\u73B0\u5728\u8FD9\u91CC\u3002") : null,
+        h("footer", { className: "eh-context-foot" }, discoveries.length && tracks.filter((item) => item.audioUrl && !likes.isDisliked(item)).length > 3 ? h(QuietButton, { onClick: () => setDiscoveryOffset((value) => value + 1) }, "\u6362\u51E0\u9996") : null, h(QuietButton, { onClick: () => go("library") }, "\u81EA\u5DF1\u627E\u4E00\u9996"), h(QuietButton, { onClick: () => go("reco-manage") }, "\u5728\u7EBF\u53D1\u73B0"))
+      );
+      if (scene === "memory") content = h(
+        "section",
+        { className: "eh-context eh-memory", ref: layerRef, "aria-label": "\u5171\u540C\u8BB0\u5FC6" },
+        heading("\u65F6\u95F4\u7559\u5728\u5B83\u8EAB\u4E0A\u3002", reviewing ? "\u4F60\u6B63\u5728\u56DE\u770B\u5F53\u65F6\u7684\u6A21\u6837\u3002" : "\u8FD9\u662F\u6B64\u523B\u7684\u5B83\u3002\u6CBF\u7740\u65F6\u95F4\uFF0C\u770B\u770B\u5B83\u7684\u53D8\u5316\u3002"),
+        h(
+          "div",
+          { className: "eh-time-control" },
+          h("div", { className: "eh-time-caption" }, h("time", null, snapshot ? shortDate2(snapshot.at) : "\u6B64\u523B"), h("strong", null, snapshot?.reason || "\u73B0\u5728\u7684\u6A21\u6837")),
+          h("input", { type: "range", min: 0, max: timeline.length, value: reviewing ? Math.min(reviewIndex, timeline.length - 1) : timeline.length, disabled: !timeline.length, onChange: (event) => {
+            const value = Number(event.target.value);
+            setReviewIndex(value === timeline.length ? null : value);
+          }, "aria-label": "\u56DE\u770B\u6210\u957F\u65F6\u95F4\u7EBF", "aria-valuetext": snapshot ? `${shortDate2(snapshot.at)}\uFF0C${snapshot.reason || "\u6210\u957F\u7247\u6BB5"}` : "\u6B64\u523B\u7684\u751F\u547D" }),
+          h("div", { className: "eh-time-labels" }, h("span", null, timeline.length ? shortDate2(timeline[0].at) : "\u521D\u6B21\u76F8\u9047"), h(QuietButton, { disabled: !reviewing, onClick: () => setReviewIndex(null) }, "\u56DE\u5230\u73B0\u5728")),
+          life?.timelineOmitted ? h("p", { className: "eh-subtle" }, `\u66F4\u65E9\u7684 ${life.timelineOmitted} \u4E2A\u666E\u901A\u7247\u6BB5\u5DF2\u5F52\u5E76\uFF0C\u539F\u59CB\u7ECF\u5386\u4ECD\u5728\u5B8C\u6574\u6863\u6848\u4E2D\u3002`) : null
+        ),
+        h("div", { className: "eh-list-caption" }, h("span", null, `${life?.memories?.length || 0} \u6BB5\u5171\u540C\u8BB0\u5FC6`), h(QuietButton, { icon: "memory", disabled: !life, onClick: () => openDialog("memory") }, "\u7559\u4F4F\u8FD9\u4E00\u523B")),
+        life?.memories?.length ? h("ol", { className: "eh-memory-list" }, [...life.memories].reverse().map((memory) => h("li", { key: memory.id }, h("button", { type: "button", onClick: () => readMemory(memory.id) }, h("time", null, shortDate2(memory.at)), h("strong", null, memory.title), h(Icon, { name: "arrow", size: 16 }))))) : h("p", { className: "eh-empty" }, "\u8F7B\u89E6\u201C\u7559\u4F4F\u8FD9\u4E00\u523B\u201D\uFF0C\u8BA9\u7B2C\u4E00\u6BB5\u8BB0\u5FC6\u7559\u5728\u5B83\u8EAB\u4E0A\u3002"),
+        h("footer", { className: "eh-context-foot" }, h(QuietButton, { icon: "download", disabled: !life, onClick: () => action(async () => downloadJSON2(await lifeService.exportArchive(), `ECHO-${life.id}.json`)) }, "\u5BFC\u51FA\u751F\u547D\u6863\u6848"))
+      );
+      if (scene === "listening") content = h(
+        "section",
+        { className: "eh-context eh-listening", ref: layerRef, "aria-label": "\u97F3\u4E50\u64CD\u4F5C" },
+        heading(track2?.title || "\u4E00\u8D77\u542C\u70B9\u4EC0\u4E48\u3002", track2?.artist || "\u9009\u4E00\u9996\u6B4C\uFF0C\u8BA9\u97F3\u4E50\u8FDB\u5165\u8FD9\u91CC\u3002"),
+        !track2 ? h(QuietButton, { onClick: () => go("library"), icon: "arrow" }, "\u627E\u97F3\u4E50") : h(
+          React.Fragment,
+          null,
+          track2.artist && openArtistPage ? h(QuietButton, { className: "eh-artist-link", onClick: () => openArtistPage(track2.artist) }, `\u8D70\u8FD1 ${track2.artist}`, h(Icon, { name: "arrow", size: 14 })) : null,
+          h("div", { className: "eh-listening-controls" }, h(QuietButton, { icon: "previous", onClick: () => action(() => player.prev()), "aria-label": "\u4E0A\u4E00\u9996" }), h(QuietButton, { icon: loading ? "loading" : playing ? "pause" : "play", className: "eh-play-expanded", disabled: loading, onClick: () => action(() => player.toggle()), "aria-label": loading ? "\u6B63\u5728\u8F7D\u5165\u97F3\u4E50" : playing ? "\u6682\u505C" : "\u64AD\u653E" }), h(QuietButton, { icon: "next", onClick: () => action(() => player.next()), "aria-label": "\u4E0B\u4E00\u9996" })),
+          h("div", { className: "eh-progress" }, h("input", { type: "range", min: 0, max: duration || 1, step: 0.1, value: Math.max(0, Math.min(seekDraft ?? position, duration || 1)), disabled: !duration, onChange: (event) => {
+            const value = Number(event.target.value);
+            seekRef.current = { track: track2, value };
+            setSeekDraft(value);
+          }, onPointerUp: commitSeek, onKeyUp: commitSeek, onBlur: commitSeek, "aria-label": "\u64AD\u653E\u8FDB\u5EA6" }), h("div", null, h("time", null, formatTime2(seekDraft ?? position)), h("time", null, formatTime2(duration)))),
+          h(
+            "div",
+            { className: "eh-taste-controls" },
+            h(QuietButton, { icon: "heart", disabled: preferencePending || !taste.loaded || !!taste.error, "aria-pressed": liked, onClick: () => preference2("like") }, liked ? "\u5DF2\u559C\u6B22" : "\u559C\u6B22"),
+            h(QuietButton, { icon: "dislike", disabled: preferencePending || !taste.loaded || !!taste.error, "aria-pressed": disliked, onClick: () => preference2("dislike") }, disliked ? "\u53D6\u6D88\u4E0D\u559C\u6B22" : "\u4E0D\u559C\u6B22\u5E76\u8DF3\u8FC7"),
+            preferencePending || !taste.loaded ? h("small", { role: "status" }, preferencePending ? "\u6B63\u5728\u4FDD\u5B58\u504F\u597D\u2026" : "\u6B63\u5728\u8BFB\u53D6\u504F\u597D\u2026") : null,
+            taste.error ? h("small", { role: "alert" }, `\u504F\u597D\u672A\u80FD\u8F7D\u5165\uFF1A${taste.error}`, likes.load ? h(QuietButton, { onClick: () => action(() => likes.load()) }, "\u91CD\u8BD5\u8BFB\u53D6") : null) : null
+          ),
+          h("div", { className: "eh-volume" }, h(QuietButton, { icon: "sound", "aria-label": muted ? "\u53D6\u6D88\u9759\u97F3" : "\u9759\u97F3", "aria-pressed": muted, onClick: () => action(() => player.toggleMute()) }), h("input", { type: "range", min: 0, max: 1, step: 0.01, value: muted ? 0 : volume, onChange: (event) => action(() => player.setVolume(Number(event.target.value))), "aria-label": "\u97F3\u91CF" }), h(QuietButton, { onClick: () => action(() => player.cycleMode()), "aria-label": "\u5207\u6362\u64AD\u653E\u6A21\u5F0F" }, shuffle ? "\u968F\u673A" : repeat === "one" ? "\u5355\u66F2\u5FAA\u73AF" : "\u987A\u5E8F"))
+        ),
+        h("footer", { className: "eh-context-foot" }, h(QuietButton, { icon: "lyrics", "aria-pressed": lyricVisible, onClick: () => setLyricVisible((value) => !value) }, lyricVisible ? "\u6536\u8D77\u6B4C\u8BCD" : "\u663E\u793A\u6B4C\u8BCD"), h(QuietButton, { onClick: () => go("now-manage") }, `\u5B8C\u6574\u6B4C\u8BCD\u4E0E\u961F\u5217${queue.length ? ` \xB7 ${queue.length}` : ""}`)),
+        lyricVisible ? h("div", { className: "eh-lyrics-detail" }, lyricContent()) : null
+      );
+      if (scene === "utility") content = h(
+        "section",
+        { className: "eh-utility", ref: layerRef, role: "dialog", "aria-modal": true, "aria-label": UTILITIES[requestedView] || "\u97F3\u4E50\u5DE5\u5177" },
+        h("header", { className: "eh-utility-heading" }, h(QuietButton, { icon: "arrow", className: "eh-back", onClick: returnHome }, "\u56DE\u5230\u751F\u547D\u7A7A\u95F4"), h("h2", { tabIndex: -1, "data-eh-heading": true }, UTILITIES[requestedView] || "\u97F3\u4E50\u5DE5\u5177"), h(QuietButton, { icon: "close", onClick: returnHome, "aria-label": "\u5173\u95ED\u5DE5\u5177" })),
+        h("div", { className: "eh-utility-scroll" }, renderUtility?.(requestedView) || h("p", { className: "eh-empty" }, "\u8FD9\u9879\u5DE5\u5177\u6682\u65F6\u4E0D\u53EF\u7528\u3002"))
+      );
+      return h(
+        "section",
+        { className: "echo-living-space", "data-scene": scene, "data-tone": tone, "data-playing": !!playing, "data-reviewing": reviewing, ref: rootRef, onKeyDown, "aria-label": "\u751F\u547D\u7A7A\u95F4" },
+        h("div", { className: "eh-atmosphere", "aria-hidden": true }, h("div", { className: "eh-distant-light" }), h("div", { className: "eh-ground" })),
+        h(
+          "header",
+          { className: "eh-presence-header", inert: scene === "utility" || !!dialog ? true : void 0 },
+          h("button", { type: "button", className: "eh-name", disabled: !life, onClick: () => openDialog("rename"), "aria-label": "\u7ED9\u751F\u547D\u547D\u540D" }, h("span", { className: "eh-name-mark", "aria-hidden": true }), h("strong", null, name), h("small", null, life ? `\u76F8\u8BC6\u7B2C ${Math.max(1, Math.floor((Date.now() - life.createdAt) / 864e5) + 1)} \u5929` : "\u6B63\u5728\u76F8\u9047")),
+          h(QuietButton, { className: "eh-menu-toggle", icon: "more", ref: menuButtonRef, onClick: () => setMenu((value) => !value), "aria-label": "\u6253\u5F00\u7A7A\u95F4\u5DE5\u5177", "aria-expanded": menu })
+        ),
+        h(
+          "div",
+          { className: "eh-being-space", key: "persistent-being", inert: scene === "utility" || !!dialog ? true : void 0 },
+          h("div", { className: "eh-being" }, life ? h(Creature, { life, morphology: selectedMorphology, framing: "presence", tone, active: !!playing && !loading && !playbackError && !resting && !reviewing, compact: resting, gesture, motionEnabled: !reviewing, onTouch: touch, onMemorySelect: readMemory, label: reviewing ? `${name}\uFF0C${shortDate2(snapshot.at)}\u7684\u6A21\u6837` : `${name}\uFF0C\u8F7B\u89E6\u4E92\u52A8` }) : h(EmptyLife, { state, lifeService })),
+          h("div", { className: "eh-being-whisper", "aria-live": "polite" }, reviewing ? `${shortDate2(snapshot.at)} \xB7 ${snapshot.reason || "\u6210\u957F\u7247\u6BB5"}` : resting ? "\u5B89\u9759\u5F85\u4E00\u4F1A\u513F\u3002" : loading ? "\u7B49\u97F3\u4E50\u8F7B\u8F7B\u8FDB\u6765\u3002" : playing && !playbackError ? "\u6B64\u523B\uFF0C\u4E0E\u4F60\u4E00\u8D77\u542C\u3002" : life?.greeting ? "\u8F7B\u89E6\u5B83\uFF0C\u6253\u4E2A\u4F60\u4EEC\u7684\u62DB\u547C\u3002" : "\u8F7B\u8F7B\u78B0\u4E00\u4E0B\uFF0C\u8BA4\u8BC6\u5F7C\u6B64\u3002")
+        ),
+        h(
+          "div",
+          { className: "eh-relationship", inert: scene === "utility" || !!dialog ? true : void 0 },
+          h(QuietButton, { icon: "memory", onClick: () => go(scene === "memory" ? "home" : "echo-memory"), "aria-pressed": scene === "memory" }, "\u5171\u540C\u8BB0\u5FC6"),
+          h(QuietButton, { icon: "greet", disabled: !life, onClick: greet }, life?.greeting ? "\u6253\u4E2A\u62DB\u547C" : "\u6559\u5B83\u62DB\u547C")
+        ),
+        content,
+        scene === "encounter" && lyricVisible ? h("div", { className: "eh-lyric-presence" }, lyricContent(true)) : null,
+        h(
+          "footer",
+          { className: "eh-music-ground", inert: scene === "utility" || !!dialog ? true : void 0 },
+          h("button", { type: "button", className: "eh-current-track", onClick: () => go(track2 ? "now" : "library"), "aria-label": track2 ? "\u6253\u5F00\u97F3\u4E50\u64CD\u4F5C" : "\u9009\u4E00\u9996\u4E00\u8D77\u542C" }, h("span", { className: `eh-playing-mark ${playing ? "is-playing" : ""}`, "aria-hidden": true }, h("i"), h("i"), h("i")), h("span", null, h("strong", null, track2?.title || "\u4E00\u8D77\u542C\u70B9\u4EC0\u4E48"), h("small", null, loading ? "\u6B63\u5728\u8F7D\u5165\u97F3\u4E50\u2026" : track2?.artist || "\u7B2C\u4E00\u9996\u6B4C\uFF0C\u4ECE\u8FD9\u91CC\u5F00\u59CB"))),
+          h("div", { className: "eh-direct-controls" }, h(QuietButton, { icon: loading ? "loading" : playing ? "pause" : "play", className: "eh-main-play", disabled: !track2 || loading, onClick: () => action(() => player.toggle()), "aria-label": loading ? "\u6B63\u5728\u8F7D\u5165\u97F3\u4E50" : playing ? "\u6682\u505C" : "\u64AD\u653E" }), h(QuietButton, { icon: "next", disabled: !track2, onClick: () => action(() => player.next()), "aria-label": "\u4E0B\u4E00\u9996" })),
+          h("button", { type: "button", ref: findRef, className: "eh-find", onClick: () => go("library"), "aria-label": "\u627E\u97F3\u4E50" }, "\u627E\u97F3\u4E50", h("kbd", { "aria-hidden": true }, "\u2318 K"))
+        ),
+        menu ? h(
+          "div",
+          { className: "eh-tools", ref: menuRef, role: "region", "aria-label": "\u7A7A\u95F4\u5DE5\u5177" },
+          h("div", { className: "eh-tool-group" }, h(QuietButton, { icon: "memory", disabled: !life, onClick: () => openDialog("memory") }, "\u7559\u4F4F\u8FD9\u4E00\u523B"), h(QuietButton, { icon: "greet", disabled: !life, onClick: () => openDialog("greeting") }, life?.greeting ? "\u518D\u6559\u4E00\u4E2A\u62DB\u547C" : "\u6559\u5B83\u4E00\u4E2A\u62DB\u547C"), h(QuietButton, { icon: "sound", disabled: !life, onClick: () => openDialog("share") }, "\u4ECB\u7ECD\u4E00\u9996\u6B4C"), h(QuietButton, { icon: resting ? "sun" : "moon", disabled: !life, onClick: rest }, resting ? "\u8212\u5C55\u8EAB\u4F53" : "\u5B89\u9759\u5F85\u4E00\u4F1A\u513F")),
+          h("div", { className: "eh-tool-group" }, [["reco", "\u9009\u51E0\u9996\u4E00\u8D77\u542C"], ["library-manage", "\u7BA1\u7406\u66F2\u5E93"], ["reco-manage", "\u5728\u7EBF\u53D1\u73B0"], ["studio", "\u7B56\u5C55"], ["history", "\u8046\u542C\u5386\u53F2"], ["echo-gallery", "\u751F\u547D\u5F62\u6001\u793A\u4F8B"], ["welcome", "\u97F3\u4E50\u6765\u6E90"], ["command", "\u97F3\u4E50\u6307\u4EE4"]].map(([route, label]) => h(QuietButton, { key: route, onClick: () => go(route) }, label))),
+          h("div", { className: "eh-tool-group" }, h(QuietButton, { icon: tone === "dark" ? "sun" : "moon", onClick: () => setTone((value) => value === "dark" ? "light" : "dark") }, tone === "dark" ? "\u6E05\u6D45\u7A7A\u95F4" : "\u6DF1\u8272\u7A7A\u95F4"), setMiniHidden ? h(QuietButton, { icon: "fold", onClick: () => {
+            setMiniHidden(false);
+            setMenu(false);
+            report("\u5173\u95ED\u4E3B\u7A7A\u95F4\u540E\uFF0C\u5B83\u4F1A\u5728\u4F34\u751F\u7A97\u91CC\u7EE7\u7EED\u966A\u4F60\u3002");
+          } }, "\u663E\u793A\u4F34\u751F\u7A97") : null)
+        ) : null,
+        h(
+          "div",
+          { className: "eh-system-status" },
+          h(Status, { state, lifeService }),
+          playbackError ? h("p", { className: "eh-feedback is-error", role: "alert" }, playbackError) : null,
+          feedback ? h("div", { className: `eh-feedback ${feedback.isError ? "is-error" : ""}`, role: feedback.isError ? "alert" : "status" }, h("span", null, feedback.message), h(QuietButton, { icon: "close", "aria-label": "\u5173\u95ED\u63D0\u793A", onClick: () => setFeedback(null) })) : null,
+          undo ? h("button", { type: "button", className: "eh-undo", disabled: preferencePending, onClick: undoPreference }, `\u64A4\u9500\u5BF9\u300A${undo.track.title}\u300B\u7684\u4E0D\u559C\u6B22`) : null
+        ),
+        dialog?.kind === "greeting" && life ? h(GreetingDialog, { life, save, close: () => setDialog(null) }) : null,
+        ["rename", "memory", "share"].includes(dialog?.kind) && life ? h(EditDialog, { kind: dialog.kind, life, track: playing ? track2 : null, save, close: () => setDialog(null) }) : null,
+        dialog?.kind === "read" ? h(MemoryDialog, { memory: dialog.memory, close: () => setDialog(null) }) : null
       );
     };
   }
@@ -1722,7 +2176,8 @@
         error ? h("span", { className: "echo-playback-error", role: "alert" }, error) : null
       );
     }
-    return { EchoHome, EchoMemories, EchoGallery, EchoDock, EchoMini, Creature };
+    const EchoHabitat = createHabitatComponent(React, { Creature, Icon, useLife, EditDialog, GreetingDialog, MemoryDialog, Status, EmptyLife, formatTime, shortDate, downloadJSON });
+    return { EchoHome, EchoMemories, EchoGallery, EchoDock, EchoMini, EchoHabitat, Creature };
   }
 
   // src/client/echo/service.js
@@ -2713,6 +3168,440 @@
   // src/client/echo/creature.css
   var creature_default = '.echo-creature {\n  position: relative;\n  width: 100%;\n  min-width: 0;\n  isolation: isolate;\n  --echo-look-x: 0px;\n  --echo-look-y: 0px;\n  --echo-look-r: 0deg;\n  -webkit-tap-highlight-color: transparent;\n}\n\n.echo-creature-svg {\n  display: block;\n  width: 100%;\n  height: auto;\n  overflow: visible;\n  user-select: none;\n}\n\n.echo-creature-drift,\n.echo-creature-breath,\n.echo-creature-response,\n.echo-creature-attention {\n  transform-box: view-box;\n  transform-origin: var(--echo-origin-x, 50.5%) var(--echo-origin-y, 73%);\n}\n\n.echo-creature-drift {\n  animation: echo-drift var(--echo-drift-duration, 15s) ease-in-out infinite;\n}\n\n.echo-creature-breath {\n  animation: echo-breathe var(--echo-breath-duration, 8.5s) ease-in-out infinite;\n}\n\n.echo-creature-attention {\n  transform: translate(var(--echo-look-x), var(--echo-look-y)) rotate(var(--echo-look-r));\n  transition: transform 650ms cubic-bezier(.18, .7, .2, 1);\n}\n\n.echo-creature-shadow {\n  opacity: var(--echo-shadow-opacity, .21);\n  transform-box: fill-box;\n  transform-origin: center;\n  animation: echo-contact var(--echo-drift-duration, 15s) ease-in-out infinite;\n}\n\n.echo-creature-contact { animation: none; opacity: calc(var(--echo-shadow-opacity, .21) * 1.12); }\n\n.echo-creature[data-active="true"] .echo-creature-breath {\n  animation-name: echo-listen;\n  /* This conveys listening, not beat detection. Actual audio drives growth. */\n  animation-duration: var(--echo-listen-duration, 4.6s);\n}\n\n.echo-creature[data-responding="true"] .echo-creature-response {\n  animation: echo-response var(--echo-response-duration, 1.3s) cubic-bezier(.22, .68, .18, 1) both;\n}\n\n.echo-creature[data-structure="shell"] .echo-creature-drift {\n  animation-name: echo-shell-drift;\n}\n\n.echo-creature[data-structure="ribbon"] .echo-creature-drift {\n  animation-name: echo-ribbon-drift;\n}\n\n.echo-creature[data-structure="shell"][data-responding="true"] .echo-creature-response {\n  animation-name: echo-shell-response;\n}\n\n.echo-creature[data-structure="ribbon"][data-responding="true"] .echo-creature-response {\n  animation-name: echo-ribbon-response;\n}\n\n.echo-fold-leaf,\n.echo-shell-feet,\n.echo-body-shell,\n.echo-memory-pose,\n.echo-body-ribbon {\n  transition: transform 1300ms cubic-bezier(.2, .75, .15, 1), opacity 600ms ease;\n}\n\n.echo-creature[data-compact="true"] .echo-creature-drift {\n  animation-duration: 17s;\n}\n\n.echo-creature[data-compact="true"] .echo-creature-breath {\n  animation-duration: 10s;\n}\n\n.echo-creature-touch-target[role="button"] { cursor: pointer; outline: none; }\n.echo-creature-focus-ring { stroke: transparent; stroke-width: 1.25; }\n.echo-creature-touch-target:focus-visible .echo-creature-focus-ring { stroke: #718274; stroke-dasharray: 3 5; }\n.echo-creature-touch-target:focus-visible .echo-creature-surface { opacity: .94; }\n.echo-memory-mark[role="button"] { cursor: pointer; outline: none; }\n.echo-memory-halo { opacity: 0; transition: opacity 220ms ease; }\n.echo-memory-mark:hover .echo-memory-halo,\n.echo-memory-mark:focus-visible .echo-memory-halo { opacity: .75; }\n.echo-memory-mark:focus-visible .echo-memory-hit { fill: #b5905e16; }\n\n.echo-creature[data-motion="off"] .echo-creature-drift,\n.echo-creature[data-motion="off"] .echo-creature-breath,\n.echo-creature[data-motion="off"] .echo-creature-shadow,\n.echo-creature[data-motion="off"] .echo-creature-response { animation: none !important; }\n.echo-creature[data-motion="off"] .echo-creature-attention { transform: none; transition: none; }\n.echo-creature[data-motion="off"] .echo-fold-leaf,\n.echo-creature[data-motion="off"] .echo-shell-feet,\n.echo-creature[data-motion="off"] .echo-body-shell,\n.echo-creature[data-motion="off"] .echo-memory-pose,\n.echo-creature[data-motion="off"] .echo-body-ribbon { transition: none; }\n\n@keyframes echo-breathe {\n  0%, 100% { transform: scale(1, 1); }\n  48% { transform: scale(1.003, var(--echo-inhale, 1.01)); }\n}\n\n@keyframes echo-drift {\n  0%, 100% { transform: translate(0, 0) rotate(-.14deg); }\n  48% { transform: translate(.4px, -1.1px) rotate(.14deg); }\n}\n\n@keyframes echo-shell-drift {\n  0%, 100% { transform: rotate(-.12deg) translate(0, 0); }\n  55% { transform: rotate(.18deg) translate(.4px, -.3px); }\n}\n\n@keyframes echo-ribbon-drift {\n  0%, 100% { transform: translate(0, 0) rotate(-.4deg); }\n  50% { transform: translate(.8px, -2.2px) rotate(.35deg); }\n}\n\n@keyframes echo-contact {\n  0%, 100% { transform: scaleX(1); opacity: var(--echo-shadow-opacity, .21); }\n  50% { transform: scaleX(.985); opacity: calc(var(--echo-shadow-opacity, .21) * .92); }\n}\n\n@keyframes echo-listen {\n  0%, 100% { transform: scale(1) rotate(0deg); }\n  30% { transform: scale(1.003, 1.012) rotate(.22deg); }\n  62% { transform: scale(.999, 1.005) rotate(-.15deg); }\n}\n\n@keyframes echo-response {\n  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }\n  20% { transform: translateY(1.5px) rotate(-1deg) scale(1.01, .985); }\n  48% { transform: translateY(-4.5px) rotate(1.4deg) scale(.994, 1.018); }\n  72% { transform: translateY(-1px) rotate(-.5deg) scale(1); }\n}\n\n@keyframes echo-shell-response {\n  0%, 100% { transform: translate(0, 0) rotate(0deg); }\n  20% { transform: translate(-1px, 1px) rotate(-1.3deg); }\n  52% { transform: translate(2.5px, -1.5px) rotate(1.3deg); }\n  73% { transform: translate(1px, 0) rotate(-.4deg); }\n}\n\n@keyframes echo-ribbon-response {\n  0%, 100% { transform: rotate(0deg) scale(1); }\n  25% { transform: rotate(-3deg) scale(.99, 1.012); }\n  55% { transform: rotate(3.5deg) scale(1.012, .995); }\n  79% { transform: rotate(-1deg) scale(1); }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .echo-creature *, .echo-creature *::before, .echo-creature *::after {\n    animation: none !important;\n    transition: none !important;\n  }\n  .echo-creature-attention { transform: none !important; }\n}\n';
 
+  // src/client/echo/habitat.css
+  var habitat_default = `/* A single, persistent space. Views move around its inhabitant. */
+.echo-living-space {
+  --eh-bg: #10181d;
+  --eh-ink: #e4eceb;
+  --eh-muted: #94a5a8;
+  --eh-faint: #64797e;
+  --eh-line: #a8c0c21c;
+  --eh-hover: #c0dce60b;
+  --eh-surface: #182429;
+  --eh-focus: #aad4d2;
+  --eh-error: #edb4a6;
+  --echo-paper: var(--eh-bg);
+  --echo-ink: var(--eh-ink);
+  --echo-muted: var(--eh-muted);
+  --echo-line: var(--eh-line);
+  --echo-surface: var(--eh-surface);
+  --echo-accent: var(--eh-focus);
+  --dsw-alias-bg-base: var(--eh-bg);
+  --dsw-alias-bg-layer-1: var(--eh-surface);
+  --dsw-alias-bg-layer-2: #223036;
+  --dsw-alias-bg-layer-3: #293b42;
+  --dsw-alias-border-l1: #a8c0c223;
+  --dsw-alias-border-l2: #a8c0c244;
+  --dsw-alias-border-l3: #a8c0c277;
+  --dsw-alias-label-primary: var(--eh-ink);
+  --dsw-alias-label-secondary: var(--eh-muted);
+  --dsw-alias-label-tertiary: var(--eh-faint);
+  --dsw-alias-label-primary-inverted: #15252c;
+  --dsw-alias-brand-primary: #8cbab8;
+  --dsw-alias-brand-text: #a9d0ce;
+  --dsw-alias-button-primary-fill: #a9d0ce;
+  --dsw-alias-button-primary-hover: #b9dfdd;
+  --dsw-alias-interactive-bg-hover: var(--eh-hover);
+  --dsw-alias-interactive-bg-active: #b7d9dc13;
+  --dsw-alias-state-error-primary: var(--eh-error);
+  --dsw-alias-state-warn-primary: #cfbf9b;
+  --dsw-alias-state-success-primary: #9bc9b9;
+  --dsw-alias-bg-mask-2: #07111488;
+  --dsw-alias-scrollbar-bg-l2: #78919440;
+  --dsw-alias-scrollbar-hover-l2: #78919470;
+  --dsw-alias-bg-skeleton: #223036;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  isolation: isolate;
+  color: var(--eh-ink);
+  background: var(--eh-bg);
+  color-scheme: dark;
+  font: 13px/1.6 Inter, -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans CJK SC", "Segoe UI", sans-serif;
+  container: echo-habitat / size;
+}
+.echo-living-space[data-tone="light"] {
+  --eh-bg: #e9eef0;
+  --eh-ink: #263b43;
+  --eh-muted: #657c84;
+  --eh-faint: #81949a;
+  --eh-line: #526c7b25;
+  --eh-hover: #50758a0a;
+  --eh-surface: #f2f6f7;
+  --eh-focus: #4d7d86;
+  --eh-error: #a75342;
+  --dsw-alias-bg-layer-2: #e1eaed;
+  --dsw-alias-bg-layer-3: #d7e3e7;
+  --dsw-alias-border-l1: #526c7b25;
+  --dsw-alias-border-l2: #526c7b45;
+  --dsw-alias-border-l3: #526c7b77;
+  --dsw-alias-label-primary-inverted: #f5fafa;
+  --dsw-alias-brand-primary: #4d7d86;
+  --dsw-alias-brand-text: #386b77;
+  --dsw-alias-button-primary-fill: #3f6975;
+  --dsw-alias-button-primary-hover: #527c87;
+  --dsw-alias-interactive-bg-active: #48708215;
+  --dsw-alias-state-warn-primary: #866d3d;
+  --dsw-alias-state-success-primary: #437e73;
+  --dsw-alias-bg-skeleton: #dce7eb;
+  color-scheme: light;
+}
+.echo-living-space *, .echo-living-space *::before, .echo-living-space *::after { box-sizing: border-box; }
+.echo-living-space button, .echo-living-space input, .echo-living-space textarea { font: inherit; }
+.echo-living-space button { -webkit-tap-highlight-color: transparent; }
+.echo-living-space button:disabled { cursor: default; opacity: .4; }
+.echo-living-space :focus-visible { outline: 2px solid var(--eh-focus) !important; outline-offset: 5px; }
+.echo-living-space input[type="range"] { width: 100%; margin: 0; height: 22px; accent-color: var(--eh-focus); cursor: pointer; }
+.echo-living-space input[type="range"]:disabled { cursor: default; opacity: .4; }
+.eh-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.eh-atmosphere { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.eh-distant-light { position: absolute; inset: -24% -12% 5%; background: radial-gradient(ellipse at 51% 47%, #73939b17 0%, #688a9410 20%, #10181d00 58%); }
+.eh-distant-light::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 27%, #8cacb60a 49%, transparent 70%); transform: skewX(-12deg); }
+.eh-ground { position: absolute; inset: 49% -25% -27%; background: radial-gradient(ellipse at 50% 14%, #6e919418, transparent 49%); border-top: 1px solid #72939d05; transform: perspective(650px) rotateX(19deg); }
+.echo-living-space[data-tone="light"] .eh-distant-light { background: radial-gradient(ellipse at 52% 42%, #fff 0%, #f5f9fa9c 22%, #e9eef000 65%); }
+.echo-living-space[data-tone="light"] .eh-ground { background: radial-gradient(ellipse at 50% 14%, #a6bdc12a, transparent 47%); }
+.eh-presence-header { position: absolute; inset: 28px 34px auto; z-index: 5; display: flex; align-items: flex-start; justify-content: space-between; pointer-events: none; }
+.eh-presence-header > * { pointer-events: auto; }
+.eh-name { border: 0; appearance: none; background: none; color: inherit; cursor: pointer; display: grid; grid-template-columns: 7px auto; gap: 2px 12px; text-align: left; padding: 6px 0; }
+.eh-name strong { font-size: 13px; font-weight: 500; letter-spacing: .1em; }
+.eh-name small { grid-column: 2; color: var(--eh-faint); font-size: 11px; letter-spacing: .08em; }
+.eh-name-mark { width: 4px; height: 4px; border-radius: 50%; align-self: center; background: #b3cbc2; box-shadow: 0 0 12px #b7e0d84d; }
+.eh-action { border: 0; appearance: none; background: none; color: var(--eh-muted); min-height: 34px; padding: 7px 8px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 6px; font-size: 11px; line-height: 1.5; cursor: pointer; text-decoration: none; transition: color 180ms, background 180ms; }
+.eh-action:hover:not(:disabled) { color: var(--eh-ink); background: var(--eh-hover); }
+.eh-action[aria-pressed="true"] { color: var(--eh-focus); }
+.eh-menu-toggle { width: 36px; padding: 8px; }
+.eh-being-space { --eh-body-block: max(0px, calc(100cqh - 216px)); position: absolute; inset: 72px 0 106px; display: flex; align-items: center; justify-content: center; pointer-events: none; transition: transform 1100ms cubic-bezier(.2,.75,.2,1), opacity 700ms; }
+/* The presence viewBox is 496 \xD7 388. This cap keeps the entire SVG, including
+   memory marks and contact shadow, within the room left by fixed controls. */
+.eh-being { width: min(72%, 820px); max-width: calc(var(--eh-body-block) * 1.2783505); flex: 0 1 auto; transform: translateY(-2%); pointer-events: auto; }
+.eh-being > .echo-creature { width: 100%; }
+.eh-being .echo-empty-life { min-height: 260px; padding: 50px 0; color: var(--eh-muted); }
+.eh-being .echo-empty-life h2 { color: var(--eh-ink); font-size: 18px; font-weight: 400; }
+.eh-being-whisper { position: absolute; bottom: 3%; left: 15%; right: 15%; text-align: center; color: var(--eh-faint); font-size: 11px; letter-spacing: .08em; pointer-events: none; }
+.eh-relationship { position: absolute; z-index: 3; left: 34px; bottom: 132px; display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
+.eh-relationship .eh-action { color: var(--eh-faint); padding-left: 0; font-size: 11px; }
+.eh-relationship .eh-action:hover { color: var(--eh-ink); }
+.eh-music-ground { position: absolute; z-index: 5; left: 34px; right: 34px; bottom: 26px; min-height: 64px; display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); gap: 22px; align-items: center; border-top: 1px solid var(--eh-line); padding-top: 18px; }
+.eh-current-track { display: flex; align-items: center; gap: 16px; min-width: 0; width: fit-content; max-width: 100%; color: inherit; appearance: none; border: 0; background: none; padding: 4px 0; text-align: left; cursor: pointer; }
+.eh-current-track > span:last-child { min-width: 0; }
+.eh-current-track strong, .eh-current-track small { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eh-current-track strong { font-size: 12px; font-weight: 500; }
+.eh-current-track small { font-size: 11px; margin-top: 3px; color: var(--eh-faint); }
+.eh-playing-mark { display: flex; align-items: center; gap: 3px; width: 19px; height: 23px; flex: 0 0 auto; color: var(--eh-faint); }
+.eh-playing-mark i { display: block; width: 2px; height: 4px; border-radius: 2px; background: currentColor; }
+.eh-playing-mark.is-playing { color: var(--eh-focus); }
+.eh-playing-mark.is-playing i { height: 11px; }
+.eh-playing-mark.is-playing i:nth-child(2) { height: 19px; }
+.eh-playing-mark.is-playing i:nth-child(3) { height: 7px; }
+.eh-direct-controls { display: flex; align-items: center; gap: 14px; }
+.eh-direct-controls .eh-action { width: 36px; height: 36px; }
+.eh-direct-controls .eh-main-play { width: 40px; height: 40px; border: 1px solid var(--eh-line); border-radius: 50%; color: var(--eh-ink); }
+.eh-find { justify-self: end; display: flex; align-items: center; gap: 22px; padding: 10px 0 10px 15px; color: var(--eh-ink); cursor: pointer; border: 0; background: transparent; appearance: none; font-size: 12px; letter-spacing: .05em; }
+.eh-find kbd, .eh-search-field kbd { font-family: inherit; font-size: 11px; font-weight: 400; color: var(--eh-faint); letter-spacing: 0; }
+.eh-find:hover { color: var(--eh-focus); }
+.eh-context { position: absolute; z-index: 4; right: 6%; top: 18%; bottom: 122px; width: min(38%, 470px); min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--eh-line) transparent; padding: 0 8px 14px; animation: eh-appear 420ms ease both; }
+.eh-context-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin: 0 0 24px; }
+.eh-context-heading h2 { font-size: clamp(18px,2vw,25px); font-weight: 400; line-height: 1.5; letter-spacing: .025em; margin: 0 0 9px; overflow-wrap: anywhere; }
+.eh-context-heading p { margin: 0; color: var(--eh-muted); font-size: 11px; line-height: 1.9; }
+.eh-context-heading > .eh-action { flex: 0 0 32px; margin-top: -4px; }
+.eh-context-heading [data-eh-heading]:focus:not(:focus-visible), .eh-utility-heading [data-eh-heading]:focus:not(:focus-visible) { outline: none; }
+.echo-living-space:is([data-scene="search"],[data-scene="memory"],[data-scene="listening"]) .eh-being-space { transform: translateX(-24%) scale(.8); }
+.echo-living-space:is([data-scene="search"],[data-scene="memory"],[data-scene="listening"]) .eh-being-whisper { color: var(--eh-faint); }
+.eh-search-field { display: flex; align-items: center; gap: 15px; border-bottom: 1px solid var(--eh-faint); padding: 2px 2px 11px; }
+.eh-search-field input { width: 100%; min-width: 0; border: 0; outline: none !important; color: var(--eh-ink); background: transparent; font-size: 14px; padding: 4px 0; }
+.eh-search-field:focus-within { border-color: var(--eh-focus); }
+.eh-search-field input::placeholder { color: var(--eh-faint); }
+.eh-list-caption { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: var(--eh-faint); font-size: 11px; padding: 16px 0 8px; }
+.eh-list-caption .eh-action { font-size: 11px; padding-right: 0; }
+.eh-song-list, .eh-memory-list { list-style: none; padding: 0; margin: 0; }
+.eh-song { display: flex; align-items: center; width: 100%; gap: 14px; padding: 15px 4px; border: 0; border-bottom: 1px solid var(--eh-line); color: var(--eh-ink); background: none; text-align: left; cursor: pointer; transition: background 180ms; }
+.eh-song:hover { background: var(--eh-hover); }
+.eh-song-index { display: flex; align-items: center; flex: 0 0 20px; color: var(--eh-faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+.eh-song-copy { flex: 1; min-width: 0; }
+.eh-song-copy strong { display: block; font-size: 12px; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eh-song-copy small { display: block; color: var(--eh-muted); font-size: 11px; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eh-song-tail { color: var(--eh-faint); display: flex; align-items: center; gap: 14px; font-size: 11px; font-variant-numeric: tabular-nums; }
+.eh-song-tail svg { opacity: 0; transition: opacity 180ms; }
+.eh-song:is(:hover,:focus-visible) .eh-song-tail svg { opacity: 1; }
+.eh-context-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 20px; }
+.eh-context-foot .eh-action { padding-left: 0; padding-right: 0; font-size: 11px; }
+.eh-load-more { display: flex; margin: 17px auto; }
+.eh-empty { color: var(--eh-muted); font-size: 12px; line-height: 2; padding: 23px 0; }
+.eh-subtle { color: var(--eh-faint); font-size: 11px; line-height: 1.8; }
+/* Discovery is a few playable sound fragments around the same body. */
+.eh-discover { inset: 15% 7% 130px; width: auto; max-height: none; padding: 0; overflow: visible; pointer-events: none; }
+.eh-discover > * { pointer-events: auto; }
+.eh-discover .eh-context-heading { position: absolute; left: 0; top: 0; right: 0; margin: 0; }
+.eh-discover .eh-context-heading h2 { font-size: 17px; }
+.eh-discover .eh-context-heading p { font-size: 11px; }
+.eh-discover .eh-song-list { position: absolute; inset: 0; pointer-events: none; }
+.eh-discover .eh-song-list li { width: 25%; max-width: 260px; min-width: 170px; position: absolute; pointer-events: auto; }
+.eh-discover .eh-song-list li:nth-child(1) { left: 0; top: 33%; }
+.eh-discover .eh-song-list li:nth-child(2) { right: 0; top: 39%; }
+.eh-discover .eh-song-list li:nth-child(3) { right: 12%; bottom: 9%; }
+.eh-discover .eh-song { gap: 10px; padding: 15px 0; border-color: var(--eh-line); }
+.eh-discover .eh-song-index { display: none; }
+.eh-discover .eh-song-copy strong { font-size: 13px; }
+.eh-discover .eh-song-tail time { display: none; }
+.eh-discover .eh-song-tail svg { opacity: .6; }
+.eh-discover .eh-context-foot { position: absolute; left: 0; bottom: 0; gap: 22px; }
+.echo-living-space[data-scene="discover"] .eh-relationship { display: none; }
+.echo-living-space[data-scene="discover"] .eh-being-space { transform: scale(.83); }
+.eh-time-control { margin: 28px 0; }
+.eh-time-caption { display: flex; flex-direction: column; gap: 5px; margin-bottom: 15px; }
+.eh-time-caption time { font-size: 11px; color: var(--eh-faint); letter-spacing: .08em; }
+.eh-time-caption strong { font-size: 15px; font-weight: 400; }
+.eh-time-labels { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--eh-faint); }
+.eh-time-labels .eh-action { font-size: 11px; padding-right: 0; }
+.eh-memory-list button { width: 100%; display: grid; grid-template-columns: 64px 1fr 16px; align-items: center; gap: 14px; color: var(--eh-ink); border: 0; border-bottom: 1px solid var(--eh-line); background: none; padding: 17px 0; text-align: left; cursor: pointer; }
+.eh-memory-list button:hover { background: var(--eh-hover); }
+.eh-memory-list time { color: var(--eh-faint); font-size: 11px; }
+.eh-memory-list strong { font-size: 12px; font-weight: 400; overflow-wrap: anywhere; }
+.eh-memory-list svg { color: var(--eh-faint); }
+.eh-artist-link { margin: -14px 0 12px; padding-left: 0; font-size: 11px; }
+.eh-listening-controls { display: flex; align-items: center; justify-content: center; gap: 30px; padding: 12px 0 18px; }
+.eh-play-expanded { width: 52px; height: 52px; color: var(--eh-ink); border-radius: 50%; border: 1px solid var(--eh-line); }
+.eh-progress > div { display: flex; justify-content: space-between; color: var(--eh-faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+.eh-taste-controls { display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 16px; margin: 16px 0; }
+.eh-taste-controls .eh-action { font-size: 11px; }
+.eh-taste-controls small { font-size: 11px; color: var(--eh-muted); }
+.eh-volume { display: flex; align-items: center; gap: 14px; margin-top: 13px; }
+.eh-volume > input { flex: 1; min-width: 30px; }
+.eh-volume > .eh-action:last-child { min-width: 66px; }
+.eh-lyrics-detail { padding: 16px 0; margin-top: 10px; border-top: 1px solid var(--eh-line); }
+.eh-lyric-presence { position: absolute; z-index: 3; left: 25%; right: 25%; bottom: 119px; text-align: center; max-height: 80px; overflow: auto; }
+.eh-lyric-line { color: var(--eh-ink); font-size: 15px; font-weight: 400; line-height: 2; margin: 0; }
+.eh-lyric-note { color: var(--eh-muted); font-size: 11px; line-height: 1.9; margin: 0; }
+.eh-plain-lyrics > small { color: var(--eh-faint); font-size: 11px; }
+.eh-plain-lyrics > p { white-space: pre-wrap; max-height: 190px; overflow: auto; font-size: 12px; line-height: 2.2; color: var(--eh-muted); margin: 8px 0 0; }
+.eh-tools { position: absolute; z-index: 12; top: 75px; right: 34px; width: 230px; max-height: calc(100% - 170px); overflow: auto; padding: 12px 17px; border: 1px solid var(--eh-line); border-radius: 10px; background: var(--eh-surface); box-shadow: 0 20px 80px #06131838; scrollbar-width: thin; }
+.eh-tool-group { display: flex; flex-direction: column; align-items: stretch; padding: 6px 0; border-bottom: 1px solid var(--eh-line); }
+.eh-tool-group:last-child { border-bottom: 0; }
+.eh-tool-group .eh-action { justify-content: flex-start; text-align: left; min-height: 36px; }
+.eh-system-status { position: absolute; z-index: 15; bottom: 100px; left: 50%; transform: translateX(-50%); max-width: min(620px,calc(100% - 40px)); display: flex; flex-direction: column; align-items: center; gap: 7px; pointer-events: none; }
+.eh-system-status > * { pointer-events: auto; }
+.eh-system-status .echo-sync-status { margin: 0; padding: 10px 16px; border-radius: 8px; background: var(--eh-surface); color: var(--eh-muted); box-shadow: 0 8px 32px #0002; }
+.eh-feedback { display: flex; align-items: center; gap: 10px; color: var(--eh-ink); background: var(--eh-surface); border: 1px solid var(--eh-line); border-radius: 7px; padding: 7px 9px 7px 15px; box-shadow: 0 8px 40px #081c2524; font-size: 11px; line-height: 1.8; margin: 0; }
+.eh-feedback.is-error { color: var(--eh-error); }
+.eh-feedback .eh-action { flex: 0 0 28px; padding: 3px; min-height: 28px; }
+.eh-undo { color: var(--eh-focus); background: var(--eh-surface); border: 1px solid var(--eh-line); border-radius: 5px; padding: 7px 12px; font-size: 11px; cursor: pointer; }
+.eh-utility { position: absolute; inset: 78px 3% 104px; z-index: 10; display: flex; flex-direction: column; background: var(--eh-bg); border: 1px solid var(--eh-line); border-radius: 12px; box-shadow: 0 32px 100px #020a1033; overflow: hidden; animation: eh-appear 300ms ease both; }
+.echo-living-space[data-scene="utility"] .eh-being-space { opacity: .14; transform: scale(.94); }
+.eh-utility-heading { flex: 0 0 auto; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; padding: 13px 22px; border-bottom: 1px solid var(--eh-line); }
+.eh-utility-heading h2 { font-size: 12px; color: var(--eh-muted); font-weight: 400; letter-spacing: .08em; margin: 0; }
+.eh-utility-heading > .eh-action:first-child { justify-self: start; }
+.eh-utility-heading > .eh-action:last-child { justify-self: end; }
+.eh-back svg { transform: rotate(180deg); }
+.eh-utility-scroll { overflow: auto; min-height: 0; flex: 1; overscroll-behavior: contain; scrollbar-width: thin; }
+.echo-living-space .echo-utility-content { margin: 0; padding: 28px; max-width: none; color: var(--eh-ink); background: transparent; min-height: 100%; }
+/* The legacy console scopes its own dark tokens. Let both the wrapper and a
+   nested source-onboarding console follow this space's selected theme. */
+.echo-living-space .echo-utility-content,
+.echo-living-space .echo-utility-content :is(.dshm-console, .dshm-console-welcome) {
+  color-scheme: inherit;
+  --dsw-alias-bg-base: inherit;
+  --dsw-alias-bg-layer-1: inherit;
+  --dsw-alias-bg-layer-2: inherit;
+  --dsw-alias-bg-layer-3: inherit;
+  --dsw-alias-border-l1: inherit;
+  --dsw-alias-border-l2: inherit;
+  --dsw-alias-border-l3: inherit;
+  --dsw-alias-label-primary: inherit;
+  --dsw-alias-label-secondary: inherit;
+  --dsw-alias-label-tertiary: inherit;
+  --dsw-alias-label-primary-inverted: inherit;
+  --dsw-alias-brand-primary: inherit;
+  --dsw-alias-brand-text: inherit;
+  --dsw-alias-button-primary-fill: inherit;
+  --dsw-alias-button-primary-hover: inherit;
+  --dsw-alias-interactive-bg-hover: inherit;
+  --dsw-alias-interactive-bg-active: inherit;
+  --dsw-alias-bg-mask-2: inherit;
+  --dsw-alias-scrollbar-bg-l2: inherit;
+  --dsw-alias-scrollbar-hover-l2: inherit;
+  --dsw-alias-bg-skeleton: inherit;
+  --dsw-alias-state-error-primary: inherit;
+  --dsw-alias-state-success-primary: inherit;
+  --dsw-alias-state-warn-primary: inherit;
+}
+.echo-living-space[data-tone="light"] .echo-utility-content :is(.dshm-console-card, .dshm-feature, .dshm-command-form, .dshm-console-hero, .dshm-header, .dshm-console-dock) { background: var(--eh-surface); border-color: var(--eh-line); }
+.echo-living-space[data-tone="light"] .echo-utility-content .dshm-feature:is(:hover,[aria-pressed="true"]) { background: var(--dsw-alias-bg-layer-2); border-color: var(--eh-focus); }
+.echo-living-space[data-tone="light"] .echo-utility-content :is(.dshm-kicker, .dshm-feature svg, .dshm-command-form > svg, .dshm-console-log time) { color: var(--dsw-alias-brand-text); }
+.echo-living-space .echo-modal-shade { --echo-paper: var(--eh-bg); --echo-ink: var(--eh-ink); --echo-muted: var(--eh-muted); --echo-line: var(--eh-line); --echo-surface: var(--eh-surface); --echo-accent: var(--eh-focus); position: absolute; color: var(--eh-ink); background: #07121724; backdrop-filter: none; color-scheme: inherit; justify-content: flex-end; padding: 70px max(6%,24px); }
+.echo-living-space .echo-dialog { background: var(--eh-surface); width: min(390px,100%); max-height: 100%; border-color: var(--eh-line); color: var(--eh-ink); box-shadow: 0 25px 100px #06121b55; border-radius: 8px; padding: 31px; overscroll-behavior: contain; }
+.echo-living-space .echo-dialog h2 { font-family: inherit; font-weight: 400; font-size: 23px; }
+.echo-living-space .echo-dialog .echo-eyebrow { color: var(--eh-faint); }
+.echo-living-space .echo-field, .echo-living-space .echo-memory-reading p { color: var(--eh-muted); }
+.echo-living-space .echo-field input, .echo-living-space .echo-field textarea { color: var(--eh-ink); background: var(--eh-bg); border-color: var(--eh-line); }
+.echo-living-space .echo-button { color: var(--eh-ink); border-color: var(--eh-line); background: var(--eh-hover); }
+.echo-living-space .echo-button-primary { color: var(--eh-bg); background: var(--eh-focus); border-color: transparent; }
+.echo-living-space .echo-tap-pad { background: var(--eh-bg); border-color: var(--eh-line); color: var(--eh-focus); }
+.echo-living-space .echo-beat-sequence i { background: var(--eh-line); }
+.echo-living-space .echo-beat-sequence i.is-filled { background: var(--eh-focus); }
+.echo-living-space .echo-related-track { background: var(--eh-bg); color: var(--eh-muted); }
+.echo-living-space .echo-error { color: var(--eh-error); }
+@keyframes eh-appear { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
+@container echo-habitat (max-width: 900px) {
+  .eh-context { right: 4%; width: 43%; top: 18%; }
+  .eh-being { width: 86%; }
+  .echo-living-space:is([data-scene="search"],[data-scene="memory"],[data-scene="listening"]) .eh-being-space { transform: translateX(-25%) scale(.73); }
+  .eh-relationship { bottom: 130px; left: 25px; }
+  .eh-presence-header { left: 25px; right: 25px; }
+  .eh-music-ground { left: 25px; right: 25px; gap: 16px; }
+  .eh-discover { inset: 16% 5% 130px; width: auto; }
+  .eh-discover .eh-song-list li { min-width: 155px; width: 27%; }
+}
+@container echo-habitat (max-width: 620px) {
+  .eh-presence-header { inset: 18px 19px auto; }
+  .eh-name strong { font-size: 12px; }
+  .eh-being-space { --eh-body-block: max(0px, calc(100cqh - 270px)); inset: 72px -7% 170px; }
+  .eh-being { width: min(103%, 600px); }
+  .eh-being-whisper { bottom: 14%; font-size: 11px; }
+  .eh-relationship { left: 19px; bottom: 130px; gap: 1px; }
+  .eh-relationship .eh-action { font-size: 11px; }
+  .eh-music-ground { left: 19px; right: 19px; bottom: 19px; grid-template-columns: minmax(0,1fr) auto auto; gap: 10px; padding-top: 16px; }
+  .eh-current-track { gap: 9px; }
+  .eh-current-track strong { font-size: 11px; }
+  .eh-current-track small { font-size: 11px; }
+  .eh-playing-mark { display: none; }
+  .eh-direct-controls { gap: 5px; }
+  .eh-direct-controls .eh-main-play { width: 36px; height: 36px; }
+  .eh-direct-controls .eh-action:last-child { width: 30px; padding: 4px; }
+  .eh-find { font-size: 11px; gap: 0; padding: 9px 0 9px 9px; }
+  .eh-find kbd { display: none; }
+  .echo-living-space:is([data-scene="search"],[data-scene="memory"],[data-scene="listening"],[data-scene="discover"]) .eh-being-space { --eh-body-block: 228px; inset: 64px 0 auto; height: 236px; transform: none; }
+  .echo-living-space:is([data-scene="search"],[data-scene="memory"],[data-scene="listening"],[data-scene="discover"]) .eh-being { width: min(83%,350px); }
+  .echo-living-space:not([data-scene="encounter"]) .eh-being-whisper { display: none; }
+  .echo-living-space:not([data-scene="encounter"]) .eh-relationship { display: none; }
+  .eh-context { top: 308px; right: 19px; left: 19px; bottom: 103px; width: auto; max-height: none; padding: 0 3px 10px; }
+  .eh-context-heading { margin-bottom: 16px; gap: 12px; }
+  .eh-context-heading h2 { font-size: 19px; margin-bottom: 6px; }
+  .eh-context-heading p { font-size: 11px; }
+  .eh-song { padding: 12px 2px; }
+  .eh-song-tail svg { opacity: .6; }
+  .eh-discover { overflow: auto; pointer-events: auto; }
+  .eh-discover .eh-context-heading, .eh-discover .eh-context-foot, .eh-discover .eh-song-list, .eh-discover .eh-song-list li { position: static; width: auto; max-width: none; min-width: 0; pointer-events: auto; }
+  .eh-discover .eh-context-heading { margin-bottom: 13px; }
+  .eh-discover .eh-song-copy strong { font-size: 12px; }
+  .eh-discover .eh-context-foot { gap: 14px; }
+  .eh-time-control { margin: 18px 0; }
+  .eh-lyric-presence { bottom: 156px; left: 38%; right: 7%; text-align: right; max-height: 74px; }
+  .eh-lyric-line { font-size: 12px; }
+  .eh-tools { top: 65px; right: 18px; max-height: calc(100% - 165px); }
+  .eh-system-status { bottom: 101px; max-width: calc(100% - 30px); width: max-content; }
+  .eh-utility { inset: 64px 12px 99px; }
+  .eh-utility-heading { padding: 10px; gap: 5px; grid-template-columns: 1fr auto; }
+  .eh-utility-heading h2 { display: none; }
+  .echo-living-space .echo-utility-content { padding: 17px; }
+  .echo-living-space .echo-modal-shade { justify-content: center; align-items: flex-end; padding: 20px 18px 100px; }
+  .echo-living-space .echo-dialog { padding: 26px 24px; max-height: calc(100% - 35px); }
+}
+/* Height belongs to the host panel, which may be much shorter than a browser
+   viewport. Keep the player anchored and scroll only the surrounding content. */
+@container echo-habitat (max-height: 680px) {
+  .eh-presence-header { top: 14px; }
+  .eh-music-ground { bottom: 14px; padding-top: 12px; }
+  .eh-relationship { bottom: 112px; gap: 4px; }
+  .eh-utility { top: 64px; bottom: 92px; }
+  .eh-tools { top: 60px; max-height: calc(100cqh - 154px); }
+  .eh-system-status { bottom: 90px; max-height: max(0px, calc(100cqh - 148px)); overflow: auto; scrollbar-width: thin; }
+  .eh-system-status > * { flex: 0 0 auto; }
+  .eh-being .echo-empty-life { min-height: 0; padding: 12px 0; }
+}
+@container echo-habitat (max-width: 620px) and (max-height: 680px) {
+  .echo-living-space:is([data-scene="search"],[data-scene="memory"],[data-scene="listening"],[data-scene="discover"]) .eh-being-space {
+    --eh-body-block: max(0px, calc(clamp(64px, 100cqh - 330px, 180px) - 12px));
+    top: 56px;
+    height: clamp(64px, calc(100cqh - 330px), 180px);
+  }
+  .echo-living-space:is([data-scene="search"],[data-scene="memory"],[data-scene="listening"],[data-scene="discover"]) .eh-being { width: min(83%, 260px); }
+  .eh-context { top: calc(66px + clamp(64px, 100cqh - 330px, 180px)); bottom: 96px; }
+}
+@container echo-habitat (max-height: 520px) {
+  .eh-presence-header { top: 8px; }
+  .eh-being-space { --eh-body-block: max(0px, calc(100cqh - 174px)); top: 58px; bottom: 90px; }
+  .eh-being-whisper { display: none; }
+  .eh-context { top: 68px; bottom: 92px; }
+  .eh-context-heading { margin-bottom: 12px; }
+  .eh-context-heading h2 { font-size: 18px; margin-bottom: 4px; }
+  .eh-context-heading p { display: none; }
+  .eh-music-ground { bottom: 10px; min-height: 60px; padding-top: 8px; }
+  .eh-current-track small { margin-top: 0; }
+  .eh-tools { top: 56px; max-height: calc(100cqh - 142px); }
+  .eh-utility { top: 56px; bottom: 82px; }
+  .eh-utility-heading { padding-top: 8px; padding-bottom: 8px; }
+  .eh-time-control { margin: 15px 0; }
+  .eh-lyric-presence { bottom: 88px; max-height: 62px; }
+  .echo-living-space[data-scene="encounter"]:has(.eh-lyric-presence) .eh-being-space { --eh-body-block: max(0px, calc(100cqh - 240px)); bottom: 158px; }
+  .echo-living-space .echo-modal-shade { padding: 12px max(4%,16px); }
+  .echo-living-space .echo-dialog { max-height: 100%; padding: 24px; }
+}
+@container echo-habitat (min-width: 621px) and (max-height: 520px) {
+  .eh-discover { top: 68px; right: 5%; left: auto; bottom: 92px; width: 40%; overflow: auto; pointer-events: auto; }
+  .eh-discover .eh-context-heading, .eh-discover .eh-context-foot, .eh-discover .eh-song-list, .eh-discover .eh-song-list li { position: static; width: auto; max-width: none; min-width: 0; pointer-events: auto; }
+  .eh-discover .eh-context-foot { gap: 14px; }
+  .echo-living-space[data-scene="discover"] .eh-being-space { transform: translateX(-24%) scale(.8); }
+}
+@container echo-habitat (max-width: 620px) and (max-height: 520px) {
+  .eh-presence-header { left: 15px; right: 15px; }
+  .eh-music-ground { left: 15px; right: 15px; gap: 8px; }
+  .eh-context { top: calc(66px + clamp(64px, 100cqh - 330px, 180px)); bottom: 90px; }
+  .echo-living-space:is([data-scene="search"],[data-scene="memory"],[data-scene="listening"],[data-scene="discover"]) .eh-being-space {
+    --eh-body-block: max(0px, calc(clamp(64px, 100cqh - 330px, 180px) - 12px));
+    top: 56px;
+    bottom: auto;
+    height: clamp(64px, calc(100cqh - 330px), 180px);
+  }
+  .echo-living-space[data-scene="encounter"] .eh-being-space { inset: 64px 12px 96px 116px; }
+  .echo-living-space[data-scene="encounter"] .eh-being { width: 100%; }
+  .eh-relationship { left: 15px; bottom: 98px; gap: 2px; }
+  .eh-relationship .eh-action { padding-right: 0; gap: 6px; }
+  .eh-lyric-presence { left: 116px; right: 12px; }
+  .eh-utility { left: 9px; right: 9px; }
+}
+@container echo-habitat (max-height: 340px) {
+  .eh-name small { display: none; }
+  .eh-presence-header { top: 6px; }
+  .eh-utility { top: 8px; bottom: 78px; }
+  .eh-tools { top: 52px; max-height: calc(100cqh - 132px); }
+  .eh-being .echo-empty-life h2 { font-size: 14px; }
+  .eh-being .echo-empty-life p { display: none; }
+}
+@container echo-habitat (max-width: 620px) and (max-height: 340px) {
+  .echo-living-space:is([data-scene="search"],[data-scene="memory"],[data-scene="listening"],[data-scene="discover"]) .eh-being-space {
+    --eh-body-block: max(0px, calc(100cqh - 158px));
+    inset: 56px auto 88px 10px;
+    height: auto;
+    width: 82px;
+  }
+  .echo-living-space:is([data-scene="search"],[data-scene="memory"],[data-scene="listening"],[data-scene="discover"]) .eh-being { width: 100%; }
+  .eh-context { top: 56px; left: 106px; right: 12px; bottom: 86px; }
+  .eh-context-heading { gap: 5px; }
+  .eh-context-heading h2 { font-size: 16px; }
+  .eh-song-index, .eh-song-tail time { display: none; }
+  .eh-song { gap: 8px; }
+  .eh-list-caption, .eh-taste-controls { flex-wrap: wrap; gap: 5px; }
+  .eh-memory-list button { grid-template-columns: 1fr 16px; gap: 6px; }
+  .eh-memory-list time { grid-column: 1 / -1; }
+}
+@media (any-pointer: coarse) {
+  .echo-living-space :is(.eh-action, .eh-find, .eh-current-track, .eh-name, .eh-song, .eh-memory-list button, .eh-undo, .echo-dialog-close, .echo-button, .echo-sync-status button) { min-width: 44px; min-height: 44px; }
+  .echo-living-space .eh-direct-controls .eh-action { width: 44px; height: 44px; }
+  .echo-living-space .eh-context-heading > .eh-action, .echo-living-space .eh-feedback .eh-action { flex-basis: 44px; }
+  .echo-living-space input[type="range"] { height: 44px; }
+  .echo-living-space .eh-search-field input { min-height: 44px; }
+  .echo-living-space .echo-utility-content :is(button, a[href], input:not([type="checkbox"]):not([type="radio"]), select) { min-height: 44px; }
+  .echo-living-space .echo-utility-content :is(button, a[href]) { min-width: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .echo-living-space *, .echo-living-space *::before, .echo-living-space *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+`;
+
   // src/client/index.js
   window.__ModuleLoader__.load({
     id: "@vicyangorg/dsh-music",
@@ -2720,7 +3609,7 @@
       const React = require2("react");
       const h = React.createElement;
       const { useState, useEffect, useMemo, useRef, useCallback } = React;
-      const { EchoHome, EchoMemories, EchoGallery, EchoDock, EchoMini } = createEchoUI(React);
+      const { EchoHabitat, EchoGallery, EchoMini } = createEchoUI(React);
       let ReactDOM = null;
       try {
         ReactDOM = require2("react-dom");
@@ -8292,33 +9181,25 @@
       function MusicPanel({ t, api, lifeService, player, library, lyrics, reco, download, sync, history, likes, preview, warm, openView, openArtistPage, setMiniHidden, ui, artistImages, artistPage, onboarding, useUi, useLibrary, usePlayer, useLyrics, useReco, useDownload, useSync, useHistory, useLikes, usePreview, useWarm, useArtistImages, useArtistPage, useOnboarding }) {
         const view = useUi((s) => s.view);
         const welcomePreview = useUi((s) => s.welcomePreview);
-        const onboardingSnap = useOnboarding((st) => st);
-        const miniHidden = useUi((s) => s.miniHidden);
-        const hasTrack = usePlayer((s) => !!s.track);
-        const status = useLibrary((s) => s.status);
-        const count = useLibrary((s) => s.tracks.length);
-        const playing = usePlayer((s) => s.playing);
-        const busy = status === "loading";
-        const [commandOpen, setCommandOpen] = useState(false);
-        const openCommand = () => setCommandOpen(true);
+        const [commandRequest, setCommandRequest] = useState(0);
         const onSelect = (consoleMode, consolePrompt = "") => {
           ui.set({ view: "studio", consoleMode, consolePrompt, consoleResult: null, saveError: false });
         };
         useEffect(() => {
-          if (view === "welcome") return void 0;
           ui.set({ dockVisible: true });
           const handleKey = (event) => {
             if (event.defaultPrevented || event.repeat || event.isComposing || !event.metaKey && !event.ctrlKey || event.altKey || event.shiftKey || event.key.toLowerCase() !== "k") return;
             event.preventDefault();
             event.stopPropagation();
-            setCommandOpen((open) => !open);
+            openView("library");
+            setCommandRequest((request) => request + 1);
           };
           window.addEventListener("keydown", handleKey, true);
           return () => {
             ui.set({ dockVisible: false });
             window.removeEventListener("keydown", handleKey, true);
           };
-        }, [view === "welcome", ui]);
+        }, [ui, openView]);
         const pageReady = useArtistPage ? useArtistPage((snap) => snap.lastReady) : null;
         const toast = useUi((s) => s.toast);
         const [seenReadyAt, setSeenReadyAt] = useState(0);
@@ -8334,109 +9215,95 @@
           const timer = setTimeout(() => ui.set({ toast: null }), 9e3);
           return () => clearTimeout(timer);
         }, [toast]);
-        if (view === "welcome") {
-          return h("div", { className: "dshm-console-welcome", style: { height: "100%" } }, h(WelcomeView, {
-            t,
-            onboarding,
-            useOnboarding,
-            preview: !!welcomePreview,
-            onExitPreview: () => {
-              ui.set({ welcomePreview: false, view: "library" });
-              openView("library");
-            },
-            onRoute: (target) => {
-              ui.set({ welcomePreview: false });
-              if (target === "library") {
-                library.load();
-                setTimeout(() => library.load(), 1500);
-                openView("library");
-              } else openView("reco");
-            }
-          }));
-        }
-        const tabs = [
-          { id: "home", label: "\u76F8\u5904" },
-          { id: "library", label: "\u97F3\u4E50" },
-          { id: "echo-memory", label: "\u8BB0\u5FC6" }
-        ];
-        const body = view === "home" ? h(EchoHome, { lifeService, player, usePlayer, openView }) : view === "echo-memory" ? h(EchoMemories, { lifeService, openView }) : view === "echo-gallery" ? h(EchoGallery, { openView }) : view === "studio" ? h(ConsoleStudio, { t, api, ui, useUi, useLibrary, useHistory, useLikes, usePlayer, history, player, openView, openArtistPage, onSelect }) : view === "library" ? h(LibraryView, { t, player, library, sync, download, preview, likes, openArtistPage, artistImages, useLikes, useSync, useDownload, useLibrary, usePlayer, useArtistImages }) : view === "reco" ? h(RecoView, { t, reco, download, player, library, likes, preview, history, openArtistPage, warm, useReco, useDownload, useLibrary, useLikes, usePlayer, useHistory, useWarm }) : view === "artist" ? h(ArtistPageView, { t, reco, player, likes, preview, library, openView, openArtistPage, artistImages, artistPage, useUi, useLikes, useLibrary, usePlayer, useArtistImages, useArtistPage }) : view === "history" ? h(HistoryView, { t, history, player, openArtistPage, artistImages, likes, useHistory, useLibrary, useArtistImages, useLikes }) : h(NowPlayingView, { t, player, lyrics, usePlayer, useLyrics, openView, openArtistPage, artistImages, useArtistImages });
+        const renderUtility = (route) => {
+          let content;
+          switch (route) {
+            case "studio":
+              content = h(ConsoleStudio, { t, api, ui, useUi, useLibrary, useHistory, useLikes, usePlayer, history, player, openView, openArtistPage, onSelect });
+              break;
+            case "library-manage":
+              content = h(LibraryView, { t, player, library, sync, download, preview, likes, openArtistPage, artistImages, useLikes, useSync, useDownload, useLibrary, usePlayer, useArtistImages });
+              break;
+            case "reco-manage":
+              content = h(RecoView, { t, reco, download, player, library, likes, preview, history, openArtistPage, warm, useReco, useDownload, useLibrary, useLikes, usePlayer, useHistory, useWarm });
+              break;
+            case "now-manage":
+              content = h(NowPlayingView, { t, player, lyrics, usePlayer, useLyrics, openView, openArtistPage, artistImages, useArtistImages });
+              break;
+            case "artist":
+              content = h(ArtistPageView, { t, reco, player, likes, preview, library, openView, openArtistPage, artistImages, artistPage, useUi, useLikes, useLibrary, usePlayer, useArtistImages, useArtistPage });
+              break;
+            case "history":
+              content = h(HistoryView, { t, history, player, openArtistPage, artistImages, likes, useHistory, useLibrary, useArtistImages, useLikes });
+              break;
+            case "echo-gallery":
+              content = h(EchoGallery, { openView });
+              break;
+            case "welcome":
+              content = h(WelcomeView, {
+                t,
+                onboarding,
+                useOnboarding,
+                preview: !!welcomePreview,
+                onExitPreview: () => {
+                  ui.set({ welcomePreview: false });
+                  openView("library");
+                },
+                onRoute: (target) => {
+                  ui.set({ welcomePreview: false });
+                  if (target === "library") {
+                    library.load();
+                    setTimeout(() => library.load(), 1500);
+                    openView("library");
+                  } else openView("reco");
+                }
+              });
+              break;
+            case "command":
+              content = h(ConsoleCommand, {
+                t,
+                useLibrary,
+                player,
+                openView,
+                onSelect,
+                close: () => {
+                  if (ui.getSnapshot().view === "command") openView("home");
+                }
+              });
+              break;
+            default:
+              return null;
+          }
+          return h("div", { className: "dshm-console echo-utility-content" }, content);
+        };
         return h(
           React.Fragment,
           null,
-          h(
-            "div",
-            { className: "dshm-panel dshm-console echo-shell" },
-            h(
-              "header",
-              { className: "dshm-header", inert: commandOpen || void 0 },
-              h(
-                "div",
-                { className: "dshm-title-row" },
-                h(ConsoleSignal),
-                h("h1", { className: "dshm-title" }, "ECHO"),
-                h("span", { className: "dshm-count" }, "\u97F3\u7075")
-              ),
-              h(
-                "nav",
-                { className: "dshm-tabs", "aria-label": t("panel") },
-                tabs.map((tab) => h("button", {
-                  key: tab.id,
-                  type: "button",
-                  className: "dshm-tab",
-                  "aria-current": view === tab.id ? "page" : void 0,
-                  onClick: () => openView(tab.id)
-                }, tab.label, tab.dot ? h("span", { className: "dshm-tab-dot", "aria-hidden": true }) : null))
-              ),
-              h(
-                "div",
-                { className: "dshm-header-actions" },
-                h(
-                  "details",
-                  { className: "echo-more-menu" },
-                  h("summary", { "aria-label": "\u66F4\u591A\u97F3\u4E50\u529F\u80FD" }, "\xB7\xB7\xB7"),
-                  h("div", null, [["reco", "\u97F3\u4E50\u63A2\u7D22"], ["studio", "\u97F3\u4E50\u7B56\u5C55"], ["now", "\u6B63\u5728\u64AD\u653E"], ["history", "\u6536\u542C\u5386\u53F2"], ["welcome", "\u97F3\u4E50\u6765\u6E90\u8BBE\u7F6E"]].map(([id, label]) => h("button", { type: "button", key: id, onClick: (event) => {
-                    event.currentTarget.closest("details").open = false;
-                    if (id === "welcome") ui.set({ welcomePreview: true });
-                    openView(id);
-                  } }, label)))
-                ),
-                h(
-                  "button",
-                  {
-                    type: "button",
-                    className: "dshm-chipbtn dshm-terminal",
-                    onClick: openCommand,
-                    "aria-label": t("consoleCommand"),
-                    title: t("consoleCommand")
-                  },
-                  h(IconSearch, { size: 14 }),
-                  h("span", { className: "dshm-terminal-text" }, t("consoleCommand")),
-                  h("kbd", { className: "dshm-key" }, /Mac/.test(window.navigator?.platform || "") ? "\u2318 K" : "Ctrl K")
-                ),
-                h(IconButton, {
-                  label: miniHidden ? t("showMini") : t("hideMini"),
-                  active: !miniHidden,
-                  onClick: () => setMiniHidden(!miniHidden)
-                }, h(IconNote, { size: 16 })),
-                h(
-                  IconButton,
-                  { label: busy ? t("rescanning") : t("rescan"), disabled: busy, onClick: () => library.rescan() },
-                  h(IconRefresh, { size: 16, className: busy ? "dshm-spin" : void 0 })
-                ),
-                onboardingSnap?.completed ? h(IconButton, {
-                  label: t("welcomePreview"),
-                  onClick: () => ui.set({ view: "welcome", welcomePreview: true })
-                }, h(IconSparkles, { size: 16 })) : null
-              )
-            ),
-            h("div", { className: "dshm-body", inert: commandOpen || void 0 }, body),
-            h(
-              "div",
-              { inert: commandOpen || void 0 },
-              h(EchoDock, { player, usePlayer, openView })
-            ),
-            commandOpen ? h(ConsoleCommand, { t, close: () => setCommandOpen(false), useLibrary, player, openView, onSelect }) : null
-          ),
+          h(EchoHabitat, {
+            lifeService,
+            player,
+            library,
+            lyrics,
+            likes,
+            reco,
+            history,
+            preview,
+            warm,
+            ui,
+            usePlayer,
+            useLibrary,
+            useLyrics,
+            useLikes,
+            useHistory,
+            useReco,
+            useUi,
+            openView,
+            openArtistPage,
+            setMiniHidden,
+            renderUtility,
+            requestedView: view,
+            commandRequest
+          }),
           toast ? h(
             "div",
             { className: "dshm-toast", role: "status" },
@@ -8826,7 +9693,7 @@
           };
           const el = document.createElement("style");
           el.setAttribute("data-dsh-music", "");
-          el.textContent = CSS + "\n" + ui_default + "\n" + creature_default;
+          el.textContent = CSS + "\n" + ui_default + "\n" + creature_default + "\n" + habitat_default;
           document.head.appendChild(el);
           return () => {
             el.remove();

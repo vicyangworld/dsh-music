@@ -12,6 +12,8 @@ import { fileURLToPath } from 'node:url'
 import { webcrypto } from 'node:crypto'
 import { build } from 'esbuild'
 import React from 'react'
+import { createRoot } from 'react-dom/client'
+import { JSDOM } from 'jsdom'
 import { createLife, getMorphology } from '../bundle/shared/life-core.js'
 
 const repo = fileURLToPath(new URL('..', import.meta.url))
@@ -37,7 +39,7 @@ const recommendation = {
 const settle = async () => { for (let i = 0; i < 8; i++) await Promise.resolve() }
 const plain = value => JSON.parse(JSON.stringify(value))
 
-async function harness(t) {
+async function harness(t, { react = React } = {}) {
   const requests = [], media = [], handlers = new Map(), cleanup = [], slots = new Map()
   const liked = new Map(), disliked = new Map(), storage = new Map()
   let definition, deferredLikes = null, deferredLyrics = null, nextRequestFailure = null
@@ -123,7 +125,7 @@ async function harness(t) {
   sandbox.globalThis = sandbox
   vm.runInNewContext(code, sandbox, { filename: 'echo-player-integration-bundle.js' })
   const module = definition.factory(id => {
-    if (id === 'react') return React
+    if (id === 'react') return react
     if (id === 'react-dom') return { createPortal: value => value }
     throw new Error(`Unexpected module ${id}`)
   })
@@ -138,7 +140,13 @@ async function harness(t) {
   await settle()
   const main = slots.get('music').value, mini = slots.get('dsh-music.mini-player').value
   await main.lifeService.load(); await main.likes.load()
-  return { main, mini, module, requests, media, handlers,
+  return { main, mini, mainComponent: slots.get('music').component, module, requests, media, handlers,
+    dispatchKey(options) {
+      const event = new Event('keydown', { cancelable: true })
+      for (const [key, value] of Object.entries(options)) Object.defineProperty(event, key, { value })
+      eventTarget.dispatchEvent(event)
+      return event
+    },
     failNext(path, message = '保存失败') { nextRequestFailure = { path, message } },
     holdNextLikes() { let release; const promise = new Promise(resolve => { release = resolve }); deferredLikes = snapshot => promise.then(() => snapshot); return release },
     holdNextLyrics() { let release; const promise = new Promise(resolve => { release = resolve }); deferredLyrics = snapshot => promise.then(() => snapshot); return release },
@@ -153,6 +161,99 @@ test('companion receives shared player, likes source and direct library navigati
   assert.equal(h.mini.hooks.likes, h.main.likes.source)
   h.mini.openLibrary()
   assert.equal(h.mini.hooks.ui.getSnapshot().view, 'library')
+})
+
+test('main controller retains one habitat and shared audio across core and utility routes; command shortcut refocuses search', async t => {
+  // Probe only the habitat boundary: real React effects, registered MusicPanel,
+  // stores and player run below. The full visual subtree has its own DOM suite.
+  let latest, mounts = 0, unmounts = 0
+  const habitatTypes = new Set()
+  function HabitatProbe(props) {
+    latest = props
+    React.useEffect(() => { mounts++; return () => { unmounts++ } }, [])
+    return React.createElement('div', { 'data-habitat-probe': true })
+  }
+  const react = { ...React, createElement(type, props, ...children) {
+    if (typeof props?.renderUtility === 'function' && 'requestedView' in props) {
+      assert.equal(typeof type, 'function', 'the real habitat export must exist')
+      habitatTypes.add(type)
+      return React.createElement(HabitatProbe, props, ...children)
+    }
+    return React.createElement(type, props, ...children)
+  } }
+  const h = await harness(t, { react })
+  const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://example.invalid/' })
+  const savedGlobals = new Map(['window', 'document', 'IS_REACT_ACT_ENVIRONMENT']
+    .map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]))
+  Object.defineProperties(globalThis, {
+    window: { value: dom.window, configurable: true, writable: true },
+    document: { value: dom.window.document, configurable: true, writable: true },
+    IS_REACT_ACT_ENVIRONMENT: { value: true, configurable: true, writable: true },
+  })
+  const root = createRoot(dom.window.document.getElementById('root'))
+  const props = { ...h.main, t: key => key }
+  for (const [key, store] of Object.entries(h.main.hooks)) {
+    props['use' + key[0].toUpperCase() + key.slice(1)] = selector =>
+      selector(React.useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot))
+  }
+  h.main.player.playTracks([a, b], 0, { shuffle: false, ordered: true })
+  const audio = h.media[0], audioSource = audio.src, plays = audio.plays, pauses = audio.pauses, loads = audio.loads
+  try {
+    await React.act(async () => { root.render(React.createElement(h.mainComponent, props)); await settle() })
+    assert.equal(h.main.ui.getSnapshot().dockVisible, true)
+    for (const service of ['lifeService', 'player', 'library', 'lyrics', 'likes', 'reco', 'history', 'preview', 'warm']) {
+      assert.equal(latest[service], h.main[service], `${service} keeps its shared instance`)
+    }
+    for (const route of ['home', 'library', 'reco', 'echo-memory', 'now']) {
+      await React.act(async () => { h.main.openView(route); await settle() })
+      assert.equal(latest.requestedView, route)
+      assert.equal(latest.renderUtility(route), null, `${route} is a habitat scene, not a legacy page`)
+    }
+    const utilities = {
+      'library-manage': 'LibraryView', 'reco-manage': 'RecoView', 'now-manage': 'NowPlayingView',
+      studio: 'ConsoleStudio', artist: 'ArtistPageView', history: 'HistoryView',
+      'echo-gallery': 'EchoGallery', welcome: 'WelcomeView', command: 'ConsoleCommand',
+    }
+    for (const [route, component] of Object.entries(utilities)) {
+      await React.act(async () => { h.main.openView(route); await settle() })
+      assert.equal(latest.requestedView, route)
+      assert.equal(latest.renderUtility(route).props.children.type.name, component)
+      assert.equal(h.main.ui.getSnapshot().dockVisible, true, `${route} must not reveal a second life`)
+      assert.equal(mounts, 1)
+      assert.equal(unmounts, 0)
+    }
+    const closeCommand = latest.renderUtility('command').props.children.props.close
+    await React.act(async () => { h.main.openView('now'); closeCommand(); await settle() })
+    assert.equal(latest.requestedView, 'now', 'command completion must not overwrite its selected destination')
+    const request = latest.commandRequest
+    for (let i = 1; i <= 2; i++) {
+      await React.act(async () => {
+        const event = h.dispatchKey({ key: 'k', ctrlKey: true })
+        assert.equal(event.defaultPrevented, true)
+        await settle()
+      })
+      assert.equal(latest.requestedView, 'library')
+      assert.equal(latest.commandRequest, request + i, 'repeat shortcut focuses the already open search')
+    }
+    assert.equal(habitatTypes.size, 1)
+    assert.equal(mounts, 1)
+    assert.equal(h.media.length, 1)
+    assert.equal(audio.src, audioSource)
+    assert.equal(audio.plays, plays)
+    assert.equal(audio.pauses, pauses)
+    assert.equal(audio.loads, loads)
+    assert.equal(h.main.player.source.getSnapshot().playing, true)
+  } finally {
+    await React.act(async () => { root.unmount(); await settle() })
+    dom.window.close()
+    for (const [key, descriptor] of savedGlobals) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor)
+      else delete globalThis[key]
+    }
+  }
+  assert.equal(h.main.ui.getSnapshot().dockVisible, false)
+  assert.equal(unmounts, 1)
+  assert.equal(audio.paused, false, 'leaving the music panel preserves playback')
 })
 
 test('verified preview metadata survives warm and legacy play paths, likes use metadata not synthetic IDs', async t => {

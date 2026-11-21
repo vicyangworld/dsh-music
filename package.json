@@ -11,7 +11,8 @@
     "test:echo": "node --test tests/echo-*.test.mjs",
     "preview": "node scripts/echo-preview.mjs",
     "specimens": "node scripts/render-echo-specimens.mjs",
-    "material-study": "node scripts/render-echo-material-study.mjs"
+    "material-study": "node scripts/render-echo-material-study.mjs",
+    "habitat-demo": "node scripts/build-echo-habitat-demo.mjs"
   },
   "devDependencies": {
     "esbuild": "0.28.2",

@@ -182,7 +182,7 @@ async function openPreview(base) {
     window.close()
   }
   try {
-    await until(() => query('.echo-home .echo-creature-svg'), 'actual plugin life stage')
+    await until(() => query('.echo-living-space .eh-being .echo-creature-svg'), 'actual continuous life space')
     assert.equal(query('.preview-error'), null, errors.join('\n'))
   } catch (error) {
     const pageText = document.body?.textContent?.replace(/\s+/g, ' ').trim().slice(0, 5000)
@@ -207,13 +207,14 @@ test('actual ECHO plugin works through preview slots, HTTP persistence and DOM i
   let identity
   let savedGreeting
 
-  await t.test('mounts the real home SVG, translated navigation and unique SVG resources', async () => {
+  await t.test('mounts one continuous life space without the old page navigation or dock', async () => {
     const snapshot = await host.json('/dsh-music/api/life')
     identity = snapshot.life.id
     assert.ok(identity)
-    assert.equal(page.query('.echo-home .echo-creature').dataset.structure, snapshot.morphology.structure)
-    assert.ok(page.byText('相处', page.query('.dshm-tabs')))
-    assert.equal(page.query('.echo-mini'), null, 'main dock owns music controls while the panel is open')
+    assert.equal(page.query('.eh-being .echo-creature').dataset.structure, snapshot.morphology.structure)
+    assert.equal(page.query('.dshm-tabs'), null, 'the primary experience does not render page tabs')
+    assert.equal(page.query('.echo-dock'), null, 'the primary experience does not render the old full-width dock')
+    assert.equal(page.query('.echo-mini'), null, 'the living space owns music controls while the panel is open')
     const ids = [...page.document.querySelectorAll('svg [id]')].map(node => node.id)
     assert.equal(ids.length, new Set(ids).size)
     assert.ok(page.document.querySelector('script[src="/client/index.js"]'))
@@ -227,8 +228,10 @@ test('actual ECHO plugin works through preview slots, HTTP persistence and DOM i
     await until(() => !page.byText('就叫这个名字', dialog)?.disabled, 'enabled name submit')
     page.click(page.byText('就叫这个名字', dialog))
     await until(async () => (await host.json('/dsh-music/api/life')).life.name === name && !page.query('[role="dialog"]'), 'saved name')
-    assert.equal(page.query('.echo-name-row h3').textContent, name)
+    assert.equal(page.query('.eh-name strong').textContent, name)
 
+    page.click(page.byText('共同记忆'))
+    await until(() => page.query('.echo-living-space[data-scene="memory"]'), 'memory in the same space')
     page.click(page.byText('留住这一刻'))
     dialog = await until(() => page.query('[role="dialog"]'), 'memory dialog')
     page.field(dialog.querySelector('input'), memoryTitle)
@@ -258,7 +261,7 @@ test('actual ECHO plugin works through preview slots, HTTP persistence and DOM i
   })
 
   await t.test('learns three taps as two private intervals and responds through the renderer', async () => {
-    page.click(page.byText('教它一个招呼'))
+    page.click(page.byText('教它招呼'))
     const dialog = await until(() => page.query('[role="dialog"]'), 'greeting dialog')
     assert.equal(page.byText('记住这个招呼', dialog).disabled, true)
     const pad = page.byLabel('敲击节奏', dialog)
@@ -278,13 +281,15 @@ test('actual ECHO plugin works through preview slots, HTTP persistence and DOM i
     assert.equal(savedGreeting.length, 2)
     assert.ok(savedGreeting.every(ms => Number.isInteger(ms) && ms >= 50 && ms <= 5000))
     page.click(page.byText('打个招呼'))
-    await until(() => page.query('.echo-home .echo-creature[data-responding="true"]'), 'greeting body response')
+    await until(() => page.query('.eh-being .echo-creature[data-responding="true"]'), 'greeting body response')
     await until(async () => (await host.json('/dsh-music/api/life')).life.greeting.recognitions === 1, 'recognized greeting')
   })
 
   await t.test('shows nine distinct individuals and changes geometry without writing simulations to the user archive', async () => {
     const archiveBefore = await readFile(join(host.directory, 'echo-life.json'), 'utf8')
-    page.click(page.byText('看看不同的生命'))
+    const bodyBefore = page.query('.eh-being .echo-creature')
+    page.click(page.byLabel('打开空间工具'))
+    page.click(await until(() => page.byText('生命形态示例'), 'explicit study tool'))
     await until(() => page.document.querySelectorAll('.echo-specimen-card').length === 9, 'nine gallery lives')
     const born = geometry(page)
     assert.deepEqual(born.map(item => item.structure).sort(), ['fold', 'fold', 'fold', 'ribbon', 'ribbon', 'ribbon', 'shell', 'shell', 'shell'])
@@ -306,17 +311,47 @@ test('actual ECHO plugin works through preview slots, HTTP persistence and DOM i
     const ids = [...page.document.querySelectorAll('svg [id]')].map(node => node.id)
     assert.equal(ids.length, new Set(ids).size, 'gallery resources are unique across nine instances')
     assert.equal(await readFile(join(host.directory, 'echo-life.json'), 'utf8'), archiveBefore, 'gallery changes never write the real archive')
+    assert.equal(page.query('.eh-being .echo-creature'), bodyBefore, 'the individual remains mounted beneath the tool')
     page.click(page.byText('回到自己的生命'))
-    await until(() => page.query('.echo-home .echo-creature'), 'personal life restored')
+    await until(() => page.query('.echo-living-space[data-scene="encounter"]'), 'attention returns to the individual')
   })
 
-  await t.test('uses the real music player and overlay across workspace, collapse, hide, restore and navigation', async () => {
-    page.click(page.byText('一起听音乐'))
-    const row = await until(() => page.query('.dshm-row[role="button"]'), 'actual library track')
+  await t.test('searches, listens and reviews time around the same body with real services', async () => {
+    const body = page.query('.eh-being .echo-creature')
+    const mediaBeforeSearch = { ...page.media }
+    page.click(page.query('.eh-find'))
+    const search = await until(() => page.query('.eh-search input[type="search"]'), 'search beside the life')
+    page.field(search, '折线')
+    await until(() => page.document.querySelectorAll('.eh-search .eh-song').length === 1, 'filtered real library result')
+    assert.equal(page.query('.eh-being .echo-creature'), body)
+    assert.deepEqual(page.media, mediaBeforeSearch, 'searching does not change playback')
+    const row = page.query('.eh-search .eh-song')
     page.click(row)
-    await until(() => page.byLabel('暂停', page.query('.echo-dock')), 'main player playing state')
+    await until(() => page.byLabel('暂停', page.query('.eh-music-ground')), 'shared player playing state')
+    await until(() => page.query('.echo-living-space[data-scene="encounter"]'), 'song selection returns attention to the life')
+    assert.equal(page.query('.eh-being .echo-creature'), body, 'choosing music does not remount the life')
     assert.ok(page.media.plays > 0, 'real player called media.play')
     await until(async () => (await host.json('/dsh-music/api/playback')).trackId === libraryTrack, 'real playback route updated')
+    const mediaWhilePlaying = { ...page.media }
+    page.click(page.byLabel('打开音乐操作'))
+    await until(() => page.query('.eh-listening'), 'in-space music controls')
+    assert.equal(page.query('.eh-being .echo-creature'), body)
+    assert.deepEqual(page.media, mediaWhilePlaying)
+    page.click(page.byText('共同记忆'))
+    const timeline = await until(() => page.byLabel('回看成长时间线'), 'in-space history slider')
+    const savedBeforeReview = await readFile(join(host.directory, 'echo-life.json'), 'utf8')
+    page.field(timeline, '0')
+    await until(() => page.query('.echo-living-space[data-reviewing="true"]'), 'past body in the same position')
+    assert.equal(page.query('.eh-being .echo-creature'), body)
+    assert.deepEqual(page.media, mediaWhilePlaying, 'reviewing history does not change music')
+    assert.equal(await readFile(join(host.directory, 'echo-life.json'), 'utf8'), savedBeforeReview, 'reviewing history is read-only')
+    page.click(page.byText('回到现在'))
+    await until(() => page.query('.echo-living-space[data-reviewing="false"]'), 'current body restored')
+    page.click(page.byLabel('回到生命空间'))
+    await until(() => page.query('.echo-living-space[data-scene="encounter"]'), 'uninterrupted life space')
+  })
+
+  await t.test('keeps the real player and companion across leaving, collapse, hide, restore and return', async () => {
     page.click(page.query('[data-testid="preview-workspace"]'))
     let mini = await until(() => page.query('.echo-mini'), 'persistent companion after leaving music')
     assert.ok(mini.querySelector('.echo-creature-svg title').textContent.includes(name))
@@ -329,7 +364,7 @@ test('actual ECHO plugin works through preview slots, HTTP persistence and DOM i
     await until(() => page.byLabel('音灵的回应', mini), 'independent greeting paper')
     await until(async () => (await host.json('/dsh-music/api/life')).life.greeting.recognitions === 2, 'companion greeting saved by actual life service')
     assert.ok(page.query('.echo-mini'))
-    assert.equal(page.query('.echo-home'), null, 'touching the body does not navigate')
+    assert.equal(page.query('.echo-living-space'), null, 'touching the companion does not navigate')
     assert.equal(mini.querySelector('.echo-mini-tools'), null, 'touching the body does not open music')
     assert.deepEqual(page.media, mediaBeforeTouch, 'touching the body does not change playback')
     page.click(page.byLabel(`回看记忆：${memoryTitle}`, mini))
@@ -361,21 +396,21 @@ test('actual ECHO plugin works through preview slots, HTTP persistence and DOM i
     await until(() => page.query('.echo-mini-tools', mini), 'music controls for explicit navigation')
     page.click(page.byLabel('更多播放操作', mini))
     page.click(await until(() => page.byText('回到主舞台', mini), 'main-stage navigation button'))
-    await until(() => page.query('.echo-home'), 'explicit companion navigation to actual home')
-    await until(() => !page.query('.echo-mini'), 'companion yields to the main dock')
+    await until(() => page.query('.echo-living-space'), 'explicit companion navigation to the living space')
+    await until(() => !page.query('.echo-mini'), 'companion yields to the living space')
     assert.equal(page.query('[data-testid="preview-music"]').getAttribute('aria-current'), 'page')
     // Avoid pretending the test has heard audio or accumulated listening time.
-    page.click(page.byLabel('暂停', page.query('.echo-dock')))
-    await until(() => page.byLabel('播放', page.query('.echo-dock')), 'audio controls paused for persistence assertions')
+    page.click(page.byLabel('暂停', page.query('.eh-music-ground')))
+    await until(() => page.byLabel('播放', page.query('.eh-music-ground')), 'audio controls paused for persistence assertions')
     assert.equal((await host.json('/dsh-music/api/life')).life.stats.listenedMs, 0)
   })
 
   await t.test('downloads the real replayable archive and restores the same life after a new DOM load', async () => {
-    page.click(page.byText('记忆', page.query('.dshm-tabs')))
-    await until(() => page.query('.echo-memories-page'), 'memory timeline')
-    assert.ok(page.query('.echo-timeline-creature .echo-creature-svg'))
-    assert.equal(page.document.querySelectorAll('.echo-memory-item').length, 1)
-    page.click(page.byText('带走生命档案'))
+    page.click(page.byText('共同记忆'))
+    await until(() => page.query('.eh-memory'), 'memory timeline in the same space')
+    assert.ok(page.query('.eh-being .echo-creature-svg'))
+    assert.equal(page.document.querySelectorAll('.eh-memory-list li').length, 1)
+    page.click(page.byText('导出生命档案'))
     const download = await until(() => page.downloads[0], 'archive Blob download')
     const archive = JSON.parse(await download.content)
     assert.equal(download.filename, `ECHO-${identity}.json`)
@@ -393,7 +428,7 @@ test('actual ECHO plugin works through preview slots, HTTP persistence and DOM i
     page.close()
     page = null
     page = await openPreview(host.base)
-    await until(() => page.query('.echo-name-row h3')?.textContent === name, 'saved name after new DOM load')
+    await until(() => page.query('.eh-name strong')?.textContent === name, 'saved name after new DOM load')
     const restored = await host.json('/dsh-music/api/life')
     assert.equal(restored.life.id, identity)
     assert.equal(restored.life.name, name)

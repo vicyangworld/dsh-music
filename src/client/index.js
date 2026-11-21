@@ -3,6 +3,7 @@ import { createLifeClient } from './echo/service.js';
 import { createPlaybackObserver } from './echo/audio.js';
 import echoCSS from './echo/ui.css';
 import creatureCSS from './echo/creature.css';
+import habitatCSS from './echo/habitat.css';
 
 /**
  * dsh-music — Client half (S1: 曲库 + 播放 + UI 骨架).
@@ -31,7 +32,7 @@ window.__ModuleLoader__.load({
     const React = require('react');
     const h = React.createElement;
     const { useState, useEffect, useMemo, useRef, useCallback } = React;
-    const { EchoHome, EchoMemories, EchoGallery, EchoDock, EchoMini } = createEchoUI(React);
+    const { EchoHabitat, EchoGallery, EchoMini } = createEchoUI(React);
 
     /* The mini player should sit above every panel/dialog of the DSH shell.
      * Portalling to <body> is the only reliable way to escape a host stacking
@@ -4215,7 +4216,7 @@ window.__ModuleLoader__.load({
     }
 
     /* ================================================================
-     * 12. Music panel (main slot): header + tabs + per-view body
+     * 12. Music panel (main slot): persistent habitat + optional music tools
      * ================================================================ */
     /* Music Console uses library IDs for generated queues and saved playlists.
      * Rules rank available tracks; a scene label never implies detected BPM or mood. */
@@ -4623,34 +4624,28 @@ window.__ModuleLoader__.load({
     function MusicPanel({ t, api, lifeService, player, library, lyrics, reco, download, sync, history, likes, preview, warm, openView, openArtistPage, setMiniHidden, ui, artistImages, artistPage, onboarding, useUi, useLibrary, usePlayer, useLyrics, useReco, useDownload, useSync, useHistory, useLikes, usePreview, useWarm, useArtistImages, useArtistPage, useOnboarding }) {
       const view = useUi((s) => s.view);
       const welcomePreview = useUi((s) => s.welcomePreview);
-      const onboardingSnap = useOnboarding((st) => st);
-      const miniHidden = useUi((s) => s.miniHidden);
-      const hasTrack = usePlayer((s) => !!s.track);
-      const status = useLibrary((s) => s.status);
-      const count = useLibrary((s) => s.tracks.length);
-      const playing = usePlayer((s) => s.playing);
-      const busy = status === 'loading';
-      const [commandOpen, setCommandOpen] = useState(false);
-      const openCommand = () => setCommandOpen(true);
+      const [commandRequest, setCommandRequest] = useState(0);
       const onSelect = (consoleMode, consolePrompt = '') => {
         ui.set({ view: 'studio', consoleMode, consolePrompt, consoleResult: null, saveError: false });
       };
       useEffect(() => {
-        if (view === 'welcome') return undefined;
+        // The habitat owns the visible life while the panel is mounted, even
+        // during source setup or a utility. Audio remains owned by apply().
         ui.set({ dockVisible: true });
         const handleKey = (event) => {
           if (event.defaultPrevented || event.repeat || event.isComposing
               || (!event.metaKey && !event.ctrlKey) || event.altKey || event.shiftKey || event.key.toLowerCase() !== 'k') return;
           event.preventDefault();
           event.stopPropagation();
-          setCommandOpen((open) => !open);
+          openView('library');
+          setCommandRequest((request) => request + 1);
         };
         window.addEventListener('keydown', handleKey, true);
         return () => {
           ui.set({ dockVisible: false });
           window.removeEventListener('keydown', handleKey, true);
         };
-      }, [view === 'welcome', ui]);
+      }, [ui, openView]);
 
       /* Background loads (v9): when an artist page finishes while the user is
        * looking at another view, surface a toast that jumps straight there. */
@@ -4670,77 +4665,62 @@ window.__ModuleLoader__.load({
         return () => clearTimeout(timer);
       }, [toast]);
 
-      if (view === 'welcome') {
-        return h('div', { className: 'dshm-console-welcome', style: { height: '100%' } }, h(WelcomeView, {
-          t, onboarding, useOnboarding,
-          preview: !!welcomePreview,
-          onExitPreview: () => { ui.set({ welcomePreview: false, view: 'library' }); openView('library'); },
-          onRoute: (target) => {
-            ui.set({ welcomePreview: false });
-            if (target === 'library') {
-              library.load();
-              setTimeout(() => library.load(), 1500);
-              openView('library');
-            } else openView('reco');
-          },
-        }));
-      }
-
-      const tabs = [
-        { id: 'home', label: '相处' },
-        { id: 'library', label: '音乐' },
-        { id: 'echo-memory', label: '记忆' },
-      ];
-
-      const body = view === 'home'
-        ? h(EchoHome, { lifeService, player, usePlayer, openView })
-        : view === 'echo-memory'
-          ? h(EchoMemories, { lifeService, openView })
-          : view === 'echo-gallery'
-            ? h(EchoGallery, { openView })
-        : view === 'studio'
-          ? h(ConsoleStudio, { t, api, ui, useUi, useLibrary, useHistory, useLikes, usePlayer, history, player, openView, openArtistPage, onSelect })
-          : view === 'library'
-        ? h(LibraryView, { t, player, library, sync, download, preview, likes, openArtistPage, artistImages, useLikes, useSync, useDownload, useLibrary, usePlayer, useArtistImages })
-        : view === 'reco'
-          ? h(RecoView, { t, reco, download, player, library, likes, preview, history, openArtistPage, warm, useReco, useDownload, useLibrary, useLikes, usePlayer, useHistory, useWarm })
-          : view === 'artist'
-            ? h(ArtistPageView, { t, reco, player, likes, preview, library, openView, openArtistPage, artistImages, artistPage, useUi, useLikes, useLibrary, usePlayer, useArtistImages, useArtistPage })
-            : view === 'history'
-              ? h(HistoryView, { t, history, player, openArtistPage, artistImages, likes, useHistory, useLibrary, useArtistImages, useLikes })
-              : h(NowPlayingView, { t, player, lyrics, usePlayer, useLyrics, openView, openArtistPage, artistImages, useArtistImages });
+      // Routes choose a layer in one habitat; none replace its Creature or
+      // construct another player. Full management views stay available here.
+      const renderUtility = (route) => {
+        let content;
+        switch (route) {
+          case 'studio':
+            content = h(ConsoleStudio, { t, api, ui, useUi, useLibrary, useHistory, useLikes, usePlayer, history, player, openView, openArtistPage, onSelect });
+            break;
+          case 'library-manage':
+            content = h(LibraryView, { t, player, library, sync, download, preview, likes, openArtistPage, artistImages, useLikes, useSync, useDownload, useLibrary, usePlayer, useArtistImages });
+            break;
+          case 'reco-manage':
+            content = h(RecoView, { t, reco, download, player, library, likes, preview, history, openArtistPage, warm, useReco, useDownload, useLibrary, useLikes, usePlayer, useHistory, useWarm });
+            break;
+          case 'now-manage':
+            content = h(NowPlayingView, { t, player, lyrics, usePlayer, useLyrics, openView, openArtistPage, artistImages, useArtistImages });
+            break;
+          case 'artist':
+            content = h(ArtistPageView, { t, reco, player, likes, preview, library, openView, openArtistPage, artistImages, artistPage, useUi, useLikes, useLibrary, usePlayer, useArtistImages, useArtistPage });
+            break;
+          case 'history':
+            content = h(HistoryView, { t, history, player, openArtistPage, artistImages, likes, useHistory, useLibrary, useArtistImages, useLikes });
+            break;
+          case 'echo-gallery':
+            content = h(EchoGallery, { openView });
+            break;
+          case 'welcome':
+            content = h(WelcomeView, {
+              t, onboarding, useOnboarding, preview: !!welcomePreview,
+              onExitPreview: () => { ui.set({ welcomePreview: false }); openView('library'); },
+              onRoute: (target) => {
+                ui.set({ welcomePreview: false });
+                if (target === 'library') {
+                  library.load();
+                  setTimeout(() => library.load(), 1500);
+                  openView('library');
+                } else openView('reco');
+              },
+            });
+            break;
+          case 'command':
+            content = h(ConsoleCommand, { t, useLibrary, player, openView, onSelect,
+              close: () => { if (ui.getSnapshot().view === 'command') openView('home'); } });
+            break;
+          default: return null;
+        }
+        return h('div', { className: 'dshm-console echo-utility-content' }, content);
+      };
 
       return h(React.Fragment, null,
-        h('div', { className: 'dshm-panel dshm-console echo-shell' },
-          h('header', { className: 'dshm-header', inert: commandOpen || undefined },
-            h('div', { className: 'dshm-title-row' }, h(ConsoleSignal),
-              h('h1', { className: 'dshm-title' }, 'ECHO'),
-              h('span', { className: 'dshm-count' }, '音灵')),
-            h('nav', { className: 'dshm-tabs', 'aria-label': t('panel') },
-              tabs.map((tab) => h('button', {
-                key: tab.id, type: 'button', className: 'dshm-tab',
-                'aria-current': view === tab.id ? 'page' : undefined,
-                onClick: () => openView(tab.id),
-              }, tab.label, tab.dot ? h('span', { className: 'dshm-tab-dot', 'aria-hidden': true }) : null))),
-            h('div', { className: 'dshm-header-actions' },
-              h('details', { className: 'echo-more-menu' },
-                h('summary', { 'aria-label': '更多音乐功能' }, '···'),
-                h('div', null, [['reco', '音乐探索'], ['studio', '音乐策展'], ['now', '正在播放'], ['history', '收听历史'], ['welcome', '音乐来源设置']].map(([id, label]) => h('button', { type: 'button', key: id, onClick: (event) => { event.currentTarget.closest('details').open = false; if (id === 'welcome') ui.set({ welcomePreview: true }); openView(id); } }, label)))),
-              h('button', { type: 'button', className: 'dshm-chipbtn dshm-terminal', onClick: openCommand,
-                'aria-label': t('consoleCommand'), title: t('consoleCommand') },
-                h(IconSearch, { size: 14 }), h('span', { className: 'dshm-terminal-text' }, t('consoleCommand')),
-                h('kbd', { className: 'dshm-key' }, /Mac/.test(window.navigator?.platform || '') ? '⌘ K' : 'Ctrl K')),
-              h(IconButton, { label: miniHidden ? t('showMini') : t('hideMini'), active: !miniHidden,
-                onClick: () => setMiniHidden(!miniHidden) }, h(IconNote, { size: 16 })),
-              h(IconButton, { label: busy ? t('rescanning') : t('rescan'), disabled: busy, onClick: () => library.rescan() },
-                h(IconRefresh, { size: 16, className: busy ? 'dshm-spin' : undefined })),
-              onboardingSnap?.completed ? h(IconButton, {
-                label: t('welcomePreview'), onClick: () => ui.set({ view: 'welcome', welcomePreview: true }),
-              }, h(IconSparkles, { size: 16 })) : null)),
-          h('div', { className: 'dshm-body', inert: commandOpen || undefined }, body),
-          h('div', { inert: commandOpen || undefined },
-            h(EchoDock, { player, usePlayer, openView })),
-          commandOpen ? h(ConsoleCommand, { t, close: () => setCommandOpen(false), useLibrary, player, openView, onSelect }) : null),
+        h(EchoHabitat, {
+          lifeService, player, library, lyrics, likes, reco, history, preview, warm, ui,
+          usePlayer, useLibrary, useLyrics, useLikes, useHistory, useReco, useUi,
+          openView, openArtistPage, setMiniHidden, renderUtility,
+          requestedView: view, commandRequest,
+        }),
         toast
           ? h('div', { className: 'dshm-toast', role: 'status' },
               h('span', { className: 'dshm-toast-icon' }, h(IconCheck, { size: 14 })),
@@ -5068,7 +5048,7 @@ window.__ModuleLoader__.load({
         if (typeof document === 'undefined') return () => {};
         const el = document.createElement('style');
         el.setAttribute('data-dsh-music', '');
-        el.textContent = CSS + '\n' + echoCSS + '\n' + creatureCSS;
+        el.textContent = CSS + '\n' + echoCSS + '\n' + creatureCSS + '\n' + habitatCSS;
         document.head.appendChild(el);
         return () => { el.remove(); };
       }, 'dsh-music: styles');

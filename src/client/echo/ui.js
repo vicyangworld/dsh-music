@@ -1,6 +1,7 @@
 import { createLife, applyLifeEvent, getMorphology } from '../../../bundle/shared/life-core.js';
 import { createCreatureComponents } from './creature.js';
 import { createEchoMiniComponent } from './mini.js';
+import { createHabitatComponent } from './habitat.js';
 
 const shortDate = at => new Date(at).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' });
 const formatTime = seconds => `${Math.floor((seconds || 0) / 60)}:${String(Math.floor((seconds || 0) % 60)).padStart(2, '0')}`;
@@ -271,5 +272,6 @@ export function createEchoUI(React) {
       h('div', { className: 'echo-dock-volume' }, h('button', { type: 'button', onClick: player.toggleMute, 'aria-label': muted ? '取消静音' : '静音', 'aria-pressed': muted }, h(Icon, { name: 'sound' })), h('input', { type: 'range', min: 0, max: 1, step: 0.01, value: muted ? 0 : volume, onChange: e => player.setVolume(Number(e.target.value)), 'aria-label': '音量' })),
       error ? h('span', { className: 'echo-playback-error', role: 'alert' }, error) : null);
   }
-  return { EchoHome, EchoMemories, EchoGallery, EchoDock, EchoMini, Creature };
+  const EchoHabitat = createHabitatComponent(React, { Creature, Icon, useLife, EditDialog, GreetingDialog, MemoryDialog, Status, EmptyLife, formatTime, shortDate, downloadJSON });
+  return { EchoHome, EchoMemories, EchoGallery, EchoDock, EchoMini, EchoHabitat, Creature };
 }
