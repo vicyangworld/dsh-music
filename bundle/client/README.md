@@ -1,63 +1,48 @@
-# dsh-music Client 半（织音）
+# ECHO / dsh-music 客户端
 
-单文件浏览器产物 `index.js`，无构建步骤。通过 `window.__ModuleLoader__.load` 注册懒工厂，
-id = `@vicyangorg/dsh-music`（须与 bundle 包名 `name` 完全一致）。React 来自浏览器模块表，不安装重复 React，
-不 import 任何 Harness Client 包（遵守 cordis-plugin-development 的 ui-plugin/practices 规范）。
+`index.js` 是给 Harness 加载的自包含生成产物。请编辑仓库中的 `src/client/`，然后在仓库根目录运行 `npm ci && npm run build`。不要直接修改生成文件。
 
-## 渲染面（已对照真实源码契约核实）
+## 加载与依赖
 
-| 插槽 | 类型 | 用途 | 关键注册参数 |
-|---|---|---|---|
-| `sidebar.panellist` | list | 左侧栏"音乐"图标 | `{id:'music', order:30, label:()=>t('panel')}`；组件收 owner props `{size, active}` |
-| `main` | keyed | 音乐面板（曲库/推荐/正在播放） | `{key:'music', locale:'dshMusic'}` |
-| `shell.overlay` | list | 迷你播放条，跨面板常驻 | `{id:'dsh-music.mini-player'}`；overlay 层 click-through，条目自带 pointer-events |
+客户端通过 `window.__ModuleLoader__.load` 注册工厂，模块 ID 为 `@vicyangorg/dsh-music`，与包名一致。工厂只从宿主模块表取得 `react` 和可用的 `react-dom` portal；发布包不捆绑另一份 React，也不导入 Harness 私有客户端包。
 
-依据：`ui-layout/src/client/index.ts`（插槽声明）、`ui-sidebar/src/client/contract/slots.ts`
-（panellist 元数据 `{id, order, label}`）、`ui-plugin-manager/src/client/index.ts`（注册范式）、
-`AppFrame.tsx`（main 只渲染当前 key → 播放器必须独立于面板生命周期；shell.overlay 无条件挂载）。
+开发依赖中的 React、ReactDOM 用于独立预览；esbuild 将源码、生命规则和 CSS 合成单个 `bundle/client/index.js`。宿主安装这个产物时无需运行构建。
 
-## 架构
+## 渲染面
 
-- **播放器单例**（`createPlayer`）：在 `apply()` 中创建、`ctx.effect` 持有 dispose。
-  HTMLAudioElement + 不可变快照 store（getSnapshot/subscribe）。面板切走时组件卸载但引擎不停，
-  迷你条继续控制。支持播放/暂停、上下首、拖动进度、音量/静音、随机、三态循环、队列跳转、
-  MediaSession（系统媒体键，try/catch 降级）。音量/静音/随机/循环偏好存 localStorage。
-- **曲库 store**（`createLibrary`）：fetch Host 路由，status: idle/loading/ready/error，防并发。
-- **视图状态 store**（`ui`）：`{view:'library'|'reco'|'now'}`，面板与迷你条共享；
-  迷你条点击 → `openView('now') + ctx.layout.selectPanel('music')`。
-- 组件经注册项 `inject.hooks` 拿到 `usePlayer/useLibrary/useUi` selector hook（框架绑定），
-  只选原始值/稳定引用，避免 timeupdate（~4Hz）引发整列表重渲染。
+| 插槽 | 注册键 | 内容 |
+|---|---|---|
+| `sidebar.panellist` | `music` | 宿主的音乐入口 |
+| `main` | `music` | 相处、音乐、记忆；更多菜单保留策展、推荐、历史和设置 |
+| `shell.overlay` | `dsh-music.mini-player` | 跨面板音灵伴生窗，可收拢、拖动、隐藏和控制播放 |
 
-## Host 契约（S1，与磐石约定）
+`inject.hooks` 中的 store 提供不可变 `getSnapshot/subscribe` 契约，Harness 生成对应的 `usePlayer/useUi` 等 selector hooks。播放器在 `apply()` 中单例创建，切换主面板不会停止播放。卸载时先停止播放器并将最后一段观察交给待发送队列，再释放生命客户端。
 
-同源 HTTP（JSON 里是根绝对路径；Client 按宿主 boot graph 约定**去掉开头 `/` 后
-`new URL(rel, document.baseURI)`** 解析，兼容非根挂载——与磐石约定的实现细化）：
-- `GET /dsh-music/api/library` → `{tracks:[{id,title,artist,album,duration,format,source,audioUrl,coverUrl}],scannedAt}`
-- `POST /dsh-music/api/rescan` → 同结构
-- `GET /dsh-music/audio/<id>` → Range 音频流（206/Accept-Ranges/Content-Type）
-- `GET /dsh-music/cover/<id>` → 封面图片或 404
-- 非 2xx：`{error:"中文原因"}`，UI 原样展示。
+## 文件职责
 
-## 主题与文案
+| 源码 | 职责 |
+|---|---|
+| `src/client/index.js` | Harness 插槽、音乐服务、曲库和原有音乐视图 |
+| `src/client/echo/ui.js`、`ui.css` | 音灵主舞台、招呼、记忆、时间线、形态比较和伴生窗 |
+| `src/client/echo/creature.js`、`creature.css` | 三种程序化 SVG 身体结构、动作和身体标记 |
+| `src/client/echo/audio.js` | 观察本播放器的有效播放区间与可用音频特征 |
+| `src/client/echo/service.js` | 生命 API、持久待发送队列、重试及错误反馈 |
+| `bundle/shared/life-core.js` | 浏览器和服务端共享的确定性成长规则 |
+| `src/preview/entry.jsx` | 独立预览的宿主适配器，加载同一个生成客户端 |
 
-- 全部颜色走 `--dsw-alias-*` token（21 个，已逐一对照 ui-theme design-platform.css 验证存在）；
-  无硬编码颜色，明暗主题自动跟随。图标为原创手绘 SVG path（currentColor）。
-- 文案全量走 Client locale：命名空间 `dshMusic`，zh/en 各 60 键，已脚本校验无缺键。
-- 动效：均衡器跳动、迷你条入场、hover/active 反馈、骨架屏；`prefers-reduced-motion` 全降级。
-- 滚动条自绘（token 色），列表/正在播放两区一致。
+## 同源 API
 
-## 阶段边界
+宿主路径按 `document.baseURI` 解析，保留非根路径挂载支持。
 
-- S1（本文件当前范围）：曲库列表（搜索/按歌手/按专辑分组/播放全部/随机播放）、播放控制、
-  正在播放视图（大封面+进度+队列）、迷你播放条、推荐视图的诚实空状态（S3 上线说明）。
-- S2 接入：歌词滚动视图、歌手卡片抽屉（拾词的数据就绪后在 NowPlaying/曲库行扩展）。
-- S3 接入：推荐列表（相近/探索标注+理由）、下载队列、Spotify 同步按钮、历史视图。
+- `GET /dsh-music/api/life`：当前生命和形态。
+- `POST /dsh-music/api/life/events`：提交一个经验证的经历。
+- `GET /dsh-music/api/life/export`：导出已保存的版本化生命档案。
+- 原有 library、audio、cover、history、lyrics、reco 等接口保持可用。
 
-## 静态验证记录（2026-11-12）
+失败的经历不会显示成已完成成长。网络暂不可用时保留本机队列；无法写入本机时明确显示仅保留在当前页面。单条无效经历单独保留，可查看原因、重试和导出。待发送/未接受的经历与服务端正式档案分开导出。
 
-- `node --check bundle/client/index.js` → SYNTAX OK
-- locale 键覆盖脚本：used 55 / zh 60 / en 60，缺键 0，zh/en 键集一致
-- CSS 硬编码颜色扫描：0；使用的 21 个 token 全部存在于 design-platform.css
-- 组件引用审计：所有 `h(Icon*/Component)` 均有定义
+## 当前视觉与验证边界
 
-GUI 实测待磐石的 Host 半 + manifest 就绪、`install_bundle` applied 后进行（证据交明镜/Chief）。
+ECHO alpha 使用浅色纸面和矿物色，新增生命界面以中文为主；原有音乐文案继续使用 `dshMusic` locale。动效支持 `prefers-reduced-motion`，交互控件和身体印记可通过键盘操作。三种结构各自有参数变化，尚不是无限拓扑生成。
+
+`npm run preview` 使用真实客户端和生命服务、独立临时数据目录及三段原创合成试听，不会扫描用户曲库。DOM 流程测试、规则测试和 SVG 静态检查不代替 Harness 实机上的布局、音频输出和性能验收。完整行为和容量限制见 [ECHO 说明](../docs/ECHO.md)。

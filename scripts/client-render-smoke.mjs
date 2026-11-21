@@ -1,19 +1,29 @@
 #!/usr/bin/env node
 /**
- * dsh-music client render smoke (no build, no browser).
+ * dsh-music generated-client render smoke (build first, no browser).
  *
  * Loads the real single-file client artifact in a vm sandbox with a minimal
  * React mock, drives the real component tree through the main views and the
- * mini player, and asserts the v6/v7 interaction contracts (mini player
- * states, list playback queues, artist entries, cold-start onboarding copy,
- * artist-image request coalescing, top-songs playback). Exit 0 = all pass.
+ * ECHO companion window, and asserts the retained music contracts (list
+ * playback queues, artist entries, cold-start onboarding copy, artist-image
+ * request coalescing, top-songs playback) plus ECHO identity,
+ * companion persistence, keyboard dragging and playback. Exit 0 = all pass.
  *
- * Run: node scripts/client-render-smoke.mjs
+ * Run: npm run build && node scripts/client-render-smoke.mjs
  */
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { webcrypto } from 'node:crypto';
+import { createLife, applyLifeEvent, getMorphology } from '../bundle/shared/life-core.js';
 
 const src = fs.readFileSync(new URL('../bundle/client/index.js', import.meta.url), 'utf8');
+// Only the two isolated onboarding handler checks read authored source below.
+// All registration, components, services and other checks execute the built artifact.
+const authoredSrc = fs.readFileSync(new URL('../src/client/index.js', import.meta.url), 'utf8');
+
+const lifeInitial = createLife({ seed: 'client-render-smoke', now: 1700000000000, name: '冒烟音灵' });
+const lifeEvents = [{ id: 'smoke-memory', type: 'memory', at: 1700000001000, title: '第一次一起听' }];
+let lifeState = applyLifeEvent(lifeInitial, lifeEvents[0]);
 
 /* ---- minimal React ---- */
 const state = { view: 'library', miniHidden: false, miniCollapsed: false, artistName: null };
@@ -64,15 +74,35 @@ const localStorage = {
   setItem(k, v) { this._v[k] = String(v); }, removeItem(k) { delete this._v[k]; },
 };
 let captured = null;
+const windowListeners = new Map();
+const addWindowListener = (type, listener) => {
+  if (!windowListeners.has(type)) windowListeners.set(type, new Set());
+  windowListeners.get(type).add(listener);
+};
+const removeWindowListener = (type, listener) => windowListeners.get(type)?.delete(listener);
+const emitWindow = (type, event) => { for (const listener of windowListeners.get(type) || []) listener(event); };
 const windowMock = {
   __ModuleLoader__: { load: (def) => { captured = def; } },
   localStorage, innerWidth: 1440, innerHeight: 900,
-  addEventListener: noop, removeEventListener: noop,
+  addEventListener: addWindowListener, removeEventListener: removeWindowListener,
   confirm: () => true,
 };
 const fetchCalls = [];
-const fetchMock = async (url) => {
+const fetchMock = async (url, options = {}) => {
   fetchCalls.push(url);
+  const path = new URL(url, 'http://127.0.0.1').pathname;
+  if (path === '/dsh-music/api/life/events') {
+    const event = JSON.parse(options.body);
+    lifeState = applyLifeEvent(lifeState, event);
+    if (!lifeEvents.some(item => item.id === event.id)) lifeEvents.push(event);
+  }
+  if (path === '/dsh-music/api/life' || path === '/dsh-music/api/life/events') {
+    const body = { life: structuredClone(lifeState), morphology: getMorphology(lifeState) };
+    return { ok: true, status: 200, json: async () => body };
+  }
+  if (path === '/dsh-music/api/life/export') {
+    return { ok: true, status: 200, json: async () => ({ format: 'echo-life-archive', version: 1, initial: lifeInitial, events: lifeEvents, life: lifeState }) };
+  }
   const body = url.includes('/sync/availability')
     ? { available: true, hint: null }
     : url.includes('/sync/status')
@@ -80,28 +110,41 @@ const fetchMock = async (url) => {
       : url.includes('/library/preview')
         ? { status: 'ready', audioUrl: '/dsh-music/preview/abc.m4a' }
         : { imageUrl: 'http://img/orig.jpg', thumbnailUrl: 'http://img/thumb.jpg' };
-  return { ok: true, json: async () => body };
+  return { ok: true, status: 200, json: async () => body };
 };
-const sandbox = { window: windowMock, localStorage, console, setTimeout, clearTimeout, fetch: fetchMock,
-  document: { createElement: () => ({ setAttribute: noop, textContent: '', remove: noop }), head: { appendChild: noop } } };
+const documentMock = {
+  baseURI: 'http://127.0.0.1/', hidden: false,
+  createElement: () => ({ setAttribute: noop, textContent: '', remove: noop, click: noop, style: { setProperty: noop } }),
+  head: { appendChild: noop }, body: { appendChild: noop },
+  addEventListener: noop, removeEventListener: noop,
+};
+const sandbox = {
+  AbortController, URL, Blob, TextEncoder, TextDecoder, structuredClone, performance,
+  crypto: webcrypto, window: windowMock, localStorage, console, setTimeout, clearTimeout,
+  addEventListener: addWindowListener, removeEventListener: removeWindowListener,
+  fetch: fetchMock, document: documentMock,
+};
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
 vm.runInContext(src, sandbox, { filename: 'client/index.js' });
 if (!captured || !captured.factory) throw new Error('factory not captured');
 
 const api = { get: noop, post: noop, request: noop };
+const portalTargets = [];
 const requireMock = (id) => {
   if (id === 'react') return React;
+  if (id === 'react-dom') return { createPortal: (node, target) => { portalTargets.push(target); return node; } };
   throw new Error('unexpected require: ' + id);
 };
 const mod = captured.factory(requireMock);
 
 const comps = {};
 const services = {};
+const selectedPanels = [];
 const ctx = {
   effect: (fn) => { const r = fn(); return typeof r === 'function' ? r : noop; },
   locale: { register: noop, bind: () => (k) => k },
-  layout: { selectPanel: noop },
+  layout: { selectPanel: id => selectedPanels.push(id) },
   slots: {
     inject: (name, fn) => fn(),
     register: (def, comp) => {
@@ -133,6 +176,7 @@ const useWarm = (sel) => {
 };
 const hooks = { usePlayer, useLibrary, useLyrics, useUi, useHistory, useReco, useDownload, useSync, useLikes, usePreview, useWarm, useArtistImages, useOnboarding };
 const svc = services['music'] || services['shell.overlay'] || {};
+await svc.lifeService.load();
 const music = comps['music'];
 const mini = comps['dsh-music.mini-player'];
 if (!music) throw new Error('MusicPanel not registered');
@@ -144,6 +188,12 @@ const expand = (node) => {
   if (Array.isArray(node)) return node.map(expand).flat(Infinity);
   if (typeof node.type === 'function') return expand(node.type(node.props));
   if (node.type === 'Fragment') return node.children.map(expand).flat(Infinity);
+  // React normally attaches DOM refs before user input. The geometry stub is
+  // only used by pointer/keyboard tests; SVG paths are still the real renderer.
+  if (node.props.ref && typeof node.props.ref === 'object') node.props.ref.current = {
+    getBoundingClientRect: () => ({ left: 100, top: 150, width: 280, height: 115 }),
+    style: { setProperty: noop }, querySelector: () => null, querySelectorAll: () => [],
+  };
   return { ...node, children: node.children.map(expand).flat(Infinity) };
 };
 const walk = (node, out = []) => {
@@ -173,6 +223,8 @@ const nowTree = expand(music(baseProps));
 check('now-playing renders', !!nowTree);
 check('now-playing has 1 cycle-mode control', walk(nowTree).filter((n) => /dshm-mode-cycle|dshm-iconbtn/.test(cls(n))).length >= 1);
 check('now-playing artist opens artist page (button present)', has(nowTree, (n) => cls(n).includes('dshm-artist-btn')));
+check('now-playing retains all synchronized lyric lines', walk(nowTree).filter((n) => /^dshm-lyric-line(?: |$)/.test(cls(n))).length === lyricsState.data.lines.length);
+check('panel dock retains a working seek slider', has(nowTree, (n) => n.type === 'input' && n.props['aria-label'] === '播放进度' && typeof n.props.onChange === 'function' && !n.props.disabled));
 
 /* 3) history view: play-list header + clickable rows */
 state.view = 'history';
@@ -278,10 +330,12 @@ check('welcome shows title + start CTA', has(welcomeTree, (n) => cls(n).includes
   && has(welcomeTree, (n) => (n.children || []).includes('welcomeTitle')));
 check('welcome shows the three selling points', has(welcomeTree, (n) => cls(n) === 'dshm-wpoint'));
 
-/* Preview mode must be side-effect free: run the real finish()/skipAll() bodies
- * extracted from source with mock services and count every call. */
-const finishBody = (src.match(/async function finish\(\) \{\n([\s\S]*?)\n      \}\n/) || [])[1];
-const skipBody = (src.match(/function skipAll\(\) \{\n([\s\S]*?)\n      \}\n/) || [])[1];
+/* Preview mode must be side-effect free. These two small handler bodies use
+ * authored source so esbuild's formatting does not alter the extraction.
+ * Their rendered controls and every other integration check use the artifact. */
+const finishBody = (authoredSrc.match(/async function finish\(\) \{\n([\s\S]*?)\n      \}\n/) || [])[1];
+const skipBody = (authoredSrc.match(/function skipAll\(\) \{\n([\s\S]*?)\n      \}\n/) || [])[1];
+if (!finishBody || !skipBody) throw new Error('Onboarding handlers were not found in authored source');
 async function runFinish(preview, mode) {
   const calls = { complete: 0, exit: 0, route: 0 };
   const fn = new Function('onboarding', 'preview', 'onExitPreview', 'onRoute', 'setStep', 'setBusy', 'setFailed', 'mode', 'genres', 'langs', 'dirPath', 'busy',
@@ -307,8 +361,7 @@ check('welcome preview shows a close button', has(expand(music(baseProps)), (n) 
 state.welcomePreview = false;
 state.view = 'library';
 const backTree = expand(music(baseProps));
-check('returning user gets a preview-welcome entry', has(backTree, (n) => cls(n) === 'dshm-chipbtn'
-  && (n.children || []).includes('welcomePreview')));
+check('returning user gets a preview-welcome entry', has(backTree, (n) => n.type === 'button' && n.props['aria-label'] === 'welcomePreview'));
 
 /* 4a) small round artist avatars where the brief asks for them */
 const isRoundThumb = (n) => cls(n).includes('dshm-tile') && n.props.style && n.props.style.borderRadius === '50%';
@@ -317,6 +370,7 @@ state.view = 'library';
 groupDefault = 'artist';
 const groupAvatars = walk(expand(music(baseProps))).filter(isRoundThumb);
 check('library artist group header avatar rendered', groupAvatars.length >= 2, 'count=' + groupAvatars.length);
+state.view = 'now';
 const nowAvatars = walk(expand(music(baseProps))).filter(isRoundThumb);
 check('now-playing artist avatar rendered', nowAvatars.length >= 1, 'count=' + nowAvatars.length);
 state.view = 'history';
@@ -364,31 +418,65 @@ offRows[0].props.onClick();
 check('clicking an unplayable top song does not start playback', plays.length === beforeOff,
   'plays=' + plays.length);
 
-/* 5) mini player states */
+/* 5) ECHO companion: persistent body, compact/hide, drag and shared playback. */
 const miniProps = { t: (k) => k, ...(services['dsh-music.mini-player'] || {}), ...hooks };
-state.miniHidden = false; state.miniCollapsed = false;
+state.miniHidden = false; state.miniCollapsed = false; state.dockVisible = false;
 const expanded = expand(mini(miniProps));
-check('mini expanded renders', !!expanded);
-check('mini has drag grip', has(expanded, (n) => cls(n) === 'dshm-mini-grip' && typeof n.props.onPointerDown === 'function'));
-check('mini has seek slider', has(expanded, (n) => cls(n).includes('dshm-slider')));
-check('mini shows 3 lyric lines', walk(expanded).filter((n) => /dshm-mini-lyric\b/.test(cls(n))).length === 3,
-  'count=' + walk(expanded).filter((n) => /dshm-mini-lyric\b/.test(cls(n))).length);
-check('mini artist clickable', has(expanded, (n) => cls(n).includes('dshm-mini-artist') && typeof n.props.onClick === 'function'));
-check('mini has collapse button', has(expanded, (n) => (n.props && n.props.title) === 'miniCollapse'));
+check('companion renders the stored life in a body portal', !!expanded && portalTargets.at(-1) === documentMock.body
+  && has(expanded, n => cls(n) === 'echo-creature' && n.props['data-structure'] === lifeState.genome.structure));
+const grip = walk(expanded).find(n => cls(n) === 'echo-mini-grip');
+check('companion grip supports pointer and keyboard access', grip?.props.role === 'button' && grip.props.tabIndex === 0
+  && typeof grip.props.onPointerDown === 'function' && typeof grip.props.onKeyDown === 'function');
+let prevented = 0;
+grip.props.onKeyDown({ key: 'ArrowRight', preventDefault: () => prevented++ });
+const keyPosition = JSON.parse(localStorage.getItem('dsh-music.echo.mini-position'));
+check('keyboard movement saves the new companion position', prevented === 1 && keyPosition.x === 112 && keyPosition.y === 150);
+grip.props.onPointerDown({ button: 0, clientX: 115, clientY: 165, preventDefault: noop,
+  currentTarget: { parentElement: { getBoundingClientRect: () => ({ left: 100, top: 150 }) } } });
+emitWindow('pointermove', { clientX: 10000, clientY: 10000 });
+emitWindow('pointerup', {});
+const dragPosition = JSON.parse(localStorage.getItem('dsh-music.echo.mini-position'));
+check('pointer movement stays in the viewport and persists on release', dragPosition.x === 1160 && dragPosition.y === 785);
+const savedToggle = playerSvc.toggle;
+let toggleCount = 0;
+playerSvc.toggle = () => toggleCount++;
+const playingMini = expand(mini(miniProps));
+const pauseButton = walk(playingMini).find(n => n.props['aria-label'] === '暂停');
+pauseButton?.props.onClick();
+check('companion controls the shared player', !!pauseButton && toggleCount === 1);
+playerSvc.toggle = savedToggle;
+const collapseButton = walk(expanded).find(n => n.props['aria-label'] === '收拢伴生窗');
+collapseButton?.props.onClick();
+check('companion collapse writes the real UI preference', !!collapseButton && svc.hooks.ui.getSnapshot().miniCollapsed === true
+  && JSON.parse(localStorage.getItem('dsh-music.prefs')).miniCollapsed === true);
 
 state.miniCollapsed = true;
 const collapsedTree = expand(mini(miniProps));
-check('mini collapsed renders a floating badge', !!collapsedTree && has(collapsedTree, (n) => cls(n) === 'dshm-mini-fab'));
-check('floating badge is draggable', has(collapsedTree, (n) => cls(n) === 'dshm-mini-fab' && typeof n.props.onPointerDown === 'function' && typeof n.props.onPointerMove === 'function'));
-check('floating badge restores on activate', has(collapsedTree, (n) => cls(n) === 'dshm-mini-fab' && typeof n.props.onKeyDown === 'function'));
-check('floating badge hides the bar controls', !has(collapsedTree, (n) => cls(n).includes('dshm-slider')));
+check('compact companion preserves a compact life body', has(collapsedTree, n => cls(n).includes('echo-mini is-compact'))
+  && has(collapsedTree, n => cls(n) === 'echo-creature' && n.props['data-compact'] === 'true'));
+check('compact companion keeps its accessible grip', has(collapsedTree, n => cls(n) === 'echo-mini-grip' && typeof n.props.onKeyDown === 'function'));
+check('compact companion hides expanded copy', !has(collapsedTree, n => cls(n) === 'echo-mini-copy'));
+const expandButton = walk(collapsedTree).find(n => n.props['aria-label'] === '展开伴生窗');
+expandButton?.props.onClick();
+check('compact companion expands through the real UI store', !!expandButton && svc.hooks.ui.getSnapshot().miniCollapsed === false);
+const touchTarget = walk(collapsedTree).find(n => cls(n) === 'echo-creature-touch-target');
+touchTarget?.props.onKeyDown({ key: 'Enter', preventDefault: noop });
+check('keyboard activation of its body opens the main habitat', svc.hooks.ui.getSnapshot().view === 'home' && selectedPanels.at(-1) === 'music');
+
+state.miniCollapsed = false;
+const savedTrack = playerState.track, savedPlaying = playerState.playing;
+playerState.track = null; playerState.playing = false;
+const silentCompanion = expand(mini(miniProps));
+check('companion stays present when no song is loaded', has(silentCompanion, n => cls(n) === 'echo-creature')
+  && has(silentCompanion, n => n.children.includes('安静陪你待一会儿')));
+check('companion without a song does not expose a false play control', !has(silentCompanion, n => ['播放', '暂停'].includes(n.props['aria-label'])));
+playerState.track = savedTrack; playerState.playing = savedPlaying;
+const hideButton = walk(expanded).find(n => n.props['aria-label'] === '隐藏伴生窗');
+hideButton?.props.onClick();
+check('hiding the companion saves visibility without changing the queue', !!hideButton && svc.hooks.ui.getSnapshot().miniHidden === true && plays.length === beforeOff);
 
 state.miniHidden = true;
-check('mini hidden renders nothing', mini(miniProps) === null);
-
-/* 5b) mini artist avatar */
-check('mini artist avatar rendered', walk(expanded).filter(isRoundThumb).length >= 1,
-  'count=' + walk(expanded).filter(isRoundThumb).length);
+check('hidden companion renders nothing', expand(mini(miniProps)) === null);
 
 /* 5c) artist-image service: debounce coalescing + memory cache */
 const svcImgs = (services['music'] || {}).artistImages;
@@ -413,7 +501,8 @@ check('artist-image memory cache prevents refetch', fetchCalls.filter((u) => u.i
 /* 5z) inline locale hygiene: no shadowed duplicates, no stale launch copy */
 function localeBlock(marker) {
   const ls = src.split('\n');
-  const start = ls.findIndex((l) => l.startsWith(marker));
+  const start = ls.findIndex((l) => l.trim() === marker);
+  if (start < 0) return { text: '', dup: [] };
   let depth = 0;
   const body = [];
   for (let i = start; i < ls.length; i++) {
@@ -423,13 +512,13 @@ function localeBlock(marker) {
   }
   const counts = {};
   for (const l of body) {
-    const m = l.match(/^      (\w+):/);
+    const m = l.match(/^\s+(\w+):/);
     if (m) counts[m[1]] = (counts[m[1]] || 0) + 1;
   }
   return { text: body.join('\n'), dup: Object.keys(counts).filter((k) => counts[k] > 1) };
 }
-const zhBlock = localeBlock('    const zh = {');
-const enBlock = localeBlock('    const en = {');
+const zhBlock = localeBlock('const zh = {');
+const enBlock = localeBlock('const en = {');
 check('zh locale has no duplicate keys (no shadowing)', !!zhBlock.text && zhBlock.dup.length === 0, 'dups=' + JSON.stringify(zhBlock.dup));
 check('en locale has no duplicate keys (no shadowing)', !!enBlock.text && enBlock.dup.length === 0, 'dups=' + JSON.stringify(enBlock.dup));
 check('no stale "stage 3" copy in zh/en', !/阶段 ?3|stage ?3/i.test(zhBlock.text) && !/阶段 ?3|stage ?3/i.test(enBlock.text));
@@ -441,8 +530,7 @@ uiStore.set({ view: 'library', welcomePreview: false, lyricsOpen: false });
 const useUiReal = (sel) => sel(uiStore.getSnapshot());
 const realProps = { ...baseProps, useUi: useUiReal };
 const realHeader = expand(music(realProps));
-const previewBtn = walk(realHeader).find((n) => cls(n) === 'dshm-chipbtn'
-  && (n.children || []).includes('welcomePreview'));
+const previewBtn = walk(realHeader).find((n) => n.type === 'button' && n.props['aria-label'] === 'welcomePreview');
 check('preview button is rendered and enabled', !!previewBtn && !(previewBtn.props || {}).disabled);
 previewBtn.props.onClick();
 const afterClick = uiStore.getSnapshot();
@@ -488,7 +576,40 @@ historyState = { ...historyState, stats: { ...historyState.stats, dislikes: { co
 const histTree = expand(music({ ...realProps, useUi: (sel) => sel({ ...uiStore.getSnapshot(), view: 'history' }) }));
 check('history stats shows the dislike summary block', has(histTree, (n) => cls(n) === 'dshm-dislike-row'));
 
-/* 6) report */
+/* 6) Local curation: generate a filtered queue and save its library IDs. */
+const addedTracks = [
+  { id: 'rock-one', title: 'Current', artist: 'Mic Check', genre: 'Rock', language: 'eng', duration: 170, audioUrl: '/one.mp3' },
+  { id: 'rock-two', title: 'Overdrive', artist: 'Sound Check', genre: 'Rock', language: 'zho', duration: 160, audioUrl: '/two.mp3' },
+  { id: 'jazz-one', title: 'Blue Hour', artist: 'Live Room', genre: 'Jazz', language: 'eng', duration: 180, audioUrl: '/three.mp3' },
+];
+const consoleProps = { ...realProps, useLibrary: (sel) => sel({ status: 'ready', tracks: addedTracks }) };
+uiStore.set({ view: 'home' });
+const consoleHome = expand(music(consoleProps));
+check('ECHO home renders the stored life and panel dock',
+  has(consoleHome, node => cls(node) === 'echo-home') && has(consoleHome, node => cls(node) === 'echo-creature')
+  && has(consoleHome, node => cls(node) === 'echo-dock') && has(consoleHome, node => node.children.includes('冒烟音灵')));
+const curationEntry = walk(consoleHome).find(node => node.type === 'button' && node.children.includes('音乐策展'));
+curationEntry?.props.onClick({ currentTarget: { closest: () => ({ open: true }) } });
+check('the retained curation entry opens the studio', !!curationEntry && uiStore.getSnapshot().view === 'studio');
+uiStore.set({ view: 'studio', consoleMode: 'playlist', consolePrompt: '5 minutes of English rock', consoleResult: null });
+const consoleTree = expand(music(consoleProps));
+await walk(consoleTree).find((node) => node.type === 'form' && cls(node) === 'dshm-command-form').props.onSubmit({ preventDefault: noop });
+const curation = uiStore.getSnapshot().consoleResult;
+check('curation respects genre and language tags and reports the target duration',
+  curation.ids.join(',') === 'rock-one' && curation.seconds === 170 && curation.target === 300);
+const generatedTree = expand(music(consoleProps));
+walk(generatedTree).find((node) => node.type === 'button' && node.children.includes('consoleSave')).props.onClick();
+const storedLists = JSON.parse(localStorage.getItem('dsh-music.prefs')).consoleLists;
+check('saving curation persists only library IDs, with no audio path',
+  storedLists.length === 1 && storedLists[0].ids.join(',') === 'rock-one'
+  && !JSON.stringify(storedLists).includes('/one.mp3'));
+// Clear the previous explicit-hide test so this assertion isolates the dock.
+uiStore.set({ dockVisible: true, miniHidden: false, miniCollapsed: false });
+const inMusic = expand(mini({ ...(services['dsh-music.mini-player'] || {}), t: (key) => key,
+  usePlayer, useUi: useUiReal, useLyrics, useArtistImages }));
+check('floating player yields to the panel dock', inMusic == null);
+
+/* 7) report */
 const fail = results.filter((r) => !r.ok);
 for (const r of results) console.log((r.ok ? 'PASS' : 'FAIL') + '  ' + r.name + (r.detail ? '  (' + r.detail + ')' : ''));
 console.log('\n' + (results.length - fail.length) + '/' + results.length + ' PASS');

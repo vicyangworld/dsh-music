@@ -14,8 +14,10 @@ import { createSearch, registerSearchRoutes } from './search.js'
 import { createLikes, registerLikesRoutes } from './likes.js'
 import { createPreview, registerPreviewRoutes } from './preview.js'
 import { createReco, registerRecoRoutes } from './reco/index.js'
+import { registerCuration } from './curation.js'
 import { createStarter } from './starter.js'
 import { createOnboarding, registerOnboardingRoutes } from './onboarding.js'
+import { createLifeService, registerLifeRoutes } from './life.js'
 
 export const inject = ['webServer']
 
@@ -37,10 +39,20 @@ export function apply(ctx, config = {}) {
   const reco = createReco({ history, library, storage, config, logger })
   const starter = createStarter({ storage, library, config, logger })
   const onboarding = createOnboarding({ storage, library, starter, config, logger })
+  const life = createLifeService({ storage, library, logger })
 
+  let llm
+  // A nested injection makes the model service optional across Harness profiles.
+  if (config.curationProvider && config.curationModel && typeof ctx.inject === 'function') {
+    ctx.inject(['llm'], (modelCtx) => {
+      llm = modelCtx.llm
+      modelCtx.effect(() => () => { llm = undefined })
+    })
+  }
   ctx.effect(() => {
     const disposers = [
       ...registerRoutes(ctx.webServer, { library, playback, storage, logger }),
+      registerCuration(ctx.webServer, config, () => llm),
       ...registerMetadataRoutes(ctx.webServer, { library, storage, logger, config }),
       ...registerHistoryRoutes(ctx.webServer, { history, likes, logger }),
       ...registerDownloadRoutes(ctx.webServer, { download, logger }),
@@ -51,6 +63,7 @@ export function apply(ctx, config = {}) {
       ...registerPreviewRoutes(ctx.webServer, { preview, logger }),
       ...registerRecoRoutes(ctx.webServer, { reco, logger }),
       ...registerOnboardingRoutes(ctx.webServer, { onboarding, logger }),
+      ...registerLifeRoutes(ctx.webServer, { life, logger }),
     ]
     return () => {
       for (const dispose of disposers) dispose()

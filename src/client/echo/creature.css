@@ -1,0 +1,163 @@
+.echo-creature {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  isolation: isolate;
+  --echo-look-x: 0px;
+  --echo-look-y: 0px;
+  --echo-look-r: 0deg;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.echo-creature-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  user-select: none;
+}
+
+.echo-creature-drift,
+.echo-creature-breath,
+.echo-creature-response,
+.echo-creature-attention {
+  transform-box: view-box;
+  transform-origin: 50% 67%;
+}
+
+.echo-creature-drift {
+  animation: echo-drift var(--echo-drift-duration, 11s) ease-in-out infinite;
+}
+
+.echo-creature-breath {
+  animation: echo-breathe var(--echo-breath-duration, 6.5s) ease-in-out infinite;
+}
+
+.echo-creature-attention {
+  transform: translate(var(--echo-look-x), var(--echo-look-y)) rotate(var(--echo-look-r));
+  transition: transform 850ms cubic-bezier(.18, .7, .2, 1);
+}
+
+.echo-creature-shadow {
+  opacity: var(--echo-shadow-opacity, .17);
+  transform-origin: 50% 80%;
+  animation: echo-contact var(--echo-drift-duration, 11s) ease-in-out infinite;
+}
+
+.echo-creature[data-active="true"] .echo-creature-breath {
+  animation-name: echo-listen;
+  animation-duration: var(--echo-listen-duration, 2.1s);
+}
+
+.echo-creature[data-responding="true"] .echo-creature-response {
+  animation: echo-response var(--echo-response-duration, 1.3s) cubic-bezier(.22, .68, .18, 1) both;
+}
+
+.echo-creature[data-structure="shell"] .echo-creature-drift {
+  animation-name: echo-shell-drift;
+}
+
+.echo-creature[data-structure="ribbon"] .echo-creature-drift {
+  animation-name: echo-ribbon-drift;
+}
+
+.echo-creature[data-structure="shell"][data-responding="true"] .echo-creature-response {
+  animation-name: echo-shell-response;
+}
+
+.echo-creature[data-structure="ribbon"][data-responding="true"] .echo-creature-response {
+  animation-name: echo-ribbon-response;
+}
+
+.echo-fold-leaf,
+.echo-shell-feet,
+.echo-body-ribbon {
+  transition: transform 1100ms cubic-bezier(.2, .75, .15, 1), opacity 600ms ease;
+}
+
+.echo-creature[data-compact="true"] .echo-creature-drift {
+  animation-duration: 13s;
+}
+
+.echo-creature[data-compact="true"] .echo-creature-breath {
+  animation-duration: 8s;
+}
+
+.echo-creature-touch-target[role="button"] { cursor: pointer; outline: none; }
+.echo-creature-focus-ring { stroke: transparent; stroke-width: 1.25; }
+.echo-creature-touch-target:focus-visible .echo-creature-focus-ring { stroke: #718274; stroke-dasharray: 3 5; }
+.echo-creature-touch-target:focus-visible .echo-creature-surface { opacity: .94; }
+.echo-memory-mark[role="button"] { cursor: pointer; outline: none; }
+.echo-memory-halo { opacity: 0; transition: opacity 220ms ease; }
+.echo-memory-mark:hover .echo-memory-halo,
+.echo-memory-mark:focus-visible .echo-memory-halo { opacity: .75; }
+.echo-memory-mark:focus-visible .echo-memory-hit { fill: #b5905e16; }
+
+.echo-creature[data-motion="off"] .echo-creature-drift,
+.echo-creature[data-motion="off"] .echo-creature-breath,
+.echo-creature[data-motion="off"] .echo-creature-shadow,
+.echo-creature[data-motion="off"] .echo-creature-response { animation: none !important; }
+.echo-creature[data-motion="off"] .echo-creature-attention { transform: none; transition: none; }
+.echo-creature[data-motion="off"] .echo-fold-leaf,
+.echo-creature[data-motion="off"] .echo-shell-feet,
+.echo-creature[data-motion="off"] .echo-body-ribbon { transition: none; }
+
+@keyframes echo-breathe {
+  0%, 100% { transform: scale(1, 1); }
+  48% { transform: scale(1.006, var(--echo-inhale, 1.017)); }
+}
+
+@keyframes echo-drift {
+  0%, 100% { transform: translate(0, 0) rotate(-.35deg); }
+  48% { transform: translate(1px, -3.4px) rotate(.35deg); }
+}
+
+@keyframes echo-shell-drift {
+  0%, 100% { transform: rotate(-.3deg) translate(0, 0); }
+  55% { transform: rotate(.5deg) translate(.8px, -.6px); }
+}
+
+@keyframes echo-ribbon-drift {
+  0%, 100% { transform: translate(0, 0) rotate(-1deg); }
+  50% { transform: translate(2px, -5px) rotate(.7deg); }
+}
+
+@keyframes echo-contact {
+  0%, 100% { transform: scaleX(1); opacity: var(--echo-shadow-opacity, .17); }
+  50% { transform: scaleX(.97); opacity: calc(var(--echo-shadow-opacity, .17) * .85); }
+}
+
+@keyframes echo-listen {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  30% { transform: scale(1.006, 1.02) rotate(.5deg); }
+  62% { transform: scale(.997, 1.009) rotate(-.35deg); }
+}
+
+@keyframes echo-response {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  20% { transform: translateY(3px) rotate(-1.5deg) scale(1.02, .97); }
+  48% { transform: translateY(-8px) rotate(2deg) scale(.985, 1.035); }
+  72% { transform: translateY(-2px) rotate(-.7deg) scale(1); }
+}
+
+@keyframes echo-shell-response {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  20% { transform: translate(-2px, 2px) rotate(-2.2deg); }
+  52% { transform: translate(5px, -3px) rotate(2deg); }
+  73% { transform: translate(2px, 0) rotate(-.7deg); }
+}
+
+@keyframes echo-ribbon-response {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-5deg) scale(.98, 1.02); }
+  55% { transform: rotate(6deg) scale(1.02, .99); }
+  79% { transform: rotate(-1.5deg) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .echo-creature *, .echo-creature *::before, .echo-creature *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .echo-creature-attention { transform: none !important; }
+}
