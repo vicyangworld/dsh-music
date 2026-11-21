@@ -44,7 +44,7 @@ export function createLibrary({ storage, config = {}, logger }) {
     source: d.source,
     path: expandHome(d.path),
   }))
-  const cache = { version: 1, entries: {} }
+  const cache = { version: 2, entries: {} }
   let cacheLoaded = false
   let byId = new Map()
   let tracks = []
@@ -58,7 +58,7 @@ export function createLibrary({ storage, config = {}, logger }) {
   async function loadCache() {
     if (cacheLoaded) return
     const saved = await storage.readJson(storage.libraryCacheFile, null)
-    if (saved && saved.version === 1 && saved.entries && typeof saved.entries === 'object') {
+    if (saved && saved.version === cache.version && saved.entries && typeof saved.entries === 'object') {
       Object.assign(cache.entries, saved.entries)
     }
     cacheLoaded = true
@@ -107,6 +107,8 @@ export function createLibrary({ storage, config = {}, logger }) {
         title: probed.title || fallback.title,
         artist: probed.artist || fallback.artist,
         album: probed.album,
+        genre: probed.genre ?? null,
+        language: probed.language ?? null,
         duration: probed.duration,
         hasCover: probed.hasCover,
         coverCodec: probed.coverCodec,
@@ -160,6 +162,8 @@ export function createLibrary({ storage, config = {}, logger }) {
         title: r.meta.title,
         artist: r.meta.artist,
         album: r.meta.album,
+        genre: r.meta.genre,
+        language: r.meta.language,
         duration: r.meta.duration,
         format: r.format,
         source: r.source,

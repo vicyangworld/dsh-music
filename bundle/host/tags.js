@@ -23,6 +23,8 @@ export function createTagReader(config = {}) {
         title: tags.title || null,
         artist: tags.artist || null,
         album: tags.album || null,
+        genre: tags.genre || null,
+        language: tags.language || null,
         duration: Number.isFinite(duration) && duration > 0 ? duration : null,
         hasCover: coverStream !== undefined,
         coverCodec: coverStream?.codec_name ?? null,

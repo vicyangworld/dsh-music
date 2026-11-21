@@ -1,0 +1,23 @@
+{
+  "name": "dsh-music-workspace",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  },
+  "scripts": {
+    "build": "node scripts/build-client.mjs",
+    "test": "npm run build && npm run test:echo && node scripts/client-render-smoke.mjs && node tests/packaging-check.mjs",
+    "test:echo": "node --test tests/echo-*.test.mjs",
+    "preview": "node scripts/echo-preview.mjs",
+    "specimens": "node scripts/render-echo-specimens.mjs",
+    "material-study": "node scripts/render-echo-material-study.mjs",
+    "habitat-demo": "node scripts/build-echo-habitat-demo.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "jsdom": "31.0.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  }
+}
