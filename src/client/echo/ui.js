@@ -1,5 +1,6 @@
 import { createLife, applyLifeEvent, getMorphology } from '../../../bundle/shared/life-core.js';
 import { createCreatureComponents } from './creature.js';
+import { createBodyComponents } from './body-renderer.js';
 import { createEchoMiniComponent } from './mini.js';
 import { createHabitatComponent } from './habitat.js';
 
@@ -38,7 +39,8 @@ const paths = {
 export function createEchoUI(React) {
   const h = React.createElement;
   const { useState, useEffect, useRef, useMemo } = React;
-  const { Creature } = createCreatureComponents(React);
+  const { Creature: LegacyCreature } = createCreatureComponents(React);
+  const { Creature } = createBodyComponents(React, { FallbackCreature: LegacyCreature });
   function Icon({ name, size = 18 }) {
     return h('svg', { width: size, height: size, viewBox: '0 0 20 20', fill: 'none', stroke: 'currentColor', strokeWidth: 1.35, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true }, h('path', { d: paths[name] || paths.info }));
   }
@@ -194,7 +196,7 @@ export function createEchoUI(React) {
       h('div', { className: 'echo-habitat' },
         h('div', { className: 'echo-habitat-light', 'aria-hidden': true }), h('div', { className: 'echo-habitat-ground', 'aria-hidden': true }),
         h('div', { className: 'echo-specimen-note' }, h('span', null, 'ECHO'), h('small', null, life.id.slice(-8).toUpperCase())),
-        h('div', { className: 'echo-creature-stage' }, h(Creature, { life, morphology: state.morphology, active: playing && !resting, compact: resting, gesture, onTouch: touch, onMemorySelect: id => { const memory = life.memories.find(m => m.id === id); if (memory) setDialog({ kind: 'read', memory }); }, label: `${name}，轻触互动` })),
+        h('div', { className: 'echo-creature-stage' }, h(Creature, { life, body: state.body, motionProvider: lifeService.motion, motionMemory: lifeService.motionMemory, music: state.features, morphology: state.morphology, active: playing && !resting, compact: resting, gesture, onTouch: touch, onMemorySelect: id => { const memory = life.memories.find(m => m.id === id); if (memory) setDialog({ kind: 'read', memory }); }, label: `${name}，轻触互动` })),
         h('div', { className: 'echo-identity' }, h('div', { className: 'echo-name-row' }, h('h3', null, name), h('button', { type: 'button', onClick: () => setDialog({ kind: 'rename' }), className: 'echo-quiet-icon', 'aria-label': '给生命命名' }, h(Icon, { name: 'edit', size: 14 }))),
           h('p', null, resting ? '收拢身体，安静待一会儿。' : playing ? '此刻，与你一起听。' : life.greeting ? '它记得你们的招呼。' : '轻触它，看看它如何回应。')),
         h('div', { className: 'echo-habitat-tools' }, h('button', { type: 'button', className: `echo-quiet-icon ${resting ? 'is-active' : ''}`, onClick: toggleRest, title: resting ? '舒展身体' : '安静待一会儿', 'aria-label': resting ? '舒展身体' : '安静待一会儿', 'aria-pressed': resting }, h(Icon, { name: resting ? 'sun' : 'moon' }))),

@@ -497,7 +497,9 @@ check('artist-image memory cache prevents refetch', fetchCalls.filter((u) => u.i
 
 /* 5z) inline locale hygiene: no shadowed duplicates, no stale launch copy */
 function localeBlock(marker) {
-  const ls = src.split('\n');
+  // Check authored keys before bundling; whitespace-minified output is not a
+  // stable source format and transformations can hide duplicate declarations.
+  const ls = authoredSrc.split('\n');
   const start = ls.findIndex((l) => l.trim() === marker);
   if (start < 0) return { text: '', dup: [] };
   let depth = 0;

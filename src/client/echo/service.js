@@ -1,3 +1,6 @@
+import { validateBodyState } from '../../../bundle/shared/body-core.js';
+import { createMotionProvider } from './motion-provider.js';
+
 const OUTBOX_KEY = 'dsh-music.echo.outbox.v1';
 const OUTBOX_VERSION = 2;
 const MAX_PENDING = 500;
@@ -73,6 +76,23 @@ export function createLifeClient(options = {}) {
   let acceptedSequence = 0;
   let acceptedRevision = 0;
   let acceptedIds = new Set();
+  let capabilitiesLoaded = false;
+  let capabilityJob = null;
+  let capabilityRetryAt = 0;
+  let developmentJob = null;
+  let developmentAfter = 0;
+  let savedMotion = null;
+  const motionMemory = {
+    read(body) {
+      if (!savedMotion || savedMotion.lifeId !== body?.lifeId || savedMotion.topology !== body?.topology || savedMotion.bodyRevision !== body?.bodyRevision) return null;
+      return JSON.parse(JSON.stringify(savedMotion));
+    },
+    write(snapshot) {
+      if (disposed || !snapshot || snapshot.lifeId !== state?.body?.lifeId || snapshot.topology !== state.body.topology || snapshot.bodyRevision !== state.body.bodyRevision) return;
+      savedMotion = JSON.parse(JSON.stringify(snapshot));
+    },
+  };
+  const motion = options.motionProvider || createMotionProvider({ resolveUrl, fetcher, getCurrentBody: () => state?.body });
   const listeners = new Set();
   const requests = new Set();
   const closed = () => failure('生命服务已经关闭。', 'LIFE_CLIENT_CLOSED');
@@ -102,7 +122,7 @@ export function createLifeClient(options = {}) {
     }
   }
   readStorage();
-  state = { status: 'idle', life: null, morphology: null, error: readError, pending: 0, syncError: readError, audioStatus: 'idle', features: null };
+  state = { status: 'idle', life: null, morphology: null, body: null, bodyGrowth: [], development: null, growthModel: { available: false, reason: 'not-checked' }, developmentError: null, error: readError, pending: 0, syncError: readError, audioStatus: 'idle', features: null };
   refresh();
   const source = { getSnapshot: () => state, subscribe: fn => { if (disposed) return () => {}; listeners.add(fn); return () => listeners.delete(fn); } };
   const url = path => resolveUrl ? resolveUrl(`/dsh-music/api/life${path}`) : `/dsh-music/api/life${path}`;
@@ -171,7 +191,8 @@ export function createLifeClient(options = {}) {
     let deadline = null;
     const handle = { cancel(error) { if (deadline !== null) timers.clearTimeout(deadline); rejectAbort(error); controller.abort(); } };
     requests.add(handle);
-    deadline = timers.setTimeout(() => handle.cancel(failure('连接生命档案超时，稍后会重试。', 'LIFE_REQUEST_TIMEOUT')), requestTimeout);
+    const timeout = path === '/development' && options.method === 'POST' ? Math.max(30000, requestTimeout) : requestTimeout;
+    deadline = timers.setTimeout(() => handle.cancel(failure('连接生命档案超时，稍后会重试。', 'LIFE_REQUEST_TIMEOUT')), timeout);
     try {
       const response = await Promise.race([Promise.resolve().then(() => { active(); return fetcher(url(path), { cache: 'no-store', ...options, signal: controller.signal }); }), aborted]);
       let data;
@@ -190,22 +211,74 @@ export function createLifeClient(options = {}) {
   }
   function accept(data, sequence) {
     if (!data?.life || !data?.morphology || typeof data.life.id !== 'string' || !Array.isArray(data.life.processedEventIds)) throw failure('生命档案响应不完整，请重试。', 'LIFE_RESPONSE_INVALID');
+    if (state.body && state.life?.id === data.life.id && !data.body) throw failure('响应缺少当前身体版本，已有身体已保留。', 'LIFE_RESPONSE_INVALID');
+    if (data.body) {
+      try { validateBodyState(data.body, data.life); }
+      catch { throw failure('身体与成长档案不一致，当前身体已保留。', 'LIFE_RESPONSE_INVALID'); }
+    }
     const previous = state.life;
     if (previous?.id === data.life.id) {
       const difference = data.life.processedEventIds.length - previous.processedEventIds.length;
-      if (difference < 0 || (difference === 0 && sequence < acceptedSequence)) return;
+      const bodyDifference = data.body && state.body ? data.body.bodyRevision - state.body.bodyRevision : 0;
+      if (difference < 0 || bodyDifference < 0 || (difference === 0 && bodyDifference === 0 && sequence < acceptedSequence)) return;
     } else if (previous && sequence < acceptedSequence) return;
     acceptedSequence = Math.max(acceptedSequence, sequence);
     acceptedRevision++;
     acceptedIds = new Set(data.life.processedEventIds);
-    set({ life: data.life, morphology: data.morphology, status: 'ready', error: null });
+    set({ life: data.life, morphology: data.morphology, body: data.body || null, bodyGrowth: data.bodyGrowth || [], development: data.development || null, status: 'ready', error: null });
+  }
+  async function refreshDevelopment() {
+    try {
+      const { data } = await request('/development');
+      set({ growthModel: data?.available === true ? data : { available: false, reason: data?.reason || 'growth-model-unavailable' } });
+      developmentAfter = Math.max(developmentAfter, Number.isFinite(data?.nextAttemptAt) ? data.nextAttemptAt : 0);
+      void develop().catch(() => {});
+      return true;
+    } catch (error) {
+      set({ growthModel: { available: false, reason: 'growth-model-unavailable' } });
+      return error.status === 404;
+    }
+  }
+  function refreshCapabilities(force = false) {
+    if (disposed || !state.body || capabilityJob || (!force && (capabilitiesLoaded || Date.now() < capabilityRetryAt))) return capabilityJob || Promise.resolve();
+    capabilityRetryAt = Date.now() + 60000;
+    capabilityJob = Promise.allSettled([refreshDevelopment(), motion.refreshStatus()]).then(results => {
+      capabilitiesLoaded = results[0].status === 'fulfilled' && results[0].value === true
+        && results[1].status === 'fulfilled' && !results[1].value?.retryable;
+    }).finally(() => { capabilityJob = null; });
+    return capabilityJob;
+  }
+  function develop() {
+    if (developmentJob) return developmentJob;
+    if (disposed || !state.body || state.development?.eligible !== true || state.growthModel?.available !== true
+        || outbox.pending.length || volatile.length || Date.now() < developmentAfter) return Promise.resolve(null);
+    const body = state.body;
+    developmentAfter = Date.now() + 60000;
+    set({ developing: true, developmentError: null });
+    developmentJob = request('/development', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseLifeRevision: body.lifeRevision, baseBodyRevision: body.bodyRevision }),
+    }).then(({ data, sequence }) => {
+      accept(data, sequence);
+      if (data.developmentResult?.status === 'deferred') developmentAfter = Date.now() + 5 * 60000;
+      if (Number.isFinite(data.developmentResult?.nextAttemptAt)) developmentAfter = Math.max(developmentAfter, data.developmentResult.nextAttemptAt);
+      return data;
+    }).catch(error => {
+      if (error.code !== 'LIFE_CLIENT_CLOSED') set({ developmentError: error.message });
+      throw error;
+    }).finally(() => { developmentJob = null; set({ developing: false }); });
+    return developmentJob;
   }
   function load() {
     if (disposed) return Promise.reject(closed());
     if (loadJob) return loadJob;
     const revision = acceptedRevision;
     set({ status: state.life ? 'ready' : 'loading' });
-    loadJob = request('').then(({ data, sequence }) => { accept(data, sequence); return data; }).catch(error => {
+    loadJob = request('').then(({ data, sequence }) => {
+      accept(data, sequence);
+      if (data.body) void refreshCapabilities();
+      return data;
+    }).catch(error => {
       // A delayed failed GET cannot replace a newer successful POST's state.
       if (revision === acceptedRevision) set({ status: state.life ? 'ready' : 'error', error: error.message });
       if ((outbox.pending.length || volatile.length) && retryable(error)) scheduleRetry();
@@ -250,7 +323,7 @@ export function createLifeClient(options = {}) {
       refresh();
       if (retryable(error)) scheduleRetry();
       throw error;
-    }).finally(() => { flushJob = null; });
+    }).finally(() => { flushJob = null; void refreshCapabilities(); void develop().catch(() => {}); });
     return flushJob;
   }
   function rejectedError(record) {
@@ -295,13 +368,13 @@ export function createLifeClient(options = {}) {
   const online = () => { void flush().catch(() => {}); };
   eventTarget.addEventListener?.('online', online);
   return {
-    source, load, submit,
+    source, load, submit, motion, motionMemory, develop, refreshDevelopment,
     async dispatch(type, payload = {}) {
       const event = { ...payload, type, id: eventId(type), at: Date.now() };
       await submit(event);
       return event;
     },
-    retry: async () => { recoverLocal(); await load(); return flush(); },
+    retry: async () => { recoverLocal(); await load(); void refreshCapabilities(true); return flush(); },
     async retryRejected(id) {
       recoverLocal();
       const target = id === undefined ? null : canonicalId(id);
@@ -323,6 +396,8 @@ export function createLifeClient(options = {}) {
     dispose() {
       if (disposed) return;
       disposed = true;
+      savedMotion = null;
+      motion.dispose();
       clearRetry();
       for (const request of requests) request.cancel(closed());
       listeners.clear();

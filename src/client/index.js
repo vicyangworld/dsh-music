@@ -4,6 +4,7 @@ import { createPlaybackObserver } from './echo/audio.js';
 import echoCSS from './echo/ui.css';
 import creatureCSS from './echo/creature.css';
 import habitatCSS from './echo/habitat.css';
+import bodyCSS from './echo/body-renderer.css';
 
 /**
  * dsh-music — Client half (S1: 曲库 + 播放 + UI 骨架).
@@ -5048,7 +5049,7 @@ window.__ModuleLoader__.load({
         if (typeof document === 'undefined') return () => {};
         const el = document.createElement('style');
         el.setAttribute('data-dsh-music', '');
-        el.textContent = CSS + '\n' + echoCSS + '\n' + creatureCSS + '\n' + habitatCSS;
+        el.textContent = CSS + '\n' + echoCSS + '\n' + creatureCSS + '\n' + habitatCSS + '\n' + bodyCSS;
         document.head.appendChild(el);
         return () => { el.remove(); };
       }, 'dsh-music: styles');

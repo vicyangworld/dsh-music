@@ -11,6 +11,7 @@ await build({
   target: ['chrome110', 'safari16'],
   loader: { '.css': 'text' },
   minify: false,
+  minifyWhitespace: true,
   legalComments: 'inline',
   banner: { js: '/* Generated from src/client/index.js. Run npm run build. React is provided by Harness. */' },
 });

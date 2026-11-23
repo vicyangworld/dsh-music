@@ -1,0 +1,29 @@
+.echo-body-creature {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  aspect-ratio: 600 / 480;
+  min-width: 0;
+  contain: layout;
+}
+.echo-body-creature[data-framing="presence"] { aspect-ratio: 496 / 388; }
+.echo-body-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  touch-action: manipulation;
+}
+.echo-body-canvas[role="button"] { cursor: pointer; }
+.echo-body-canvas:focus-visible { outline: 1px solid #788a7a; outline-offset: -12px; border-radius: 34%; }
+.echo-body-memory-access { position: absolute; inset: auto 18% 7%; display: flex; justify-content: center; gap: 6px; pointer-events: none; }
+.echo-body-memory-access button { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; padding: 0; }
+.echo-body-memory-access button:focus-visible { position: relative; width: auto; height: auto; clip-path: none; overflow: visible; padding: 6px 10px; border-radius: 12px; background: #f3eee4; color: #50483d; outline: 1px solid #a88a67; pointer-events: auto; font: inherit; font-size: 11px; }
+.echo-body-creature[data-tone="dark"] .echo-body-memory-access button:focus-visible { color: #eee7d9; background: #303b35; }
+@media (prefers-reduced-motion: reduce) {
+  .echo-body-creature { scroll-behavior: auto; }
+}

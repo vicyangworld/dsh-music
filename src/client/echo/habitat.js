@@ -240,7 +240,13 @@ export function createHabitatComponent(React, { Creature, Icon, useLife, EditDia
       discoveries.length ? songRows(discoveries, 'discover') : collection.status !== 'loading' ? h('p', { className: 'eh-empty' }, tracks.length ? '暂时没有其他候选。可以去曲库重新挑选。' : '添加一些本地音乐，熟悉的声音就会出现在这里。') : null,
       h('footer', { className: 'eh-context-foot' }, discoveries.length && tracks.filter(item => item.audioUrl && !likes.isDisliked(item)).length > 3 ? h(QuietButton, { onClick: () => setDiscoveryOffset(value => value + 1) }, '换几首') : null, h(QuietButton, { onClick: () => go('library') }, '自己找一首'), h(QuietButton, { onClick: () => go('reco-manage') }, '在线发现')));
     if (scene === 'memory') content = h('section', { className: 'eh-context eh-memory', ref: layerRef, 'aria-label': '共同记忆' },
-      heading('时间留在它身上。', reviewing ? '你正在回看当时的模样。' : '这是此刻的它。沿着时间，看看它的变化。'),
+      heading('时间留在它身上。', reviewing ? state.body ? '这里保留的是旧版规则形态，不是当前朏朏的历史身体。' : '你正在回看当时的模样。' : '这是此刻的它。沿着时间，回看共同经历。'),
+      state.body ? h('p', { className: 'eh-subtle', role: 'status' }, state.developing ? '正在根据共同经历评估身体变化…'
+        : state.developmentError ? '这次身体成长未完成，当前身体已保留。'
+          : state.growthModel?.available ? '身体成长已连接，会根据积累的经历评估变化。'
+            : state.growthModel?.reason === 'not-checked' ? '正在确认身体成长是否可用…'
+              : state.growthModel?.reason === 'growth-model-not-configured' ? '身体成长尚未开启。连接成长模型后，聆听经历才会用于改变身体。'
+                : '身体成长暂时不可用，聆听和共同记忆仍会保存。') : null,
       h('div', { className: 'eh-time-control' }, h('div', { className: 'eh-time-caption' }, h('time', null, snapshot ? shortDate(snapshot.at) : '此刻'), h('strong', null, snapshot?.reason || '现在的模样')),
         h('input', { type: 'range', min: 0, max: timeline.length, value: reviewing ? Math.min(reviewIndex, timeline.length - 1) : timeline.length, disabled: !timeline.length, onChange: event => { const value = Number(event.target.value); setReviewIndex(value === timeline.length ? null : value); }, 'aria-label': '回看成长时间线', 'aria-valuetext': snapshot ? `${shortDate(snapshot.at)}，${snapshot.reason || '成长片段'}` : '此刻的生命' }),
         h('div', { className: 'eh-time-labels' }, h('span', null, timeline.length ? shortDate(timeline[0].at) : '初次相遇'), h(QuietButton, { disabled: !reviewing, onClick: () => setReviewIndex(null) }, '回到现在')),
@@ -269,7 +275,7 @@ export function createHabitatComponent(React, { Creature, Icon, useLife, EditDia
         h('button', { type: 'button', className: 'eh-name', disabled: !life, onClick: () => openDialog('rename'), 'aria-label': '给生命命名' }, h('span', { className: 'eh-name-mark', 'aria-hidden': true }), h('strong', null, name), h('small', null, life ? `相识第 ${Math.max(1, Math.floor((Date.now() - life.createdAt) / 86400000) + 1)} 天` : '正在相遇')),
         h(QuietButton, { className: 'eh-menu-toggle', icon: 'more', ref: menuButtonRef, onClick: () => setMenu(value => !value), 'aria-label': '打开空间工具', 'aria-expanded': menu })),
       h('div', { className: 'eh-being-space', key: 'persistent-being', inert: scene === 'utility' || !!dialog ? true : undefined },
-        h('div', { className: 'eh-being' }, life ? h(Creature, { life, morphology: selectedMorphology, framing: 'presence', tone, active: !!playing && !loading && !playbackError && !resting && !reviewing, compact: resting, gesture, motionEnabled: !reviewing, onTouch: touch, onMemorySelect: readMemory, label: reviewing ? `${name}，${shortDate(snapshot.at)}的模样` : `${name}，轻触互动` }) : h(EmptyLife, { state, lifeService })),
+        h('div', { className: 'eh-being' }, life ? h(Creature, { life, body: reviewing ? null : state.body, motionProvider: lifeService.motion, motionMemory: lifeService.motionMemory, music: state.features, morphology: selectedMorphology, framing: 'presence', tone, active: !!playing && !loading && !playbackError && !resting && !reviewing, compact: resting, gesture, motionEnabled: !reviewing, onTouch: touch, onMemorySelect: readMemory, label: reviewing ? `${name}，${shortDate(snapshot.at)}的${state.body ? '旧版形态' : '模样'}` : `${name}，轻触互动` }) : h(EmptyLife, { state, lifeService })),
         h('div', { className: 'eh-being-whisper', 'aria-live': 'polite' }, reviewing ? `${shortDate(snapshot.at)} · ${snapshot.reason || '成长片段'}` : resting ? '安静待一会儿。' : loading ? '等音乐轻轻进来。' : playing && !playbackError ? '此刻，与你一起听。' : life?.greeting ? '轻触它，打个你们的招呼。' : '轻轻碰一下，认识彼此。')),
       h('div', { className: 'eh-relationship', inert: scene === 'utility' || !!dialog ? true : undefined },
         h(QuietButton, { icon: 'memory', onClick: () => go(scene === 'memory' ? 'home' : 'echo-memory'), 'aria-pressed': scene === 'memory' }, '共同记忆'),

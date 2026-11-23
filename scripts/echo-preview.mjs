@@ -18,6 +18,8 @@ import { registerRoutes } from '../bundle/host/routes.js'
 import { createHistory, registerHistoryRoutes } from '../bundle/host/history.js'
 import { createLikes, registerLikesRoutes } from '../bundle/host/likes.js'
 import { createLifeService, registerLifeRoutes } from '../bundle/host/life.js'
+import { createDevelopmentService, registerDevelopmentRoutes } from '../bundle/host/development.js'
+import { registerMotionRoutes } from '../bundle/host/motion.js'
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const args = process.argv.slice(2)
@@ -110,7 +112,7 @@ const likes = createLikes({ storage, library, history, logger, download: {
 } })
 const life = createLifeService({ storage, library, logger })
 const registrations = []
-const webServer = { register(def) {
+const webServer = { getOrigin: () => 'http://127.0.0.1:' + port, register(def) {
   registrations.push(def)
   return () => { const index = registrations.indexOf(def); if (index >= 0) registrations.splice(index, 1) }
 } }
@@ -118,6 +120,8 @@ registerRoutes(webServer, { library, playback, storage, logger })
 registerHistoryRoutes(webServer, { history, likes, logger })
 registerLikesRoutes(webServer, { likes, logger })
 registerLifeRoutes(webServer, { life, logger })
+const development = createDevelopmentService({ life, getLlm: () => null })
+const modelDisposers = [registerDevelopmentRoutes(webServer, { development, logger }), ...registerMotionRoutes(webServer, { life, logger })]
 
 function json(res, status, data) {
   const body = JSON.stringify(data)
@@ -210,4 +214,8 @@ server.listen(port, '127.0.0.1', () => {
   console.log(`Isolated preview data: ${dataDir}`)
   console.log('Audio: three original locally synthesized studies; no user music directories are read.')
 })
-for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => server.close(() => process.exit(0)))
+for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {
+  development.dispose()
+  modelDisposers.forEach(dispose => dispose())
+  server.close(() => process.exit(0))
+})

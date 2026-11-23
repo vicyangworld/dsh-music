@@ -13,9 +13,14 @@ import {
   validateLifeEvent,
   ValidationError,
 } from '../shared/life-core.js'
+import {
+  createBodyFromLife, validateBodyState, synchronizeBodyLifeRevision,
+  commitBodyCandidate,
+} from '../shared/body-core.js'
 
 const ARCHIVE_FORMAT = 'echo-life-archive'
-const ARCHIVE_VERSION = 1
+const ARCHIVE_VERSION = 2
+export const MIN_BODY_GROWTH_AUDIO_MS = 5 * 60 * 1000
 const DEFAULT_MAX_EVENTS = 100000
 const DEFAULT_MAX_BYTES = 64 * 1024 * 1024
 const BODY_LIMIT = 64 * 1024
@@ -49,6 +54,9 @@ function badArchive() {
 
 function asServiceError(err) {
   if (err instanceof LifeServiceError) return err
+  if (typeof err?.code === 'string' && /BODY|GROWTH/.test(err.code)) {
+    return new LifeServiceError(err.message, err.code, /STALE|CONFLICT|LIMIT/.test(err.code) ? 409 : 400)
+  }
   if (err instanceof ValidationError || err?.code === 'INVALID_LIFE_EVENT') {
     return new LifeServiceError(err.message, err.code || 'INVALID_LIFE_EVENT', /_LIMIT$/.test(err.code || '') ? 409 : 400)
   }
@@ -118,7 +126,7 @@ export function createLifeService({ storage, library, logger, now = Date.now, se
 
   function checkArchive(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw badArchive()
-    if (value.format !== ARCHIVE_FORMAT || value.version !== ARCHIVE_VERSION) {
+    if (value.format !== ARCHIVE_FORMAT || ![1, ARCHIVE_VERSION].includes(value.version)) {
       throw new LifeServiceError('这个生命档案来自其他版本。原文件已保留，请使用兼容版本打开。', 'LIFE_ARCHIVE_VERSION', 409)
     }
     const { checksum, ...payload } = value
@@ -134,15 +142,56 @@ export function createLifeService({ storage, library, logger, now = Date.now, se
           || JSON.stringify(value.initial.genome) !== JSON.stringify(value.life.genome)
           || value.life.processedEventIds.length !== value.events.length) throw badArchive()
       const ids = new Set()
+      // Prefix totals bind a growth decision to what had actually been heard
+      // when it was proposed. Later listening cannot justify an earlier body.
+      const audioAtRevision = [value.initial.growth.audioMs]
       for (let i = 0; i < value.events.length; i++) {
         const event = validateLifeEvent(value.events[i])
         if (ids.has(event.id) || event.id !== value.life.processedEventIds[i]) throw badArchive()
         ids.add(event.id)
+        const audioMs = audioAtRevision[i] + (event.type === 'listening' && event.featureSource === 'audio' ? event.listenedMs : 0)
+        if (!Number.isSafeInteger(audioMs)) throw badArchive()
+        audioAtRevision.push(audioMs)
+      }
+      if (value.version === ARCHIVE_VERSION) {
+        validateBodyState(value.body, value.life)
+        validateBodyState(value.bodyInitial)
+        if (value.bodyInitial.lifeId !== value.life.id || value.bodyInitial.seed !== value.life.seed
+            || value.bodyInitial.createdAt !== value.life.createdAt || value.bodyInitial.bodyRevision !== 0
+            || value.bodyInitial.lifeRevision > value.events.length
+            || !Array.isArray(value.bodyGrowth) || value.bodyGrowth.length > 10000
+            || !Number.isSafeInteger(value.bodyBaselineAudioMs) || value.bodyBaselineAudioMs < 0
+            || value.bodyBaselineAudioMs !== audioAtRevision[value.bodyInitial.lifeRevision]
+            || audioAtRevision.at(-1) !== value.life.growth.audioMs) throw badArchive()
+        let replayed = value.bodyInitial
+        let observed = value.bodyBaselineAudioMs
+        const growthIds = new Set()
+        const eventOrder = new Map(value.life.processedEventIds.map((id, index) => [id, index]))
+        for (const record of value.bodyGrowth) {
+          const candidate = record.candidate
+          if (!candidate || growthIds.has(candidate.id)
+              || !Number.isSafeInteger(record.observedAudioMs)
+              || record.observedAudioMs - observed < MIN_BODY_GROWTH_AUDIO_MS
+              || record.observedAudioMs !== audioAtRevision[candidate.baseLifeRevision]
+              || candidate.baseLifeRevision < replayed.lifeRevision
+              || candidate.baseLifeRevision > value.life.processedEventIds.length
+              || candidate.evidenceEventIds.some(id => !eventOrder.has(id) || eventOrder.get(id) >= candidate.baseLifeRevision)) throw badArchive()
+          replayed = commitBodyCandidate({ ...replayed, lifeRevision: candidate.baseLifeRevision }, candidate, { lifeRevision: candidate.baseLifeRevision })
+          observed = record.observedAudioMs
+          growthIds.add(candidate.id)
+        }
+        replayed = synchronizeBodyLifeRevision(replayed, value.life)
+        if (JSON.stringify(replayed) !== JSON.stringify(value.body)) throw badArchive()
       }
       return ids
     } catch {
       throw badArchive()
     }
+  }
+
+  function withBody(payload) {
+    const body = createBodyFromLife(payload.life)
+    return { ...payload, version: ARCHIVE_VERSION, body, bodyInitial: clone(body), bodyGrowth: [], bodyBaselineAudioMs: payload.life.growth.audioMs }
   }
 
   async function load() {
@@ -156,7 +205,7 @@ export function createLifeService({ storage, library, logger, now = Date.now, se
     } catch (err) {
       if (err?.code !== 'ENOENT') throw err
       const initial = createInitialLife({ seed: seedFactory(), now: clock() })
-      const payload = { format: ARCHIVE_FORMAT, version: ARCHIVE_VERSION, initial, events: [], life: initial }
+      const payload = withBody({ format: ARCHIVE_FORMAT, version: ARCHIVE_VERSION, initial, events: [], life: initial })
       const saved = await persist(payload)
       archive = saved
       eventIds = new Set()
@@ -165,13 +214,23 @@ export function createLifeService({ storage, library, logger, now = Date.now, se
     let parsed
     try { parsed = JSON.parse(text) } catch { throw badArchive() }
     const ids = checkArchive(parsed)
-    archive = parsed
+    if (parsed.version === 1) {
+      const { checksum, ...legacy } = parsed
+      // Check the old archive first; commit body migration before exposing it.
+      archive = await persist(withBody(legacy))
+    } else archive = parsed
     eventIds = ids
     return archive
   }
 
   function snapshot(duplicate) {
-    const result = { life: clone(archive.life), morphology: getMorphology(archive.life) }
+    const last = archive.bodyGrowth.at(-1)
+    const observedAudioMs = archive.life.growth.audioMs - (last?.observedAudioMs ?? archive.bodyBaselineAudioMs)
+    const result = {
+      life: clone(archive.life), morphology: getMorphology(archive.life), body: clone(archive.body),
+      bodyGrowth: archive.bodyGrowth.slice(-20).map(record => clone(record)),
+      development: { eligible: observedAudioMs >= MIN_BODY_GROWTH_AUDIO_MS, observedAudioMs, minimumAudioMs: MIN_BODY_GROWTH_AUDIO_MS },
+    }
     if (typeof duplicate === 'boolean') result.duplicate = duplicate
     return result
   }
@@ -228,12 +287,15 @@ export function createLifeService({ storage, library, logger, now = Date.now, se
       }
       const event = normalize({ ...raw, id })
       const nextLife = applyLifeEvent(archive.life, event)
+      const { checksum, ...current } = archive
       const payload = {
+        ...current,
         format: ARCHIVE_FORMAT,
         version: ARCHIVE_VERSION,
         initial: archive.initial,
         events: [...archive.events, event],
         life: nextLife,
+        body: synchronizeBodyLifeRevision(archive.body, nextLife),
       }
       const saved = await persist(payload)
       // Never expose an in-memory state which has not been durably committed.
@@ -243,11 +305,43 @@ export function createLifeService({ storage, library, logger, now = Date.now, se
     })
   }
 
+  function growthContext() {
+    return serialized(async () => {
+      await load()
+      return { ...snapshot(), evidence: archive.events.slice(-32).map(event => ({
+        id: event.id, type: event.type, at: event.at,
+        ...(event.type === 'listening' ? { listenedMs: event.listenedMs, featureSource: event.featureSource, features: event.features } : {}),
+        ...(event.type === 'interaction' ? { action: event.action } : {}),
+      })) }
+    })
+  }
+
+  function commitGrowth(candidate) {
+    return serialized(async () => {
+      await load()
+      const accepted = archive.bodyGrowth.find(record => record.candidate.id === candidate?.id)
+      if (accepted) {
+        if (JSON.stringify(accepted.candidate) !== JSON.stringify(candidate)) throw new LifeServiceError('同一成长标识包含不同结果。', 'BODY_PROPOSAL_CONFLICT', 409)
+        return snapshot(true)
+      }
+      if (archive.bodyGrowth.length >= 10000) throw new LifeServiceError('身体成长记录已达到容量上限，当前身体已保留。', 'BODY_GROWTH_LIMIT', 409)
+      if (!snapshot().development.eligible) throw new LifeServiceError('新的共同聆听还不足以形成一次身体成长。', 'BODY_GROWTH_NOT_READY', 409)
+      const body = commitBodyCandidate(archive.body, candidate, { lifeRevision: archive.life.processedEventIds.length, life: archive.life })
+      const { checksum, ...current } = archive
+      const payload = {
+        ...current, body,
+        bodyGrowth: [...archive.bodyGrowth, { candidate: clone(candidate), observedAudioMs: archive.life.growth.audioMs }],
+      }
+      archive = await persist(payload)
+      return snapshot(false)
+    })
+  }
+
   function exportArchive() {
     return serialized(async () => { await load(); return clone(archive) })
   }
 
-  return { file, get, append, exportArchive }
+  return { file, get, append, exportArchive, growthContext, commitGrowth }
 }
 
 function sendJson(res, status, value, headers = {}) {
