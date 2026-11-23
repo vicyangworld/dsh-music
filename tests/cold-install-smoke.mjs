@@ -64,11 +64,18 @@ for (const f of hostFiles) {
 }
 check(bad.length === 0 && hostFiles.length > 20, `host 全模块真实解析（${hostFiles.length} 个）`, bad.slice(0, 3).join('; '))
 check(existsSync(join(root, 'client', 'index.js')), 'client/index.js 在包内')
+check(existsSync(join(root, 'host', 'life.js')), 'host/life.js 在包内（ECHO 存档服务）')
+check(existsSync(join(root, 'shared', 'life-core.js')), 'shared/life-core.js 在包内（ECHO 共享规则）')
+const core = await import(pathToFileURL(join(root, 'shared', 'life-core.js')).href).catch((e) => ({ __err: e }))
+check(!core.__err && ['createLife', 'applyLifeEvent', 'getMorphology', 'replayLife'].every(name => typeof core[name] === 'function'),
+  '打包的 ECHO 共享规则可独立导入', core.__err ? core.__err.message.split('\n')[0] : '')
 
 // ---- ④ 工厂 id ----
 const clientSrc = readFileSync(join(root, 'client', 'index.js'), 'utf8')
-const idMatch = clientSrc.match(/id:\s*'([^']+)'/)
-check(Boolean(idMatch) && idMatch[1] === pkg.name, 'client 工厂 id == 包名（DSH 注册要求）', idMatch ? `${idMatch[1]} vs ${pkg.name}` : '未找到 id')
+// The built artifact may contain many unrelated id fields. Match only the
+// ModuleLoader registration, accepting either quote style emitted by esbuild.
+const idMatch = clientSrc.match(/window\.__ModuleLoader__\.load\(\{\s*id:\s*(['"])([^'"]+)\1\s*,/)
+check(Boolean(idMatch) && idMatch[2] === pkg.name, 'client 工厂 id == 包名（DSH 注册要求）', idMatch ? `${idMatch[2]} vs ${pkg.name}` : '未找到 ModuleLoader 工厂 id')
 
 // ---- ⑤ 八语 meta + DETAIL + 图片 ----
 const localeDir = join(root, 'locale')

@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.6.0",
+  "version": "0.8.0-alpha.4",
   "private": false,
   "license": "MIT",
   "author": "vicyangworld",
@@ -16,7 +16,7 @@
     "url": "https://github.com/vicyangworld/dsh-music/issues"
   },
   "type": "module",
-  "description": "Local music plugin: library playback, lyrics and artist stories, history-based recommendations with downloads, and one-click Spotify liked-songs sync.",
+  "description": "ECHO: a personal digital life shaped by local music, shared moments, and your own rhythm. Includes the dsh-music library and player.",
   "keywords": [
     "dsh",
     "dsh-plugin",
@@ -45,7 +45,11 @@
     "locale/*.json",
     "icon.png",
     "docs/DETAIL.md",
-    "docs/assets/*"
+    "docs/ECHO.md",
+    "docs/ECHO_MOTION.md",
+    "docs/THIRD_PARTY.md",
+    "docs/assets/*",
+    "shared/**/*.js"
   ],
   "dsh": {
     "bundle": {
