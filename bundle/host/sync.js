@@ -7,9 +7,11 @@
 import { spawn } from 'node:child_process'
 import { access, constants } from 'node:fs/promises'
 import { delimiter, join } from 'node:path'
+import { homedir } from 'node:os'
 
 const SYNC_TIMEOUT_MS = 30 * 60 * 1000
 const MAX_LINES = 300
+const TOKEN_FILE = join(homedir(), '.config', 'spotify-sync', 'refresh_token')
 const OPTIONAL_HINT = '未检测到 spotify-sync CLI。Spotify 同步是可选功能：安装 spotify-sync 后即可启用（或在本插件 config 中设置 syncCommand / syncScriptPath），不影响本地曲库、搜索、试听与推荐。'
 
 /** 解析 CLI 输出：云端/新增/移除 行、逐曲结果行、「完成 {...}」汇总（Python dict repr）。 */
@@ -72,25 +74,35 @@ export function createSync({ library, config = {}, logger }) {
 
   /** 探测 CLI 可用性（不跑同步）：config.syncCommand → PATH 的 spotify-sync →
    * config.syncScriptPath（python3 直跑技能脚本）。结果进程内缓存，probe() 可强制重探。 */
+  /** spotify-sync 自己保管的登录凭据是否已就位：只做「文件存在」检查，绝不读取内容（红线）。 */
+  async function authorized() {
+    try {
+      await access(config.spotifyTokenPath || TOKEN_FILE, constants.R_OK)
+      return true
+    } catch {
+      return false
+    }
+  }
+
   async function availability() {
     if (cached) return cached
     const cmd = typeof config.syncCommand === 'string' && config.syncCommand ? config.syncCommand : null
     if (cmd) {
       if (await executable(cmd)) {
-        cached = { available: true, mode: 'cli', command: cmd, message: null }
+        cached = { available: true, mode: 'cli', command: cmd, message: null, authorized: await authorized() }
         return cached
       }
       warn(`dsh-music: 配置的 syncCommand 不可执行（${cmd}），继续探测 PATH`)
     }
     const found = await findOnPath('spotify-sync')
     if (found) {
-      cached = { available: true, mode: 'cli', command: found, message: null }
+      cached = { available: true, mode: 'cli', command: found, message: null, authorized: await authorized() }
       return cached
     }
     const script = typeof config.syncScriptPath === 'string' && config.syncScriptPath ? config.syncScriptPath : null
     if (script && await executable(script)) {
       const python = config.pythonPath || (await findOnPath('python3')) || '/usr/bin/python3'
-      cached = { available: true, mode: 'script', command: python, script, message: null }
+      cached = { available: true, mode: 'script', command: python, script, message: null, authorized: await authorized() }
       return cached
     }
     cached = { available: false, mode: null, command: null, message: OPTIONAL_HINT }
@@ -242,8 +254,9 @@ export function registerSyncRoutes(webServer, { sync, logger }) {
     handler: async (req, res) => {
       if (req.method !== 'GET') return sendJson(res, 405, { error: '方法不允许' })
       try {
-        const av = await sync.availability()
-        return sendJson(res, 200, { available: av.available, hint: av.available ? null : av.message })
+        /* ?refresh=1：用户装好 CLI / 完成授权后点「重新检测」→ 重探（仍不执行 CLI，只查文件） */
+        const av = /[?&]refresh=1/.test(String(req.url || '')) ? await sync.probe() : await sync.availability()
+        return sendJson(res, 200, { available: av.available, hint: av.available ? null : av.message, authorized: av.authorized == null ? null : !!av.authorized })
       } catch (err) {
         warn(`dsh-music: 同步可用性探测错误: ${err.message}`)
         return sendJson(res, 500, { error: '同步可用性探测内部错误' })

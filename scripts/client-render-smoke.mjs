@@ -75,6 +75,7 @@ const windowMock = {
 };
 const fetchCalls = [];
 const fetchBodies = [];
+let qqConnected = false; /* 5w：新用户先未连接（三步引导），粘贴后变已连接 */
 const fetchMock = async (url, init) => {
   fetchCalls.push(url);
   if (init && init.body != null) fetchBodies.push({ url: String(url), body: String(init.body) });
@@ -83,18 +84,26 @@ const fetchMock = async (url, init) => {
     : url.includes('/onboarding/complete')
       ? { state: { status: 'ready', completed: true, mode: 'local', libraryConfigured: true, libraryPath: null, prefs: {}, starter: null }, startedStarter: false }
       : url.includes('/sync/availability')
-    ? { available: true, hint: null }
+    ? { available: true, hint: null, authorized: url.includes('refresh=1') }
     : url.includes('/sync/status')
       ? { running: false, result: null, error: null }
       : url.includes('/liked-sync/status')
         ? { enabled: true, providers: {
           netease: { label: '网易云音乐', connected: false, account: null, busy: false, lastSyncAt: null, lastResult: null, knownCount: 0 },
-          qq: { label: 'QQ 音乐', connected: true, account: { uid: '1001', nickname: '小Q', loginAt: 1 }, busy: false, lastSyncAt: 0, lastResult: null, knownCount: 5 },
+          qq: { label: 'QQ 音乐', connected: qqConnected, account: qqConnected ? { uid: '1001', nickname: '小Q', loginAt: 1 } : null, busy: false, lastSyncAt: 0, lastResult: null, knownCount: qqConnected ? 5 : 0 },
         } }
         : url.includes('/liked-sync/netease/qr/poll')
           ? { code: 801, message: '等待扫码' }
           : url.includes('/liked-sync/netease/qr')
             ? { key: 'k1', url: 'https://music.163.com/login?codekey=8126df9b-smoke' }
+            : url.includes('/liked-sync/qq/connect')
+              ? { account: { uid: '1001', nickname: '小Q' }, likedDir: { tid: 201, name: '我喜欢', songCount: 10 } }
+            : url.includes('/library/search')
+              ? { local: [], remote: [{ title: '乙', artist: '甲', album: null, verification: { source: 'MusicBrainz', url: 'https://musicbrainz.org/release/x', verifiedAt: Date.now() } }] }
+            : url.includes('/dsh-music/api/download/status')
+              ? { running: false, total: 0, done: 0, items: [] }
+            : url.includes('/dsh-music/api/download')
+              ? { runId: 'r1', total: 1 }
             : url.includes('/liked-sync/qq/sync')
               ? { provider: 'qq', at: 1, durationMs: 5, total: 10, unavailable: 1, playlistName: '我喜欢', added: 3, existed: 5, skippedDisliked: 1, removed: 2, removedItems: [{ title: '旧歌', artist: '某人' }] }
               : url.includes('/library/preview')
@@ -175,8 +184,8 @@ const walk = (node, out = []) => {
   return out;
 };
 const cls = (n) => (n && n.props && n.props.className) || '';
-/* 「dshm-imp-card」要按整段 class 匹配（dshm-imp-card-body / -spotify 不是卡片本身） */
-const isCard = (n) => cls(n).split(' ').includes('dshm-imp-card');
+/* 平台行按整段 class 匹配（dshm-prv-head / -body / -open 不是行本身） */
+const isCard = (n) => cls(n).split(' ').includes('dshm-prv');
 const has = (tree, pred) => walk(tree).some(pred);
 
 const results = [];
@@ -310,12 +319,12 @@ check('first-run foot: skip + finish', has(firstTree, (n) => cls(n) === 'dshm-wb
 const sectionIds = walk(firstTree).filter((n) => cls(n) === 'dshm-set-section').map((n) => (n.props || {})['aria-label']);
 check('three sections in order: liked / taste / library', JSON.stringify(sectionIds) === JSON.stringify(['setLikedTitle', 'setTasteTitle', 'setLibTitle']),
   JSON.stringify(sectionIds));
-check('liked section = Spotify card + 网易云 card + QQ card', walk(firstTree).filter(isCard).length === 3
-  && has(firstTree, (n) => cls(n) === 'dshm-imp-card dshm-imp-card-spotify')
-  && has(firstTree, (n) => cls(n) === 'dshm-imp-card dshm-imp-card-netease')
-  && has(firstTree, (n) => cls(n) === 'dshm-imp-card dshm-imp-card-qq'));
-const spotBtn = walk(firstTree).find((n) => cls(n) === 'dshm-chipbtn dshm-chipbtn-primary' && (n.children || []).includes('syncBtn'));
-check('Spotify card offers the sync action inside settings', !!spotBtn && !(spotBtn.props || {}).disabled);
+check('liked section = three provider rows: 网易云 / QQ 音乐 / Spotify', walk(firstTree).filter(isCard).map((n) => n.props['data-provider']).join(',') === 'netease,qq,spotify',
+  walk(firstTree).filter(isCard).map((n) => n.props['data-provider']).join(','));
+svc.likedSync.selectTab('spotify');
+const spotBtn = walk(expand(music({ ...baseProps, useOnboarding: (sel) => sel(firstRunSnap) }))).find((n) => cls(n) === 'dshm-chipbtn dshm-chipbtn-primary' && (n.children || []).includes('syncBtn'));
+svc.likedSync.selectTab(null);
+check('Spotify row offers the sync action inside settings', !!spotBtn && !(spotBtn.props || {}).disabled);
 check('no standalone import/Spotify buttons outside the settings page', !has(firstTree, (n) => cls(n) === 'dshm-toolbar'));
 check('taste chips + library pick cards render', has(firstTree, (n) => cls(n) === 'dshm-wchip')
   && walk(firstTree).filter((n) => /^dshm-wcard( |$)/.test(cls(n))).length === 2);
@@ -610,47 +619,107 @@ historyState = { ...historyState, stats: { ...historyState.stats, dislikes: { co
 const histTree = expand(music({ ...realProps, useUi: (sel) => sel({ ...uiStore.getSnapshot(), view: 'history' }) }));
 check('history stats shows the dislike summary block', has(histTree, (n) => cls(n) === 'dshm-dislike-row'));
 
-/* 5w) 喜欢列表导入（网易云扫码 / QQ Cookie，只读）住在「设置 → 喜欢列表同步」：
- *     网易云卡自动出二维码 SVG → QQ 卡已连接 → 同步 → 结果 chips；来源小标随 sources 渲染。 */
+/* 5w) 喜欢列表同步（设置页）：网易云 / QQ 音乐 / Spotify 三行手风琴 + 新用户分步引导；
+ *     连接成功即自动导入；结果 = 一行主结论 + 异常 chip；错误按行归属；「入库」走核实下载。 */
 const svcLiked = svc.likedSync;
 check('liked-sync service is injected into the panel', !!svcLiked && !!svcLiked.source && typeof svcLiked.open === 'function');
+const tick = () => new Promise((r) => setTimeout(r, 60));
 const useLikedSyncReal = (sel) => sel(svcLiked.source.getSnapshot());
 uiStore.set({ view: 'settings', settingsSection: 'liked' });
-const setProps = { ...realProps, useLikedSync: useLikedSyncReal };
+const svcSync = svc.sync;
+await svcSync.probe();
+const setProps = { ...realProps, useLikedSync: useLikedSyncReal, useSync: (sel) => sel(svcSync.source.getSnapshot()) };
 svcLiked.open('netease');
-await new Promise((r) => setTimeout(r, 50));
+await tick();
 const qrSnap = svcLiked.source.getSnapshot();
 check('QR session created from the host route and encoded locally', qrSnap.qr && qrSnap.qr.key === 'k1'
   && qrSnap.qr.matrix && qrSnap.qr.matrix.size > 20 && qrSnap.qrPhase === 'waiting',
   'phase=' + qrSnap.qrPhase + ' size=' + (qrSnap.qr && qrSnap.qr.matrix && qrSnap.qr.matrix.size));
 const setTree = expand(music(setProps));
 check('status route fetched on open', fetchCalls.some((u) => u.includes('/liked-sync/status')));
+const rowsOf = (tree) => walk(tree).filter(isCard);
+const rowOf = (tree, id) => rowsOf(tree).find((n) => n.props['data-provider'] === id) || null;
+const isOpen = (row) => !!row && cls(row).includes('dshm-prv-open');
+const headOf = (tree, id) => { const r = rowOf(tree, id); return r ? (r.children || []).find((c) => cls(c) === 'dshm-prv-head') || null : null; };
+const says = (node, text) => !!node && has(node, (x) => (x.children || []).includes(text));
+const stepsOf = (tree, id) => { const r = rowOf(tree, id); return r ? walk(r).filter((n) => /^dshm-step /.test(cls(n))).map(cls) : []; };
+check('settings lists three provider rows (netease / qq / spotify)', rowsOf(setTree).map((n) => n.props['data-provider']).join(',') === 'netease,qq,spotify',
+  rowsOf(setTree).map((n) => n.props['data-provider']).join(','));
+check('netease row is expanded first (new-user path); the others are collapsed', isOpen(rowOf(setTree, 'netease')) && !isOpen(rowOf(setTree, 'qq')) && !isOpen(rowOf(setTree, 'spotify')));
+check('netease shows a 2-step guide: scan (active) → auto import (todo)', stepsOf(setTree, 'netease').join('|') === 'dshm-step dshm-step-active|dshm-step dshm-step-todo',
+  stepsOf(setTree, 'netease').join('|'));
+check('collapsed row headers state how to connect', says(headOf(setTree, 'qq'), 'prvQqHow') && says(headOf(setTree, 'spotify'), 'spStateNoAuth'));
 const qrSvg = walk(setTree).find((n) => cls(n) === 'dshm-qr');
-check('netease card renders the QR as a crisp SVG with a 4-module quiet zone', !!qrSvg && (qrSvg.props || {}).shapeRendering === 'crispEdges'
+check('netease step renders the QR as a crisp SVG with a 4-module quiet zone', !!qrSvg && (qrSvg.props || {}).shapeRendering === 'crispEdges'
   && /^-4 -4 /.test((qrSvg.props || {}).viewBox || ''), 'viewBox=' + ((qrSvg && qrSvg.props.viewBox) || ''));
-check('QR card shows the waiting status + regenerate button', has(setTree, (n) => cls(n) === 'dshm-imp-step' && (n.children || []).includes('importQrWaiting'))
+check('step 1 shows the waiting status + regenerate button', has(setTree, (n) => cls(n) === 'dshm-imp-step' && (n.children || []).includes('importQrWaiting'))
   && has(setTree, (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('importQrRegenerate')));
-check('read-only contract note is stated in the settings page', has(setTree, (n) => (n.children || []).includes('importFootNote')));
-check('connected QQ card renders nickname + known count', has(setTree, (n) => cls(n) === 'dshm-imp-nick' && (n.children || []).includes('小Q'))
-  && has(setTree, (n) => cls(n) === 'dshm-imp-card-state' && (n.children || []).includes('importConnected')));
-const syncBtn = walk(setTree).find((n) => cls(n) === 'dshm-chipbtn dshm-chipbtn-primary' && (n.children || []).includes('importSyncNow'));
-check('QQ card offers the import action', !!syncBtn && !(syncBtn.props || {}).disabled);
-syncBtn.props.onClick();
-await new Promise((r) => setTimeout(r, 50));
-check('sync POSTs to the provider route and stores the result', fetchCalls.some((u) => u.includes('/liked-sync/qq/sync'))
-  && svcLiked.source.getSnapshot().result && svcLiked.source.getSnapshot().result.added === 3);
+check('read-only contract is stated under the section title', has(setTree, (n) => cls(n) === 'dshm-wstep-sub' && (n.children || []).includes('setLikedSub')));
+
+/* QQ：未连接 → 三步引导（登录 → 复制命令 → 粘贴即连接并自动导入） */
+qqConnected = false;
+await svcLiked.load();
+headOf(expand(music(setProps)), 'qq').props.onClick();
+let tree = expand(music(setProps));
+check('QQ row expands into a 3-step guide', isOpen(rowOf(tree, 'qq')) && !isOpen(rowOf(tree, 'netease')) && stepsOf(tree, 'qq').length === 3
+  && has(tree, (n) => cls(n) === 'dshm-step-title' && (n.children || []).includes('importQqStep3')));
+check('QQ guide offers open-page + copy-command buttons and a single-line paste field',
+  ['importQqOpen', 'importQqCopy'].every((k) => has(tree, (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes(k)))
+  && !!walk(tree).find((n) => cls(n) === 'dshm-imp-cookie' && (n.props || {}).type === 'text'));
+walk(tree).find((n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('importQqCopy')).props.onClick();
+walk(tree).find((n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('importQqOpen')).props.onClick();
+await tick();
+qqConnected = true;
+const beforeConnect = fetchCalls.length;
+walk(tree).find((n) => cls(n) === 'dshm-imp-cookie').props.onChange({ target: { value: 'qm_keyst=Q_H_SMOKE; uin=o1001' } });
+await tick();
+check('pasting a cookie connects and auto-imports (connect → sync)', fetchCalls.slice(beforeConnect).some((u) => u.includes('/liked-sync/qq/connect'))
+  && fetchCalls.slice(beforeConnect).some((u) => u.includes('/liked-sync/qq/sync')),
+  JSON.stringify(fetchCalls.slice(beforeConnect).filter((u) => u.includes('liked-sync'))));
 const resTree = expand(music(setProps));
-check('result chips render added/existed/removed', has(resTree, (n) => cls(n) === 'dshm-sync-chip dshm-sync-chip-ok' && (n.children || []).includes('importResAdded 3'))
-  && has(resTree, (n) => cls(n) === 'dshm-sync-chip' && (n.children || []).includes('importResExisted 5'))
-  && has(resTree, (n) => cls(n) === 'dshm-sync-chip dshm-sync-chip-warn' && (n.children || []).includes('importResRemoved 2')));
+check('connected row shows the account line (nickname + imported count)', has(resTree, (n) => cls(n) === 'dshm-imp-nick' && (n.children || []).includes('小Q'))
+  && has(resTree, (n) => cls(n) === 'dshm-imp-time' && (n.children || []).includes('importKnownLine')));
+check('result = one summary line + exception chips only', has(resTree, (n) => cls(n) === 'dshm-imp-summary' && has(n, (x) => (x.children || []).includes('importDoneLine')))
+  && has(resTree, (n) => cls(n) === 'dshm-sync-chip dshm-sync-chip-warn' && (n.children || []).includes('importResRemoved 2'))
+  && has(resTree, (n) => cls(n) === 'dshm-sync-chip' && (n.children || []).includes('importResUnavailable 1'))
+  && !has(resTree, (n) => cls(n) === 'dshm-sync-chip' && /^importRes(Total|Added|Existed) /.test(String((n.children || [])[0]))));
 check('removed items are listed (informational only)', has(resTree, (n) => cls(n) === 'dshm-sync-detail' && (n.children || []).some((c) => typeof c === 'object' && (c.children || []).includes('· 某人 - 旧歌'))));
-/* 错误按平台分卡：QQ 连接错误只出现在 QQ 卡 */
-svcLiked.source.set({ error: 'Cookie 已失效', errorProvider: 'qq' });
+const viewBtn = walk(resTree).find((n) => cls(n) === 'dshm-linkbtn' && (n.children || []).includes('importViewLikes'));
+check('result offers a “view liked” jump (returning users)', !!viewBtn);
+if (viewBtn) viewBtn.props.onClick();
+check('the jump opens the library on the likes tab', uiStore.getSnapshot().view === 'library' && uiStore.getSnapshot().libTabWish === 'likes',
+  JSON.stringify({ view: uiStore.getSnapshot().view, wish: uiStore.getSnapshot().libTabWish }));
+uiStore.set({ view: 'settings', settingsSection: 'liked', libTabWish: null });
+/* 错误按行归属，且主机的「缺 qm_keyst」换成新用户文案 */
+svcLiked.source.set({ error: 'Cookie 中缺少 qm_keyst / qqmusic_key（登录态）', errorProvider: 'qq' });
 const errTree = expand(music(setProps));
-const errCards = walk(errTree).filter((n) => isCard(n) && has(n, (x) => cls(x) === 'dshm-errorline'));
-check('error line shows only on the owning provider card', errCards.length === 1 && cls(errCards[0]) === 'dshm-imp-card dshm-imp-card-qq',
-  errCards.map(cls).join('|'));
+const errRows = rowsOf(errTree).filter((n) => has(n, (x) => cls(x) === 'dshm-errorline'));
+check('error line shows only on the owning provider row, in plain wording', errRows.length === 1 && errRows[0].props['data-provider'] === 'qq'
+  && has(errTree, (n) => cls(n) === 'dshm-errorline' && (n.children || []).includes('importQqNeedKey')), errRows.map((n) => n.props['data-provider']).join('|'));
 svcLiked.source.set({ error: null, errorProvider: null });
+
+/* Spotify：装 CLI → 授权 → 同步 三步；「重新检测」带 refresh=1 */
+const spProps = setProps;
+headOf(expand(music(spProps)), 'spotify').props.onClick();
+let spTree = expand(music(spProps));
+check('Spotify row expands into install(done) → authorize(miss) → sync(active)', stepsOf(spTree, 'spotify').join('|') === 'dshm-step dshm-step-done|dshm-step dshm-step-miss|dshm-step dshm-step-active',
+  stepsOf(spTree, 'spotify').join('|'));
+check('Spotify header flags the pending authorization', says(headOf(spTree, 'spotify'), 'spStateNoAuth'));
+walk(spTree).find((n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('spRecheck')).props.onClick();
+await tick();
+spTree = expand(music(spProps));
+check('re-check hits availability?refresh=1 and turns the authorize step green', fetchCalls.some((u) => u.includes('/sync/availability?refresh=1'))
+  && stepsOf(spTree, 'spotify')[1].includes('dshm-step-done') && says(headOf(spTree, 'spotify'), 'spStateReady'));
+const noCli = expand(music({ ...spProps, useSync: (sel) => sel({ phase: 'idle', available: false, authorized: null, hint: '未检测到', result: null, error: null }) }));
+check('missing CLI: step 1 miss, sync disabled, header says not installed', stepsOf(noCli, 'spotify')[0].includes('dshm-step-miss') && stepsOf(noCli, 'spotify')[2].includes('dshm-step-todo')
+  && has(noCli, (n) => cls(n) === 'dshm-chipbtn dshm-chipbtn-primary dshm-chipbtn-off' && (n.children || []).includes('syncBtn') && n.props.disabled)
+  && says(headOf(noCli, 'spotify'), 'spStateNoCli'));
+headOf(expand(music(spProps)), 'spotify').props.onClick();
+const closedTree = expand(music(spProps));
+check('clicking the open row collapses it', rowsOf(closedTree).every((n) => !cls(n).includes('dshm-prv-open')) && !has(closedTree, (n) => cls(n) === 'dshm-prv-body'),
+  'tab=' + svcLiked.source.getSnapshot().tab + ' rows=' + rowsOf(closedTree).map(cls).join('|') + ' view=' + uiStore.getSnapshot().view);
+uiStore.set({ view: 'library', settingsSection: null });
+
 const withSources = (sel) => sel({
   keys: {}, dislikes: {}, loaded: true, error: null,
   items: [{ key: 'k9', artist: '甲', title: '乙', trackId: null, audioUrl: null, coverUrl: null, inLibrary: false, durationMs: 1000,
@@ -666,6 +735,17 @@ check('liked entry opens settings at the liked section', uiStore.getSnapshot().v
 uiStore.set({ view: 'library', settingsSection: null });
 check('liked rows show a source chip per platform', has(srcTree2, (n) => cls(n) === 'dshm-src-chip dshm-src-netease')
   && has(srcTree2, (n) => cls(n) === 'dshm-src-chip dshm-src-qq'));
+check('likes header counts songs not in the library yet', has(srcTree2, (n) => cls(n) === 'dshm-missing-chip' && (n.children || []).includes('likesMissingCount')));
+const addBtn = walk(srcTree2).find((n) => n.props && n.props['aria-label'] === 'addMissing');
+check('rows imported but not in the library get an add-to-library button', !!addBtn);
+if (addBtn) {
+  const b = fetchBodies.length;
+  addBtn.props.onClick({ stopPropagation: noop });
+  await tick();
+  check('add-to-library resolves a verified search hit and POSTs it to the download route',
+    fetchBodies.slice(b).some((x) => x.url.includes('/dsh-music/api/download') && x.body.includes('"verification"')),
+    JSON.stringify(fetchBodies.slice(b).map((x) => x.url)));
+}
 /* 文案必须走真实字典键（曾出现 t('src' + p) 拼出 srcqq 这种不存在的键 → 界面裸露键名） */
 const chipText = (name) => { const n = walk(srcTree2).find((x) => cls(x) === 'dshm-src-chip dshm-src-' + name); return n ? String(n.children[0]) : ''; };
 const zhKeys = new Set([...src.slice(src.indexOf('    const zh = {'), src.indexOf('    const en = {')).matchAll(/^      (\w+): '/gm)].map((m) => m[1]));

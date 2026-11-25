@@ -169,21 +169,34 @@ await test('网易云：plain / weapi 都 301 → 401；profile 为空 → 401',
   const empty = createNetease({ fetchImpl: mockFetch(() => jsonRes({ code: 200, account: null, profile: null })) })
   await expectStatus(empty.account('MUSIC_U=bad'), 401)
 })
-await test('网易云：喜欢歌单 → 歌曲详情归一化（时间戳/歌手/专辑/下架计数）', async () => {
+await test('网易云：喜欢歌单（摘要无 trackIds → 歌单详情补全）→ 歌曲详情归一化（时间戳/歌手/专辑/下架计数）', async () => {
   const fetchImpl = mockFetch((rec) => {
     if (rec.path === '/api/user/playlist') {
+      // 线上实测：摘要只有 trackCount，不带 trackIds
       return jsonRes({
         code: 200,
         playlist: [
-          { id: 1, name: '别人的歌单', creator: { userId: 7 }, trackIds: [{ id: 999 }] },
-          { id: 9, name: '小明喜欢的音乐', creator: { userId: 42 }, trackCount: 3, trackIds: [{ id: 111, at: 1700000000000 }, { id: 222 }, { id: 333 }] },
+          { id: 1, name: '别人的歌单', creator: { userId: 7 }, trackCount: 1 },
+          { id: 9, name: '小明喜欢的音乐', creator: { userId: 42 }, trackCount: 3 },
         ],
+      })
+    }
+    if (rec.path === '/api/v6/playlist/detail') {
+      // trackIds 全量；tracks 只带前 n 首的完整信息（这里只给第 1 首）
+      assert.equal(rec.form.id, '9')
+      return jsonRes({
+        code: 200,
+        playlist: {
+          id: 9, trackCount: 3,
+          trackIds: [{ id: 111, at: 1700000000000 }, { id: 222 }, { id: 333 }],
+          tracks: [{ id: 111, name: '歌111', ar: [{ name: '周杰伦' }, { name: '' }, { name: '费玉清' }], al: { name: '专辑111' }, dt: 269000 }],
+        },
       })
     }
     if (rec.path === '/api/v3/song/detail') {
       const ids = JSON.parse(rec.form.c).map((x) => x.id)
       return jsonRes({ code: 200, songs: ids.filter((id) => id !== 333).map((id) => ({
-        id, name: `歌${id}`, ar: [{ name: '周杰伦' }, { name: '' }, { name: '费玉清' }], al: { name: `专辑${id}` }, dt: 269000,
+        id, name: `歌${id}`, ar: [{ name: 'A' }], al: { name: `专辑${id}` }, dt: 269000,
       })) })
     }
   })
@@ -192,9 +205,12 @@ await test('网易云：喜欢歌单 → 歌曲详情归一化（时间戳/歌�
   assert.equal(out.tracks.length, 2)
   assert.equal(out.unavailable, 1)
   assert.equal(out.playlist.name, '小明喜欢的音乐')
+  assert.equal(out.playlist.trackCount, 3)
   assert.deepEqual(out.tracks[0], { platformId: '111', title: '歌111', artist: '周杰伦 / 费玉清', album: '专辑111', durationMs: 269000, likedAt: 1700000000000 })
   assert.equal(out.tracks[1].likedAt, null)
-  assert.equal(JSON.parse(fetchImpl.calls[1].form.c).length, 3)
+  const detailCalls = fetchImpl.calls.filter((c) => c.path === '/api/v3/song/detail')
+  assert.equal(detailCalls.length, 1)
+  assert.deepEqual(JSON.parse(detailCalls[0].form.c).map((x) => x.id), [222, 333])
 })
 await test('网易云：歌单接口失败 → 回退 like/get（无序 ids）', async () => {
   const fetchImpl = mockFetch((rec) => {
@@ -206,6 +222,16 @@ await test('网易云：歌单接口失败 → 回退 like/get（无序 ids）',
   const out = await ne.likedTracks('MUSIC_U=T', '42')
   assert.deepEqual(out.tracks.map((t) => t.platformId), ['5', '6'])
   assert.equal(fetchImpl.calls.find((c) => c.path === '/api/song/like/get').form.uid, '42')
+})
+await test('网易云：歌单摘要成功但详情失败 → 回退 like/get', async () => {
+  const fetchImpl = mockFetch((rec) => {
+    if (rec.path === '/api/user/playlist') return jsonRes({ code: 200, playlist: [{ id: 9, name: '我喜欢的音乐', creator: { userId: 42 }, trackCount: 2 }] })
+    if (rec.path === '/api/v6/playlist/detail' || rec.path === '/weapi/v6/playlist/detail') return jsonRes({ code: 400 })
+    if (rec.path === '/api/song/like/get') return jsonRes({ code: 200, ids: [5, 6], count: 2 })
+    if (rec.path === '/api/v3/song/detail') return jsonRes({ code: 200, songs: [{ id: 5, name: '五', ar: [{ name: 'A' }], dt: 1 }, { id: 6, name: '六', ar: [{ name: 'B' }], dt: 2 }] })
+  })
+  const out = await createNetease({ fetchImpl }).likedTracks('MUSIC_U=T', '42')
+  assert.deepEqual(out.tracks.map((t) => t.platformId), ['5', '6'])
 })
 await test('网易云：歌曲详情分块 ≤500 / 非 JSON 响应 → 502', async () => {
   let idsAsked = 0
@@ -242,6 +268,18 @@ await test('QQ：Cookie 解析（Cookie: 前缀 / o 前缀 uin / 双 keyst 名 /
   assert.doesNotMatch(b.cookie, /(^|; )uin=/)
   assert.match(parseQQCookie('uin=o1; foo=bar').error, /qm_keyst/)
   assert.match(parseQQCookie('qm_keyst=X').error, /uin/)
+  // 整段粘贴：cURL（-H 'cookie: …'）/ 请求头里的 cookie: 行 / -b '…' 三种形态都能抽出 Cookie
+  const curl = parseQQCookie("curl 'https://u.y.qq.com/cgi-bin/musicu.fcg' -H 'accept: */*' -H 'cookie: pgv=p; uin=o0123456; qm_keyst=Q_H_CURL; qqmusic_nick=%E9%98%BF%E5%BC%BA' -H 'origin: https://y.qq.com'")
+  assert.equal(curl.keyst, 'Q_H_CURL')
+  assert.equal(curl.uin, '123456')
+  assert.equal(curl.nickname, '阿强')
+  assert.doesNotMatch(curl.cookie, /pgv/)
+  const hdr = parseQQCookie('accept: */*\ncookie: wxuin=WX9; qqmusic_key=Q_W_HDR\nreferer: https://y.qq.com/')
+  assert.equal(hdr.keyst, 'Q_W_HDR')
+  assert.equal(hdr.musicid, 'WX9')
+  const dashB = parseQQCookie("curl 'https://y.qq.com/' -b 'uin=o0777; qm_keyst=Q_H_B'")
+  assert.equal(dashB.keyst, 'Q_H_B')
+  assert.equal(dashB.uin, '777')
 })
 await test('QQ：g_tk 确定性且为 31 位非负整数', () => {
   assert.equal(gtk('abc'), gtk('abc'))
@@ -331,7 +369,9 @@ try {
   await writeFile(join(tmp, 'x'), '')
   const storage = createStorage({ dataDir })
   const track = { id: 'a'.repeat(16), artist: '周杰伦', title: '晴天' }
-  const likes = createLikes({ storage, library: fakeLibrary([track]), download: null, logger: null, history: null })
+  /* 本地入库曲目的歌手分隔写法与网易云导入条目不同（「 / 」vs「、」）→ 应按宽松 key 对上 */
+  const track2 = { id: 'b'.repeat(16), artist: '周杰伦 / 费玉清', title: '千里之外' }
+  const likes = createLikes({ storage, library: fakeLibrary([track, track2]), download: null, logger: null, history: null })
   await storage.ready
   await storage.writeJson(join(dataDir, 'likes.json'), {
     v: 2,
@@ -364,6 +404,10 @@ try {
     const list = await likes.list()
     assert.equal(list.total, 3)
     assert.equal(list.items.find((i) => i.key === '周杰伦::晴天').inLibrary, true)
+    const farItem = list.items.find((i) => i.key === '周杰伦、费玉清::千里之外')
+    assert.equal(farItem.inLibrary, true, '导入条目按宽松 key 对上本地曲目（分隔符差异）')
+    assert.equal(farItem.trackId, 'b'.repeat(16))
+    assert.equal(list.items.find((i) => i.key === '林俊杰::江南').inLibrary, false)
   })
 
   /* ================= 6. liked-sync 编排 ================= */

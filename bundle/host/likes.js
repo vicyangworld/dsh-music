@@ -37,8 +37,27 @@ export function createLikes({ storage, library, download, logger, history }) {
   }
 
   /** 在曲库中按 key 找曲（完整 track 对象）。 */
+  /* 宽松索引：按曲库快照缓存一次，供 findInLibrary 回退使用 */
+  let looseIdx = { tracks: null, map: null }
+  function looseMap(tracks) {
+    if (looseIdx.tracks !== tracks) {
+      const map = new Map()
+      for (const t of tracks) {
+        const k = looseKey(t.artist, t.title)
+        if (!map.has(k)) map.set(k, t)
+      }
+      looseIdx = { tracks, map }
+    }
+    return looseIdx.map
+  }
+  /** 先按精确 key 找；找不到再按宽松 key（导入条目与本地入库曲目的歌手分隔符/空白写法常不一致） */
   function findInLibrary(key) {
-    return library.snapshot().tracks.find((t) => likeKey(t.artist, t.title) === key) ?? null
+    const tracks = library.snapshot().tracks
+    const exact = tracks.find((t) => likeKey(t.artist, t.title) === key)
+    if (exact) return exact
+    const parts = String(key).split('::')
+    if (parts.length !== 2) return null
+    return looseMap(tracks).get(looseKey(parts[0], parts[1])) ?? null
   }
 
   /** 解析入参公共部分：trackId 或 artist/title，返回规整后的元数据。 */

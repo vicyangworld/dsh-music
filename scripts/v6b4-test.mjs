@@ -73,8 +73,11 @@ try {
   // ---- 路由：GET /api/sync/availability（织音契约 {available, hint}）----
   {
     const routes = []
+    let probed = 0
     const fakeSync = {
       availability: async () => ({ available: false, mode: null, command: null, message: '未检测到 spotify-sync CLI。可选功能。' }),
+      /* ?refresh=1 → 走 probe() 重探（用户点「重新检测」） */
+      probe: async () => { probed++; return { available: true, mode: 'cli', command: '/x/spotify-sync', message: null, authorized: true } },
     }
     registerSyncRoutes({ register: (r) => { routes.push(r); return () => {} } }, { sync: fakeSync, logger })
     const route = routes.find((r) => r.path === '/dsh-music/api/sync/availability')
@@ -85,6 +88,12 @@ try {
     fakeSync.availability = async () => ({ available: true, mode: 'cli', command: '/x/spotify-sync', message: null })
     await route.handler({ method: 'GET' }, { writeHead() {}, end: (b) => { body = JSON.parse(b) } })
     assert(body?.available === true && body.hint === null, '契约：可用时 hint=null')
+    assert(body.authorized === null, 'availability 未带 authorized → 返回 null（未知）')
+    await route.handler({ method: 'GET', url: '/dsh-music/api/sync/availability?refresh=1' }, { writeHead() {}, end: (b) => { body = JSON.parse(b) } })
+    assert(probed === 1 && body?.available === true && body.authorized === true, '契约：?refresh=1 强制重探并回传 authorized')
+    fakeSync.availability = async () => ({ available: true, mode: 'cli', command: '/x/spotify-sync', message: null, authorized: false })
+    await route.handler({ method: 'GET' }, { writeHead() {}, end: (b) => { body = JSON.parse(b) } })
+    assert(body.authorized === false && probed === 1, '契约：无 refresh 参数走缓存，authorized=false 原样回传')
     let code = 0
     await route.handler({ method: 'POST' }, { writeHead: (c) => { code = c }, end: () => {} })
     assert(code === 405, '契约：availability POST → 405')

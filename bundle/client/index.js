@@ -55,9 +55,6 @@ window.__ModuleLoader__.load({
       settingsSaved: '已保存',
       settingsFirstRunNote: '第一次来？先把下面三项过一遍，之后随时能回来改。',
       setLikedTitle: '喜欢列表同步',
-      setSpotifyBody: '通过本机的 spotify-sync 拉取 Spotify 收藏；首次同步会把新歌取回本地曲库。',
-      setNeteaseBody: '手机端网易云扫码登录，只读导入「我喜欢的音乐」。',
-      setQqBody: '粘贴 y.qq.com 的 Cookie，只读导入「我喜欢」歌单。',
       setTasteTitle: '推荐口味',
       setLibTitle: '音乐库',
       setLibSubReturning: '已经配置好了；要换目录或改用 starter 曲库就在这里改，保存后生效。',
@@ -155,9 +152,6 @@ window.__ModuleLoader__.load({
       emptyAddDirHint: '默认扫描目录（支持 mp3 / flac / m4a / wav 等）：',
       emptyRescanCta: '重新扫描曲库',
       emptyDirNote: '也可以在插件配置里用 directories 自定义扫描目录。',
-      syncOptional: 'Spotify 同步（可选）',
-      syncOptionalHint: '可选功能：需要机器上已安装 spotify-sync CLI，没有也不影响听歌',
-      syncUnavailableHint: '未检测到 spotify-sync CLI，同步功能暂不可用（可跳过，不影响听歌）',
       exploreChip: '探索批次',
       recoColdTitle: '还没有收听历史',
       recoColdBody: '先搜歌手或歌名试听，喜欢的歌会自动入库；听过几首后这里会按你的口味推荐。',
@@ -319,8 +313,6 @@ window.__ModuleLoader__.load({
       importBtnHint: '从网易云音乐 / QQ 音乐的「我喜欢」只读导入到本地（不下载）',
       importTabNetease: '网易云音乐',
       importTabQq: 'QQ 音乐',
-      importConnected: '已连接',
-      importNotConnected: '未连接',
       importQrLoading: '正在生成二维码…',
       importQrWaiting: '等待扫码…',
       importQrConfirmed: '已扫码，请在手机上确认登录',
@@ -328,25 +320,56 @@ window.__ModuleLoader__.load({
       importQrExpired: '二维码已过期，请重新生成',
       importQrRegenerate: '重新生成',
       importQrHint: '打开网易云音乐 App → 左侧菜单「我的」→ 右上角「+」或设置里的「扫一扫」，对准二维码，登录后自动完成连接。',
-      importQqCookieLabel: '粘贴 y.qq.com 的 Cookie',
-      importQqCookieHint: '电脑浏览器登录 y.qq.com → 按 F12 打开开发者工具 → Network（网络）→ 刷新页面 → 点任意请求 → Request Headers 里复制 Cookie 整行。需包含 qm_keyst（或 qqmusic_key）和 uin（或 wxuin）。Cookie 只保存在本机 ~/.dsh/dsh-music/accounts.json（权限 0600）。',
       importQqConnect: '连接',
       importConnecting: '连接中…',
       importSyncNow: '导入到「我喜欢」',
       importSyncing: '导入中…',
       importReQr: '重新扫码登录',
       importDisconnect: '断开连接',
-      importLastSync: '上次导入',
-      importNever: '尚未导入',
-      importKnown: '已导入',
-      importResTotal: '云端喜欢',
-      importResAdded: '新增 ♥',
-      importResExisted: '已有 ♥',
       importResDisliked: '本地 👎 跳过',
       importResUnavailable: '云端已下架',
       importResRemoved: '云端已移除',
       importResRemovedHint: '仅提示：不会取消本地 ♥，也不会删除文件',
-      importFootNote: '只读导入：不修改云端账号，不自动下载；只标记 ♥，后续可在推荐或曲库里决定是否入库。',
+      importDoneLine: '已导入 {total} 首到「我喜欢」：新增 {added}，之前已有 {existed}',
+      importViewLikes: '查看「我喜欢」',
+      importQrStep1: '用手机扫码登录',
+      importQrStep2: '登录后自动导入到「我喜欢」',
+      importAutoNote: '扫码并在手机上确认后会立刻导入一次。登录凭据只保存在本机、不上传；插件只读你的「我喜欢的音乐」，不改云端任何内容。',
+      importQqPrivacy: '登录凭据只保存在本机（~/.dsh/dsh-music/accounts.json，权限 0600），不上传；可随时断开连接。',
+      importQqStep1: '在浏览器登录 QQ 音乐网页版',
+      importQqOpen: '打开 y.qq.com',
+      importQqLoginHint: 'QQ 或微信登录都可以，登录后别关这个标签页。',
+      importQqStep2: '复制登录凭据到剪贴板',
+      importQqCopy: '复制命令',
+      importQqCopied: '已复制',
+      importQqStep2Hint: '在 y.qq.com 页面打开开发者工具（{keys}）→ Console，粘贴命令并回车',
+      importQqFallback: '命令不好用？在 y.qq.com 打开开发者工具（{keys}）→ Network → 刷新页面 → 点任意一个请求 → 复制 Request Headers 里的 Cookie 整行。',
+      importQqStep3: '粘贴到这里，自动连接并导入',
+      importQqPlaceholder: '粘贴 Cookie，例如 qm_keyst=…; uin=…',
+      importQqNeedKey: '没拿到登录凭据（qm_keyst）。请先在 y.qq.com 登录，再按上面的方法复制一次。',
+      importKnownLine: '已导入 {n} 首',
+      importLastSyncLine: '上次 {time}',
+      prvNeteaseHow: '扫码连接',
+      prvQqHow: '粘贴登录凭据',
+      spStep1: '安装 spotify-sync 命令行（可选）',
+      spStep1Ok: '已检测到 spotify-sync，这一步不用管。',
+      spStep1Hint: '还没检测到 spotify-sync 命令。这是可选功能，没有它也能听歌；装好后点「重新检测」，或在插件配置里指定 syncCommand / syncScriptPath。',
+      spRecheck: '重新检测',
+      spStep2: '完成 Spotify 授权',
+      spStep2Ok: '已找到授权凭据。',
+      spStep2Hint: '还没找到授权凭据。登录凭据由 spotify-sync 自己保管（~/.config/spotify-sync/refresh_token），本插件只检查文件在不在、从不读取。按 spotify-sync 的说明登录授权一次，再点「重新检测」。',
+      spStep3: '同步收藏到本地曲库',
+      spBody: '新增的收藏会下载到 ~/Music/spotify-liked 并并入曲库；已有的不重复下载。',
+      spStateNoCli: '未安装',
+      spStateNoAuth: '待授权',
+      spStateReady: '已就绪',
+      spStateChecking: '检测中…',
+      setLikedSub: '把你在音乐 App 里「喜欢」的歌带进来：只读、不改云端；导入的歌先进「我喜欢」，想听再入库。',
+      addMissing: '入库（联网核实后下载）',
+      addMissingQueued: '已加入入库队列，完成后自动出现在曲库',
+      addMissingNone: '没找到可靠的音源，去曲库搜「{title}」试试',
+      likesMissingCount: '{n} 首还没入库',
+      addMissingHint: '这些歌只标记了 ♥、还没下载。点歌后面的入库按钮会先联网核实再下载。',
       importEnabledOff: '主机已关闭喜欢列表导入（配置项 likedSync = false）',
       importCookieEmpty: '请先粘贴 Cookie',
       srcNetease: '网易云',
@@ -371,9 +394,6 @@ window.__ModuleLoader__.load({
       settingsSaved: 'Saved',
       settingsFirstRunNote: 'First time here? Walk through the three sections below — you can change everything later.',
       setLikedTitle: 'Liked-list sync',
-      setSpotifyBody: 'Pulls your Spotify likes through the local spotify-sync CLI; the first sync adds new songs to the library.',
-      setNeteaseBody: 'Scan with the NetEase Cloud Music app to import “My Favorite Music” read-only.',
-      setQqBody: 'Paste your y.qq.com Cookie to import the “Liked” playlist read-only.',
       setTasteTitle: 'Taste',
       setLibTitle: 'Library',
       setLibSubReturning: 'Already set up. Change the folder or switch to the starter library here; takes effect after saving.',
@@ -471,9 +491,6 @@ window.__ModuleLoader__.load({
       emptyAddDirHint: 'Default scanned folders (mp3 / flac / m4a / wav…):',
       emptyRescanCta: 'Rescan library',
       emptyDirNote: 'You can also set custom folders with `directories` in the plugin config.',
-      syncOptional: 'Spotify sync (optional)',
-      syncOptionalHint: 'Optional: needs the spotify-sync CLI installed; music works without it',
-      syncUnavailableHint: 'spotify-sync CLI not found — sync is unavailable (safe to skip)',
       exploreChip: 'Exploration batch',
       recoColdTitle: 'No listening history yet',
       recoColdBody: 'Search and preview some songs first — liked songs are added automatically, and recommendations will follow your taste.',
@@ -635,8 +652,6 @@ window.__ModuleLoader__.load({
       importBtnHint: 'Read-only import of your NetEase Cloud Music / QQ Music liked list (no downloads)',
       importTabNetease: 'NetEase Cloud Music',
       importTabQq: 'QQ Music',
-      importConnected: 'Connected',
-      importNotConnected: 'Not connected',
       importQrLoading: 'Generating QR code…',
       importQrWaiting: 'Waiting for scan…',
       importQrConfirmed: 'Scanned — confirm the login on your phone',
@@ -644,25 +659,56 @@ window.__ModuleLoader__.load({
       importQrExpired: 'QR code expired — generate a new one',
       importQrRegenerate: 'Regenerate',
       importQrHint: 'Open the NetEase Cloud Music app → “Mine” → the “+” / scan entry, point it at the QR code; the connection completes right after login.',
-      importQqCookieLabel: 'Paste your y.qq.com Cookie',
-      importQqCookieHint: 'Sign in at y.qq.com in a desktop browser → F12 → Network → reload → pick any request → copy the whole Cookie line from Request Headers. It must contain qm_keyst (or qqmusic_key) and uin (or wxuin). The cookie stays on this machine in ~/.dsh/dsh-music/accounts.json (mode 0600).',
       importQqConnect: 'Connect',
       importConnecting: 'Connecting…',
       importSyncNow: 'Import into “Liked”',
       importSyncing: 'Importing…',
       importReQr: 'Sign in again (QR)',
       importDisconnect: 'Disconnect',
-      importLastSync: 'Last import',
-      importNever: 'Not imported yet',
-      importKnown: 'Imported',
-      importResTotal: 'Cloud liked',
-      importResAdded: 'New ♥',
-      importResExisted: 'Already ♥',
       importResDisliked: 'Skipped (local 👎)',
       importResUnavailable: 'Unavailable in cloud',
       importResRemoved: 'Removed in cloud',
       importResRemovedHint: 'Informational only: local ♥ marks and files are kept',
-      importFootNote: 'Read-only import: your cloud account is never modified and nothing is downloaded — songs are only marked ♥; decide later whether to add them to the library.',
+      importDoneLine: 'Imported {total} songs into “Liked”: {added} new, {existed} already there',
+      importViewLikes: 'View Liked',
+      importQrStep1: 'Scan the QR code with your phone',
+      importQrStep2: 'Imports into “Liked” right after sign-in',
+      importAutoNote: 'Once you confirm on your phone the first import starts right away. Your login stays on this machine and is never uploaded; the plugin only reads “My Favorite Music” and changes nothing in the cloud.',
+      importQqPrivacy: 'Your login stays on this machine (~/.dsh/dsh-music/accounts.json, mode 0600) and is never uploaded; disconnect any time.',
+      importQqStep1: 'Sign in to QQ Music on the web',
+      importQqOpen: 'Open y.qq.com',
+      importQqLoginHint: 'QQ or WeChat sign-in both work; leave that tab open afterwards.',
+      importQqStep2: 'Copy the sign-in cookie to the clipboard',
+      importQqCopy: 'Copy command',
+      importQqCopied: 'Copied',
+      importQqStep2Hint: 'On the y.qq.com tab open DevTools ({keys}) → Console, paste the command and press Enter',
+      importQqFallback: 'Command didn’t work? On y.qq.com open DevTools ({keys}) → Network → reload → pick any request → copy the whole Cookie line under Request Headers.',
+      importQqStep3: 'Paste it here — it connects and imports automatically',
+      importQqPlaceholder: 'Paste the cookie, e.g. qm_keyst=…; uin=…',
+      importQqNeedKey: 'No sign-in cookie (qm_keyst) yet. Sign in at y.qq.com first, then copy again.',
+      importKnownLine: '{n} songs imported',
+      importLastSyncLine: 'last {time}',
+      prvNeteaseHow: 'Scan to connect',
+      prvQqHow: 'Paste cookie',
+      spStep1: 'Install the spotify-sync CLI (optional)',
+      spStep1Ok: 'spotify-sync detected — nothing to do here.',
+      spStep1Hint: 'spotify-sync was not found. It’s optional: everything else works without it. After installing, click Re-check, or set syncCommand / syncScriptPath in the plugin config.',
+      spRecheck: 'Re-check',
+      spStep2: 'Authorize Spotify',
+      spStep2Ok: 'Credentials found.',
+      spStep2Hint: 'No credentials yet. spotify-sync keeps its own login (~/.config/spotify-sync/refresh_token); this plugin only checks that the file exists and never reads it. Authorize once as spotify-sync describes, then click Re-check.',
+      spStep3: 'Sync Liked Songs into your library',
+      spBody: 'New likes are downloaded to ~/Music/spotify-liked and added to the library; existing files are skipped.',
+      spStateNoCli: 'Not installed',
+      spStateNoAuth: 'Authorize',
+      spStateReady: 'Ready',
+      spStateChecking: 'Checking…',
+      setLikedSub: 'Bring in the songs you liked in other music apps: read-only, nothing changes in the cloud; imported songs land in Liked first, and you add them to the library when you want to listen.',
+      addMissing: 'Add to library (verified download)',
+      addMissingQueued: 'Queued — it appears in the library when done',
+      addMissingNone: 'No reliable source found — try searching “{title}” in the library',
+      likesMissingCount: '{n} not in library yet',
+      addMissingHint: 'These songs are only marked ♥ and not downloaded yet. The add-to-library button verifies online first, then downloads.',
       importEnabledOff: 'Liked-list import is disabled on this host (config likedSync = false)',
       importCookieEmpty: 'Paste the cookie first',
       srcNetease: 'NetEase',
@@ -1080,6 +1126,8 @@ window.__ModuleLoader__.load({
       ['path', { d: 'M5 18.5h14' }],
     ]);
     /* 喜欢列表导入：箭头进入一个盒（区别于下载的“落入托盘”）。 */
+    const IconExternal = makeIcon([['path', { d: 'M14 4h6v6' }], ['path', { d: 'M20 4l-9 9' }], ['path', { d: 'M19 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-12A1.5 1.5 0 0 1 4 18.5v-12A1.5 1.5 0 0 1 5.5 5H10' }]]);
+    const IconSpotify = makeIcon([['path', { d: 'M6 9.5a12 12 0 0 1 12 0' }], ['path', { d: 'M7.5 12.8a9 9 0 0 1 9 0' }], ['path', { d: 'M9 16a5.5 5.5 0 0 1 6 0' }]]);
     const IconImport = makeIcon([
       ['path', { d: 'M10 5H6.5A1.5 1.5 0 0 0 5 6.5v11A1.5 1.5 0 0 0 6.5 19h11a1.5 1.5 0 0 0 1.5-1.5V14' }],
       ['path', { d: 'M14 4h6v6' }],
@@ -1366,9 +1414,7 @@ window.__ModuleLoader__.load({
 .dshm-src-chip{font-size:10px;line-height:1;border:1px solid var(--dsw-alias-border-l1);border-radius:99px;padding:2px 6px;color:var(--dsw-alias-label-tertiary);background:var(--dsw-alias-bg-layer-2);}
 .dshm-src-netease{color:var(--dsw-alias-state-error-primary);}
 .dshm-src-qq{color:var(--dsw-alias-label-secondary);}
-.dshm-imp-dot{width:7px;height:7px;border-radius:50%;background:var(--dsw-alias-state-success-primary);display:inline-block;flex:none;}
-.dshm-imp-dot-off{background:var(--dsw-alias-label-tertiary);opacity:.55;}
-.dshm-imp-account{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:10px;padding:10px 12px;}
+.dshm-imp-account{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:10px;padding:8px 12px;}
 .dshm-imp-nick{font-weight:600;}
 .dshm-imp-time{font-size:11.5px;color:var(--dsw-alias-label-tertiary);}
 .dshm-imp-qr{display:flex;gap:16px;align-items:flex-start;}
@@ -1377,12 +1423,54 @@ window.__ModuleLoader__.load({
 .dshm-imp-qr-side{flex:1;display:flex;flex-direction:column;gap:10px;min-width:0;}
 .dshm-imp-step{font-size:13px;font-weight:600;color:var(--dsw-alias-label-primary);}
 .dshm-imp-hint{font-size:12px;line-height:1.7;color:var(--dsw-alias-label-tertiary);}
-.dshm-imp-qq{display:flex;flex-direction:column;gap:8px;}
-.dshm-imp-label{font-size:12.5px;font-weight:600;color:var(--dsw-alias-label-primary);}
-.dshm-imp-cookie{font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:9px;padding:8px 10px;resize:vertical;min-height:96px;box-sizing:border-box;width:100%;}
+.dshm-imp-cookie{font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:9px;padding:9px 11px;box-sizing:border-box;width:100%;outline:none;}
 .dshm-imp-actions{display:flex;gap:8px;flex-wrap:wrap;}
 .dshm-qr{display:block;}
 .dshm-sync-bare{margin:0;padding:10px 0 0;border-top:1px dashed var(--dsw-alias-border-l1);border-radius:0;background:transparent;border-left:0;border-right:0;border-bottom:0;}
+.dshm-prvs{display:flex;flex-direction:column;gap:8px;}
+.dshm-prv{background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);border-radius:12px;overflow:hidden;transition:border-color .15s ease;}
+.dshm-prv:hover{border-color:var(--dsw-alias-border-l2);}
+.dshm-prv-open,.dshm-prv-open:hover{border-color:var(--dsw-alias-border-l3);}
+.dshm-prv-head{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;background:transparent;border:0;color:var(--dsw-alias-label-primary);text-align:left;cursor:pointer;font:inherit;min-width:0;}
+.dshm-prv-head:hover{background:var(--dsw-alias-bg-layer-2);}
+.dshm-prv-head:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px;}
+.dshm-prv-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;flex:none;color:var(--dsw-alias-brand-primary);background:color-mix(in srgb,var(--dsw-alias-brand-primary) 12%,transparent);}
+.dshm-prv-netease .dshm-prv-icon{color:var(--dsw-alias-state-error-primary);background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 12%,transparent);}
+.dshm-prv-spotify .dshm-prv-icon{color:var(--dsw-alias-state-success-primary);background:color-mix(in srgb,var(--dsw-alias-state-success-primary) 12%,transparent);}
+.dshm-prv-name{font-size:13.5px;font-weight:600;flex:none;}
+.dshm-prv-state{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--dsw-alias-label-tertiary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.dshm-prv-state::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;flex:none;}
+.dshm-prv-state-ok{color:var(--dsw-alias-state-success-primary);}
+.dshm-prv-state-busy{color:var(--dsw-alias-brand-primary);}
+.dshm-prv-state-off::before{opacity:.45;}
+.dshm-prv-chev{flex:none;color:var(--dsw-alias-label-tertiary);transition:transform .18s ease;}
+.dshm-prv-open .dshm-prv-chev{transform:rotate(180deg);}
+.dshm-prv-body{padding:4px 16px 16px;border-top:1px solid var(--dsw-alias-border-l1);}
+.dshm-prv-body p{margin:0;}
+.dshm-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;}
+.dshm-step{display:grid;grid-template-columns:24px 1fr;gap:10px;padding:10px 0;position:relative;}
+.dshm-step:not(:last-child)::before{content:'';position:absolute;left:11px;top:36px;bottom:-2px;width:2px;border-radius:1px;background:var(--dsw-alias-border-l1);}
+.dshm-step-n{position:relative;z-index:1;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:12px;font-weight:600;color:var(--dsw-alias-label-secondary);border:1.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);}
+.dshm-step-done .dshm-step-n{color:var(--dsw-alias-state-success-primary);border-color:currentColor;background:color-mix(in srgb,var(--dsw-alias-state-success-primary) 12%,transparent);}
+.dshm-step-active .dshm-step-n{color:var(--dsw-alias-brand-primary);border-color:currentColor;}
+.dshm-step-miss .dshm-step-n{color:var(--dsw-alias-state-error-primary);border-color:currentColor;}
+.dshm-step-todo{opacity:.55;}
+.dshm-step-done .dshm-step-title{color:var(--dsw-alias-label-secondary);}
+.dshm-step-body{display:flex;flex-direction:column;gap:8px;min-width:0;padding-top:2px;}
+.dshm-step-title{font-size:13px;font-weight:600;line-height:20px;color:var(--dsw-alias-label-primary);}
+.dshm-step-content{display:flex;flex-direction:column;gap:8px;min-width:0;}
+.dshm-step-content>.dshm-chipbtn,.dshm-step-content>.dshm-linkbtn{align-self:flex-start;}
+.dshm-step-content>.dshm-imp-cookie{align-self:stretch;}
+.dshm-step-content p{margin:0;}
+.dshm-imp-summary{display:flex;align-items:flex-start;gap:6px;font-size:13px;font-weight:600;line-height:1.5;color:var(--dsw-alias-state-success-primary);}
+.dshm-imp-summary svg{flex:none;margin-top:3px;}
+.dshm-ava{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;flex:none;font-size:12.5px;font-weight:700;color:var(--dsw-alias-brand-primary);background:color-mix(in srgb,var(--dsw-alias-brand-primary) 14%,transparent);}
+.dshm-imp-nick{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dshm-linkbtn{display:inline-flex;align-items:center;gap:4px;padding:0;border:0;background:transparent;color:var(--dsw-alias-brand-primary);font:inherit;font-size:12.5px;cursor:pointer;align-self:flex-start;}
+.dshm-linkbtn:hover{text-decoration:underline;}
+.dshm-imp-hint-more{font-size:11.5px;padding-top:8px;border-top:1px dashed var(--dsw-alias-border-l1);}
+.dshm-imp-cookie:focus-visible{border-color:var(--dsw-alias-brand-primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--dsw-alias-brand-primary) 18%,transparent);}
+.dshm-missing-chip{font-size:11.5px;color:var(--dsw-alias-state-warn-primary);border:1px solid currentColor;border-radius:99px;padding:2px 9px;white-space:nowrap;}
 .dshm-settings{position:relative;height:100%;overflow:auto;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;animation:dshm-fade-in .28s ease-out;}
 .dshm-settings-inner{max-width:720px;margin:0 auto;padding:28px 24px 96px;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:20px;}
 .dshm-settings-narrow{max-width:540px;}
@@ -1398,17 +1486,8 @@ window.__ModuleLoader__.load({
 .dshm-set-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;color:var(--dsw-alias-label-primary);}
 .dshm-set-head-icon{display:inline-flex;width:26px;height:26px;border-radius:8px;align-items:center;justify-content:center;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-brand-primary);flex:none;}
 .dshm-set-head .dshm-wstep-title{margin:0;font-size:15px;}
-.dshm-set-head .dshm-wstep-sub{flex-basis:100%;margin:0;}
-.dshm-set-cards{display:grid;grid-template-columns:1fr;gap:12px;}
-.dshm-imp-card{background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0;}
-.dshm-imp-card-head{display:flex;align-items:center;gap:8px;color:var(--dsw-alias-label-primary);min-width:0;}
-.dshm-imp-card-head svg{color:var(--dsw-alias-label-secondary);flex:none;}
-.dshm-imp-card-title{font-size:13.5px;font-weight:600;flex:none;}
-.dshm-imp-card-state{font-size:12px;color:var(--dsw-alias-label-tertiary);margin-left:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
-.dshm-imp-card-body{display:flex;flex-direction:column;gap:10px;min-width:0;}
-.dshm-imp-card-body p{margin:0;}
-.dshm-imp-logged{display:flex;flex-wrap:wrap;align-items:center;gap:10px;}
-.dshm-imp-logged .dshm-imp-actions{margin-left:auto;}
+.dshm-set-head .dshm-wstep-sub{flex-basis:100%;margin:0;max-width:none;padding-left:34px;line-height:1.55;}
+.dshm-imp-logged{display:flex;flex-direction:column;gap:10px;min-width:0;}
 .dshm-imp-account{max-width:100%;}
 .dshm-set-foot{position:sticky;bottom:0;z-index:2;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px -24px -96px;padding:12px 24px 20px;background:var(--dsw-alias-bg-base);border-top:1px solid var(--dsw-alias-border-l1);}
 .dshm-set-foot-hint{font-size:11.5px;color:var(--dsw-alias-label-tertiary);margin-left:auto;}
@@ -1577,7 +1656,7 @@ window.__ModuleLoader__.load({
 @media (prefers-reduced-motion:reduce){
   .dshm-eq-on i,.dshm-tab-dot,.dshm-skel-box,.dshm-spin,.dshm-state-spin,.dshm-mini,.dshm-mini-fab,.dshm-drawer,.dshm-welcome-fish,.dshm-settings,.dshm-logo{animation:none;}
   .dshm-mini{animation:none;}
-  .dshm-row,.dshm-iconbtn,.dshm-chipbtn,.dshm-playbtn,.dshm-slider-thumb,.dshm-mini-progress>div,.dshm-reco-card,.dshm-dl-bar>div,.dshm-like-btn,.dshm-playround,.dshm-artcard,.dshm-mode-btn{transition:none;}
+  .dshm-row,.dshm-iconbtn,.dshm-chipbtn,.dshm-playbtn,.dshm-slider-thumb,.dshm-mini-progress>div,.dshm-reco-card,.dshm-dl-bar>div,.dshm-like-btn,.dshm-playround,.dshm-artcard,.dshm-mode-btn,.dshm-prv,.dshm-prv-chev{transition}:none;}
 }
 `;
 
@@ -1650,7 +1729,7 @@ window.__ModuleLoader__.load({
         downloadStatus: () => request('/dsh-music/api/download/status'),
         sync: () => request('/dsh-music/api/sync', { method: 'POST' }),
         syncStatus: () => request('/dsh-music/api/sync/status'),
-        syncAvailability: () => request('/dsh-music/api/sync/availability'),
+        syncAvailability: (refresh) => request('/dsh-music/api/sync/availability' + (refresh ? '?refresh=1' : '')),
         history: (limit) => request('/dsh-music/api/history?limit=' + (limit || 50)),
         historyStats: () => request('/dsh-music/api/history/stats'),
         onboardingState: () => request('/dsh-music/api/onboarding/state'),
@@ -2078,17 +2157,20 @@ window.__ModuleLoader__.load({
     }
 
     function createSyncService(api) {
-      const store = createStore({ phase: 'idle', result: null, error: null, available: null, hint: null });
+      /* authorized：null 未知 / true 已找到 spotify-sync 的授权凭据文件 / false 还没授权（主机只查文件存在） */
+      const store = createStore({ phase: 'idle', result: null, error: null, available: null, hint: null, authorized: null });
       let timer = null;
       /* Host probe endpoint: sync is optional, so a failed probe means "unavailable". */
-      async function probe() {
+      async function probe(force) {
         try {
-          const a = await api.syncAvailability();
-          store.set({ available: !!(a && a.available), hint: (a && a.hint) || null });
+          const a = await api.syncAvailability(!!force);
+          store.set({ available: !!(a && a.available), hint: (a && a.hint) || null, authorized: a && a.authorized != null ? !!a.authorized : null });
         } catch {
           store.set({ available: false, hint: null });
         }
       }
+      /* 用户装好 CLI / 完成授权后点「重新检测」：让主机重探（不执行 CLI） */
+      async function recheck() { await probe(true); return store.getSnapshot(); }
       function noteAvailable(s) {
         if (s && typeof s.available === 'boolean') store.set({ available: s.available, hint: s.hint || null });
       }
@@ -2127,7 +2209,7 @@ window.__ModuleLoader__.load({
       }
       async function warm() { await probe(); const r = await refresh(); if (r) poll(); }
       function dispose() { if (timer) { clearTimeout(timer); timer = null; } }
-      return { source: store, start, warm, dispose, probe };
+      return { source: store, start, warm, dispose, probe, recheck };
     }
 
     function createHistoryService(api) {
@@ -2236,9 +2318,10 @@ window.__ModuleLoader__.load({
     function createLikedSyncService(api, onChange) {
       const store = createStore({
         open: false, tab: 'netease', enabled: true, providers: {}, loaded: false, error: null, errorProvider: null,
-        qr: null, qrPhase: 'idle', qrMessage: '', qqCookie: '', connecting: false, syncing: null, result: null, notice: null,
+        qr: null, qrPhase: 'idle', qrMessage: '', qqCookie: '', connecting: false, syncing: null, result: null, notice: null, copied: false,
       });
       let pollTimer = null;
+      let copiedTimer = null;
       let pollSeq = 0;
       function stopPolling() {
         if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
@@ -2261,7 +2344,7 @@ window.__ModuleLoader__.load({
       function open(tab) {
         const next = tab || store.getSnapshot().tab || 'netease';
         stopPolling();
-        store.set({ open: true, tab: next, qr: null, qrPhase: 'idle', qrMessage: '', result: null, notice: null, error: null, errorProvider: null });
+        store.set({ open: true, tab: next, qr: null, qrPhase: 'idle', qrMessage: '', result: null, notice: null, error: null, errorProvider: null, copied: false });
         load();
         if (next === 'netease' && !isConnected('netease')) startQr();
       }
@@ -2297,6 +2380,8 @@ window.__ModuleLoader__.load({
           if (code === 803) {
             store.set({ qrPhase: 'done', qrMessage: (r && r.message) || '', notice: r && r.account ? { provider: 'netease', nickname: r.account.nickname || '' } : null });
             await load();
+            /* 新用户路径：扫码成功 = 登录完成 → 不用再点一次，直接导入 */
+            await sync('netease');
             return;
           }
           if (code === 800 || code === 804) {
@@ -2317,13 +2402,17 @@ window.__ModuleLoader__.load({
       async function connectQq() {
         const cookie = (store.getSnapshot().qqCookie || '').trim();
         if (!cookie) { store.set({ error: 'importCookieEmpty', errorProvider: 'qq' }); return; }
+        /* connecting 一直保持到自动导入结束：粘贴即连接期间不能再触发一次 */
         store.set({ connecting: true, error: null, errorProvider: null, result: null });
         try {
           const res = await api.likedSyncQqConnect(cookie);
-          store.set({ connecting: false, qqCookie: '', notice: { provider: 'qq', nickname: (res && res.account && res.account.nickname) || '' } });
+          store.set({ qqCookie: '', notice: { provider: 'qq', nickname: (res && res.account && res.account.nickname) || '' } });
           await load();
+          await sync('qq');
         } catch (err) {
-          store.set({ connecting: false, error: (err && err.message) || String(err), errorProvider: 'qq' });
+          store.set({ error: (err && err.message) || String(err), errorProvider: 'qq' });
+        } finally {
+          store.set({ connecting: false });
         }
       }
       async function sync(provider) {
@@ -2344,8 +2433,41 @@ window.__ModuleLoader__.load({
         await load();
         if (provider === 'netease' && store.getSnapshot().open) startQr();
       }
-      function dispose() { stopPolling(); }
-      return { source: store, load, open, close, selectTab, startQr, setQqCookie, connectQq, sync, disconnect, dispose };
+      /* QQ：「复制命令」把 copy(document.cookie) 写进剪贴板，用户到 y.qq.com 的 Console 里粘贴执行 */
+      async function copyCookieCommand() {
+        const cmd = 'copy(document.cookie)';
+        try {
+          if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(cmd);
+          } else {
+            const ta = typeof document !== 'undefined' && document.createElement ? document.createElement('textarea') : null;
+            if (!ta) return false;
+            ta.value = cmd;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            const ok = typeof document.execCommand === 'function' ? document.execCommand('copy') : false;
+            document.body.removeChild(ta);
+            if (!ok) return false;
+          }
+        } catch {
+          return false;
+        }
+        store.set({ copied: true });
+        if (copiedTimer) clearTimeout(copiedTimer);
+        copiedTimer = setTimeout(() => store.set({ copied: false }), 2000);
+        return true;
+      }
+      /* 在新标签页打开外部网址（QQ 音乐网页版登录） */
+      function openUrl(url) {
+        try {
+          if (typeof window !== 'undefined' && typeof window.open === 'function') window.open(url, '_blank', 'noopener,noreferrer');
+        } catch { /* 宿主禁止弹窗时静默：用户可手动打开 */ }
+      }
+      function dispose() { stopPolling(); if (copiedTimer) { clearTimeout(copiedTimer); copiedTimer = null; } }
+      return { source: store, load, open, close, selectTab, startQr, setQqCookie, connectQq, sync, disconnect, copyCookieCommand, openUrl, dispose };
     }
 
     function createPreviewService(api) {
@@ -2927,7 +3049,7 @@ window.__ModuleLoader__.load({
       });
     }
 
-    function SettingsView({ t, onboarding, useOnboarding, sync, useSync, likedSync, useLikedSync, section, onExit, onRoute }) {
+    function SettingsView({ t, onboarding, useOnboarding, sync, useSync, likedSync, useLikedSync, section, onExit, onRoute, onViewLikes }) {
       const snap = useOnboarding((st) => st) || {};
       const firstRun = snap.completed !== true;
       const taste = snap.taste || {};
@@ -3042,35 +3164,10 @@ window.__ModuleLoader__.load({
         extra || null,
         sub ? h('p', { className: 'dshm-wstep-sub' }, sub) : null);
 
-      /* ── ① 喜欢列表同步：Spotify + 网易云 + QQ 音乐 ── */
-      const syncState = sync ? (useSync ? useSync((st) => st.phase) : 'idle') : 'idle';
-      const syncAvail = sync ? (useSync ? useSync((st) => st.available) : null) : null;
-      const syncHint = sync ? (useSync ? useSync((st) => st.hint) : null) : null;
-      const syncUsable = syncAvail !== false;
-      const spotifyCard = h('div', { className: 'dshm-imp-card dshm-imp-card-spotify' },
-        h('div', { className: 'dshm-imp-card-head' },
-          h(IconDisc, { size: 15 }),
-          h('span', { className: 'dshm-imp-card-title' }, 'Spotify'),
-          h('span', { className: cx('dshm-imp-dot', !syncUsable && 'dshm-imp-dot-off'), title: syncUsable ? (syncHint || t('syncOptional')) : (syncHint || t('syncUnavailableHint')) }),
-          h('span', { className: 'dshm-imp-card-state' }, syncUsable ? (syncHint || t('syncOptional')) : (syncHint || t('syncUnavailableHint')))),
-        h('div', { className: 'dshm-imp-card-body' },
-          h('p', { className: 'dshm-imp-hint' }, t('setSpotifyBody')),
-          sync ? h('div', { className: 'dshm-imp-actions' },
-            h('button', {
-              type: 'button', className: cx('dshm-chipbtn', 'dshm-chipbtn-primary', !syncUsable && 'dshm-chipbtn-off'),
-              disabled: syncState === 'running' || !syncUsable,
-              onClick: () => sync.start(),
-            }, h(IconRefresh, { size: 13, className: syncState === 'running' ? 'dshm-spin' : undefined }),
-              syncState === 'running' ? t('syncing') : t('syncBtn'))) : null,
-          sync ? h(SyncPanel, { t, sync, useSync, bare: true }) : null));
-
+      /* ── ① 喜欢列表同步：网易云 / QQ 音乐 / Spotify 各一行手风琴（新用户分步引导） ── */
       const likedSection = h('section', { className: 'dshm-set-section', ref: likedRef, 'aria-label': t('setLikedTitle') },
-        sectionHead(null, 'dshm-set-liked', IconHeart, t('setLikedTitle'), firstRun ? null : t('importFootNote')),
-        h('div', { className: 'dshm-set-cards' },
-          spotifyCard,
-          likedSync ? h(LikedProviderCard, { t, likedSync, useLikedSync, provider: 'netease' }) : null,
-          likedSync ? h(LikedProviderCard, { t, likedSync, useLikedSync, provider: 'qq' }) : null),
-        firstRun ? h('p', { className: 'dshm-whint' }, t('importFootNote')) : null);
+        sectionHead(null, 'dshm-set-liked', IconHeart, t('setLikedTitle'), t('setLikedSub')),
+        h(LikedProviders, { t, sync, useSync, likedSync, useLikedSync, firstRun, onViewLikes }));
 
       /* ── ② 推荐口味 ── */
       const tasteSection = h('section', { className: 'dshm-set-section', ref: tasteRef, 'aria-label': t('setTasteTitle') },
@@ -3267,7 +3364,7 @@ window.__ModuleLoader__.load({
       }, h(IconThumbDown, { size: 15, style: disliked ? { fill: 'currentColor' } : undefined }));
     }
 
-    function TrackRow({ track, index, isCurrent, playing, onPlay, onDelete, onReveal, onOpenArtist, likes, useLikes, t, muted, pending }) {
+    function TrackRow({ track, index, isCurrent, playing, onPlay, onDelete, onReveal, onOpenArtist, likes, useLikes, t, muted, pending, onAdd }) {
       return h('div', {
         className: cx('dshm-row', isCurrent && 'dshm-row-current', muted && 'dshm-row-off'),
         role: 'button', tabIndex: 0,
@@ -3300,6 +3397,9 @@ window.__ModuleLoader__.load({
         h('span', { className: 'dshm-row-dur' }, formatTime(track.duration)),
         likes ? h(LikeButton, { t, item: track, likes, useLikes }) : null,
         likes ? h(DislikeButton, { t, item: track, likes, useLikes }) : null,
+        onAdd && track.inLibrary === false
+          ? h(IconButton, { label: t('addMissing'), onClick: (e) => { e.stopPropagation(); onAdd(track); } }, h(IconDownload, { size: 14 }))
+          : null,
         onDelete ? h('span', { className: 'dshm-row-actions', onClick: (e) => e.stopPropagation() },
           h(IconButton, { label: t('revealTrack'), onClick: (e) => { e.stopPropagation(); onReveal(track); } }, h(IconDisc, { size: 14 })),
           h(IconButton, { label: t('deleteTrack'), onClick: (e) => { e.stopPropagation(); onDelete(track); } }, h(IconClose, { size: 14 }))) : null,
@@ -3310,7 +3410,7 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 9. Library view — search, grouping, play-all / shuffle
      * ================================================================ */
-    function LibraryView({ t, player, library, sync, download, preview, likes, openArtistPage, artistImages, likedSync, openSettings, useSync, useDownload, useLibrary, usePlayer, useLikes, useArtistImages }) {
+    function LibraryView({ t, player, library, sync, download, preview, likes, openArtistPage, artistImages, likedSync, openSettings, useSync, useDownload, useLibrary, usePlayer, useLikes, useArtistImages, tabWish, onTabWishDone }) {
       const status = useLibrary((s) => s.status);
       const tracks = useLibrary((s) => s.tracks);
       const error = useLibrary((s) => s.error);
@@ -3319,7 +3419,13 @@ window.__ModuleLoader__.load({
       const [query, setQuery] = useState('');
       const [searchState, setSearchState] = useState({ status: 'idle', local: [], remote: [] });
       const [groupBy, setGroupBy] = useState('none');
-      const [libTab, setLibTab] = useState('library');
+      const [libTab, setLibTab] = useState(tabWish || 'library');
+      /* 入口指定子页（设置页「查看我喜欢」）：挂载后或 wish 变化时切过去，用完即清 */
+      useEffect(() => {
+        if (!tabWish) return;
+        setLibTab(tabWish);
+        if (onTabWishDone) onTabWishDone();
+      }, [tabWish]);
       const [rowError, setRowError] = useState('');
       const [playNotice, setPlayNotice] = useState('');
       const searchRef = useRef(null);
@@ -3337,10 +3443,13 @@ window.__ModuleLoader__.load({
         duration: it.durationMs ? Math.round(it.durationMs / 1000) : (it.duration || 0),
         audioUrl: it.audioUrl || null, coverUrl: it.coverUrl || null,
         muted: !it.audioUrl,
+        inLibrary: it.inLibrary == null ? !!it.audioUrl : !!it.inLibrary,
         /* 来自网易云 / QQ 音乐导入的条目带 sources，行内显示来源小标 */
         sources: it.sources && Object.keys(it.sources).length ? it.sources : null,
       })), [likeItems]);
       const likedPlayable = useMemo(() => likedTracks.filter((tr) => !!tr.audioUrl), [likedTracks]);
+      /* 导入但还没入库的数量（行尾给「入库」按钮） */
+      const likedMissing = useMemo(() => likedTracks.filter((tr) => !tr.inLibrary).length, [likedTracks]);
 
       /* Backend search (local filter + MusicBrainz completion), debounced.
        * Empty query keeps the pure client-side browse below. */
@@ -3429,6 +3538,23 @@ window.__ModuleLoader__.load({
         const idx = likedPlayable.indexOf(track);
         player.playTracks(likedPlayable, idx >= 0 ? idx : 0);
       }
+      /* 「入库」：导入的喜欢条目还不在本地 → 曲库搜索找带核实记录的候选，交给既有下载管线
+       * （每批 ≤20、串行、先核实再下载，只写 ~/Music/dsh-music）。歌名对不上就不下载。 */
+      async function addMissing(item) {
+        const norm = (x) => normalizeZh(String(x || '')).toLowerCase().replace(/\s+/g, '');
+        const want = norm(item.title);
+        try {
+          const r = await library.searchRemote((item.artist ? item.artist + ' ' : '') + item.title);
+          const remote = (r && Array.isArray(r.remote) ? r.remote : []).filter((x) => x && x.verification && x.kind !== 'artist' && x.title);
+          const hit = remote.find((x) => norm(x.title) === want)
+            || remote.find((x) => { const nt = norm(x.title); return nt.includes(want) || want.includes(nt); });
+          if (!hit) { setPlayNotice(fmt(t('addMissingNone'), { title: item.title })); return; }
+          const ok = await download.start([hit]);
+          setPlayNotice(ok ? t('addMissingQueued') : (download.source.getSnapshot().error || t('downloadError')));
+        } catch (err) {
+          setPlayNotice((err && err.message) || t('downloadError'));
+        }
+      }
 
       const renderRow = (tr, i) => h(TrackRow, {
         key: tr.id || i, track: tr, index: i,
@@ -3498,6 +3624,8 @@ window.__ModuleLoader__.load({
                   key: tr.id || ('liked' + i), track: tr, index: i,
                   isCurrent: currentId === tr.id, playing, muted: tr.muted,
                   onPlay: playLiked, onOpenArtist: openArtistPage, likes, useLikes, t,
+                  /* 行尾「入库」只给「导入且不在曲库」的条目（有 audioUrl 的已在曲库） */
+                  onAdd: download && !tr.inLibrary && !tr.audioUrl ? addMissing : null,
                 })));
       } else if (status === 'loading' && tracks.length === 0) {
         content = h('div', { className: 'dshm-list' }, h(SkeletonRows));
@@ -3576,6 +3704,9 @@ window.__ModuleLoader__.load({
               }, '← ' + t('favsBack')),
               h('span', { className: 'dshm-favs-title', style: { marginLeft: '4px' } }, t('libTabLikes')),
               h('span', { className: 'dshm-count' }, likeItems.length + ' ' + t('tracksUnit')),
+              likedMissing > 0
+                ? h('span', { className: 'dshm-missing-chip', title: t('addMissingHint'), role: 'status' }, fmt(t('likesMissingCount'), { n: likedMissing }))
+                : null,
               likedSync ? h('button', {
                 type: 'button', className: 'dshm-chipbtn', style: { marginLeft: 'auto' },
                 title: t('importBtnHint'), onClick: () => openSettings('liked'),
@@ -4324,136 +4455,238 @@ window.__ModuleLoader__.load({
         h('g', { fill: '#000' }, cells));
     }
 
-    /* 单平台卡片（设置页「喜欢列表同步」区块内）：provider = 'netease' | 'qq'。
-     * 未登录 → 网易云展示二维码 / QQ 展示 Cookie 输入；已登录 → 账号 + 「立即同步」；下方为上次结果。 */
-    function LikedProviderCard({ t, likedSync, useLikedSync, provider }) {
+    /* ================================================================
+     * 11b-3. 「喜欢列表同步」区块（设置页）：三个平台各占一行（手风琴）。
+     *        行头 = 图标 / 名称 / 状态；展开后是给新用户的分步引导（①②③）。
+     *        连接成功即自动导入一次；结果只留一行主结论 + 异常项。
+     * ================================================================ */
+    function fmt(str, vars) {
+      return String(str || '').replace(/\{(\w+)\}/g, (m, k) => (vars && vars[k] != null ? String(vars[k]) : m));
+    }
+    function devtoolsKeys() {
+      return typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform || '') ? '⌘⌥I' : 'F12';
+    }
+
+    /* 分步引导：state = done（已完成）| active（进行中）| todo（还没轮到）| miss（没满足，可补救） */
+    function Steps({ children }) { return h('ol', { className: 'dshm-steps' }, children); }
+    function Step({ n, state, title, children }) {
+      return h('li', { className: cx('dshm-step', 'dshm-step-' + state) },
+        h('span', { className: 'dshm-step-n', 'aria-hidden': true }, state === 'done' ? h(IconCheck, { size: 12 }) : n),
+        h('div', { className: 'dshm-step-body' },
+          h('div', { className: 'dshm-step-title' }, title),
+          children ? h('div', { className: 'dshm-step-content' }, children) : null));
+    }
+
+    /* 导入结果：一行主结论；移除 / 下架 / 跳过 👎 这类异常才单独出 chip */
+    function ImportResult({ t, result, onViewLikes }) {
+      if (!result || result.total == null) return null;
+      const extras = [
+        ['importResRemoved', result.removed, 'dshm-sync-chip-warn', 'importResRemovedHint'],
+        ['importResUnavailable', result.unavailable, '', null],
+        ['importResDisliked', result.skippedDisliked, '', null],
+      ].filter(([, v]) => v > 0);
+      const removed = Array.isArray(result.removedItems) ? result.removedItems : [];
+      return h('div', { className: 'dshm-imp-result', role: 'status' },
+        h('div', { className: 'dshm-imp-summary' },
+          h(IconCheck, { size: 14 }),
+          h('span', null, fmt(t('importDoneLine'), { total: result.total, added: result.added || 0, existed: result.existed || 0 }))),
+        extras.length
+          ? h('div', { className: 'dshm-sync-chips' }, extras.map(([key, v, cls, hint]) => h('span', {
+              key, className: cx('dshm-sync-chip', cls), title: hint ? t(hint) : undefined,
+            }, t(key) + ' ' + v)))
+          : null,
+        removed.length
+          ? h('div', { className: 'dshm-sync-detail' },
+              removed.slice(0, 6).map((it, i) => h('div', { key: i }, '· ' + (it.artist || '') + ' - ' + (it.title || ''))),
+              removed.length > 6 ? h('div', null, '… +' + (removed.length - 6)) : null)
+          : null,
+        onViewLikes
+          ? h('button', { type: 'button', className: 'dshm-linkbtn', onClick: onViewLikes }, t('importViewLikes'),
+              h(IconChevronUp, { size: 12, style: { transform: 'rotate(90deg)' } }))
+          : null);
+    }
+
+    /* 平台行：整行是展开/收起按钮；stateTone = ok | busy | off */
+    function ProviderRow({ provider, icon, title, stateText, stateTone, expanded, onToggle, children }) {
+      return h('div', { className: cx('dshm-prv', 'dshm-prv-' + provider, expanded && 'dshm-prv-open'), 'data-provider': provider, role: 'listitem' },
+        h('button', { type: 'button', className: 'dshm-prv-head', 'aria-expanded': expanded, onClick: onToggle },
+          h('span', { className: 'dshm-prv-icon' }, h(icon, { size: 18 })),
+          h('span', { className: 'dshm-prv-name' }, title),
+          h('span', { className: cx('dshm-prv-state', stateTone && 'dshm-prv-state-' + stateTone) }, stateText),
+          h(IconChevronDown, { size: 14, className: 'dshm-prv-chev' })),
+        expanded ? h('div', { className: 'dshm-prv-body' }, children) : null);
+    }
+
+    function LikedProviders({ t, sync, useSync, likedSync, useLikedSync, firstRun, onViewLikes }) {
       /* useLikedSync 由宿主 hooks 注入；直接读取服务 store 作为兜底（独立渲染/测试场景） */
-      const s = (useLikedSync ? useLikedSync((st) => st) : (likedSync && likedSync.source ? likedSync.source.getSnapshot() : null)) || {};
-      const isNetease = provider === 'netease';
-      const prov = (s.providers && s.providers[provider]) || null;
-      const connected = !!(prov && prov.connected);
-      const syncing = s.syncing === provider;
-      const result = s.result && s.result.provider === provider ? s.result : null;
-      const last = prov && prov.lastResult && !syncing ? prov.lastResult : null;
-      const shown = result || last;
-      /* 错误按归属平台分卡展示；状态拉取失败（无归属）显示在第一张卡 */
-      const error = s.error && (s.errorProvider === provider || (s.errorProvider == null && !s.loaded && isNetease)) ? s.error : null;
-      const notice = s.notice && s.notice.provider === provider ? s.notice : null;
-      /* 网易云未登录且尚未生成二维码（或已过期被重新打开）→ 自动生成；老用户每次打开设置页都拿新码 */
-      useEffect(() => {
-        if (!isNetease || connected || (s.loaded && !s.enabled)) return undefined;
-        const st = likedSync.source.getSnapshot();
-        if (st.qrPhase === 'idle' || st.qrPhase === 'expired') likedSync.startQr();
-        return undefined;
-      }, [isNetease, connected, s.loaded, s.enabled]);
+      const s = (useLikedSync ? useLikedSync((st) => st) : (likedSync && likedSync.source ? likedSync.source.getSnapshot() : {})) || {};
+      const ss = sync ? (useSync ? useSync((st) => st) : sync.source.getSnapshot()) : { phase: 'idle' };
+      /* 展开的行（null = 全部收起）；store 初值就是 'netease'，新用户一进来先看到扫码 */
+      const tab = s.tab || null;
+      const providers = s.providers || {};
+      const ne = providers.netease || null;
+      const qq = providers.qq || null;
+      const neOn = !!(ne && ne.connected);
+      const qqOn = !!(qq && qq.connected);
+      const enabled = !(s.loaded && !s.enabled);
+      const spAvail = ss.available;
+      const spAuth = ss.authorized;
+      const spRunning = ss.phase === 'running';
+      const toggle = (id) => likedSync.selectTab(tab === id ? null : id);
 
-      const chips = [
-        ['importResTotal', shown && shown.total],
-        ['importResAdded', shown && shown.added],
-        ['importResExisted', shown && shown.existed],
-        ['importResDisliked', shown && shown.skippedDisliked],
-        ['importResUnavailable', shown && shown.unavailable],
-        ['importResRemoved', shown && shown.removed],
-      ];
-      const phaseText = {
-        loading: t('importQrLoading'), waiting: t('importQrWaiting'), confirmed: t('importQrConfirmed'),
-        done: t('importQrDone'), expired: t('importQrExpired'), error: s.qrMessage || t('importQrExpired'),
-      }[s.qrPhase] || '';
-      const qrAlive = !!s.qr && (s.qrPhase === 'waiting' || s.qrPhase === 'confirmed');
-
-      const accountCard = connected && prov.account
-        ? h('div', { className: 'dshm-imp-account' },
-            h(IconCheck, { size: 14, style: { color: 'var(--dsw-alias-state-success-primary)' } }),
-            h('span', { className: 'dshm-imp-nick' }, prov.account.nickname || String(prov.account.uid || '')),
-            prov.knownCount != null ? h('span', { className: 'dshm-count' }, t('importKnown') + ' ' + prov.knownCount) : null,
-            prov.lastSyncAt
-              ? h('span', { className: 'dshm-imp-time' }, t('importLastSync') + ' ' + formatSyncTime(prov.lastSyncAt))
-              : h('span', { className: 'dshm-imp-time' }, t('importNever')))
-        : null;
-      const actions = h('div', { className: 'dshm-imp-actions' },
+      /* 错误按归属平台分行展示；主机文案里的「缺 qm_keyst」换成给新用户的说法 */
+      const errLine = (provider) => {
+        if (!s.error || s.errorProvider !== provider) return null;
+        const text = s.error === 'importCookieEmpty' ? t('importCookieEmpty')
+          : /qm_keyst|qqmusic_key/.test(s.error) ? t('importQqNeedKey') : s.error;
+        return h('div', { className: 'dshm-errorline', role: 'alert' }, h(IconAlert, { size: 14 }), text);
+      };
+      const resOf = (provider) => (s.result && s.result.provider === provider ? s.result : null)
+        || (s.syncing === provider ? null : (providers[provider] && providers[provider].lastResult) || null);
+      const nameOf = (prov) => (prov && prov.account && (prov.account.nickname || prov.account.uid)) || '';
+      const accountLine = (prov) => h('div', { className: 'dshm-imp-account' },
+        h('span', { className: 'dshm-ava', 'aria-hidden': true }, nameOf(prov).slice(0, 1) || '·'),
+        h('span', { className: 'dshm-imp-nick' }, nameOf(prov)),
+        prov && prov.knownCount != null ? h('span', { className: 'dshm-imp-time' }, fmt(t('importKnownLine'), { n: prov.knownCount })) : null,
+        prov && prov.lastSyncAt ? h('span', { className: 'dshm-imp-time' }, fmt(t('importLastSyncLine'), { time: formatSyncTime(prov.lastSyncAt) })) : null);
+      const syncActions = (provider, prov) => h('div', { className: 'dshm-imp-actions' },
         h('button', {
           type: 'button', className: 'dshm-chipbtn dshm-chipbtn-primary',
           disabled: !!s.syncing || !!(prov && prov.busy),
           onClick: () => likedSync.sync(provider),
-        }, syncing ? h(IconRefresh, { size: 13, className: 'dshm-spin' }) : h(IconHeart, { size: 13 }),
-            syncing ? t('importSyncing') : t('importSyncNow')),
-        isNetease
+        }, s.syncing === provider ? h(IconRefresh, { size: 13, className: 'dshm-spin' }) : h(IconHeart, { size: 13 }),
+            s.syncing === provider ? t('importSyncing') : t('importSyncNow')),
+        provider === 'netease'
           ? h('button', { type: 'button', className: 'dshm-chipbtn', onClick: () => likedSync.startQr() }, t('importReQr'))
           : null,
         h('button', { type: 'button', className: 'dshm-chipbtn', onClick: () => likedSync.disconnect(provider) }, t('importDisconnect')));
+      const recheck = h('button', { type: 'button', className: 'dshm-chipbtn', onClick: () => sync.recheck() },
+        h(IconRefresh, { size: 13 }), t('spRecheck'));
 
-      let body;
-      if (s.loaded && !s.enabled) {
-        body = h('div', { className: 'dshm-imp-hint' }, t('importEnabledOff'));
-      } else if (isNetease) {
-        body = connected
-          ? h('div', { className: 'dshm-imp-logged' }, h('p', { className: 'dshm-imp-hint' }, t('setNeteaseBody')), accountCard, actions)
-          : h('div', { className: 'dshm-imp-qr' },
+      /* ── 网易云：扫码 → 自动导入 ── */
+      const qrText = {
+        loading: t('importQrLoading'), waiting: t('importQrWaiting'), confirmed: t('importQrConfirmed'),
+        done: t('importQrDone'), expired: t('importQrExpired'), error: s.qrMessage || t('importQrExpired'),
+      }[s.qrPhase] || '';
+      const qrAlive = !!s.qr && (s.qrPhase === 'waiting' || s.qrPhase === 'confirmed');
+      useEffect(() => {
+        if (!enabled || neOn || tab !== 'netease' || s.qrPhase !== 'idle') return undefined;
+        likedSync.startQr();
+        return undefined;
+      }, [enabled, neOn, tab, s.qrPhase]);
+      let neteaseBody;
+      if (!enabled) {
+        neteaseBody = h('p', { className: 'dshm-imp-hint' }, t('importEnabledOff'));
+      } else if (neOn) {
+        neteaseBody = h('div', { className: 'dshm-imp-logged' }, accountLine(ne), syncActions('netease', ne),
+          h(ImportResult, { t, result: resOf('netease'), onViewLikes: firstRun ? null : onViewLikes }), errLine('netease'));
+      } else {
+        const neRes = resOf('netease');
+        const neBusy = s.syncing === 'netease';
+        neteaseBody = h(Steps, null,
+          h(Step, { n: 1, state: neRes ? 'done' : 'active', title: t('importQrStep1') },
+            h('div', { className: 'dshm-imp-qr' },
               h('div', { className: 'dshm-imp-qr-box' },
                 s.qrPhase === 'loading' || (s.qrPhase === 'idle' && !s.loaded)
                   ? h(IconRefresh, { size: 24, className: 'dshm-spin' })
                   : qrAlive
                     ? h(QrSvg, { matrix: s.qr.matrix, label: t('importQrWaiting') })
-                    : h('div', { className: 'dshm-imp-qr-fallback' }, h(IconAlert, { size: 22 }), h('div', null, phaseText))),
+                    : h('div', { className: 'dshm-imp-qr-fallback' }, h(IconAlert, { size: 22 }), h('div', null, qrText))),
               h('div', { className: 'dshm-imp-qr-side' },
-                h('p', { className: 'dshm-imp-hint' }, t('setNeteaseBody')),
-                h('div', { className: 'dshm-imp-step', role: 'status' }, phaseText),
-                h('div', { className: 'dshm-imp-hint' }, t('importQrHint')),
-                h('div', { className: 'dshm-imp-actions' },
-                  h('button', { type: 'button', className: 'dshm-chipbtn', disabled: s.qrPhase === 'loading', onClick: () => likedSync.startQr() },
-                    h(IconRefresh, { size: 13 }), t('importQrRegenerate')))));
-      } else {
-        body = connected
-          ? h('div', { className: 'dshm-imp-logged' }, h('p', { className: 'dshm-imp-hint' }, t('setQqBody')), accountCard, actions)
-          : h('div', { className: 'dshm-imp-qq' },
-              h('p', { className: 'dshm-imp-hint' }, t('setQqBody')),
-              h('label', { className: 'dshm-imp-label' }, t('importQqCookieLabel')),
-              h('textarea', {
-                className: 'dshm-imp-cookie', rows: 4, spellCheck: false,
-                placeholder: 'qm_keyst=…; uin=…; …',
-                value: s.qqCookie, 'aria-label': t('importQqCookieLabel'),
-                onChange: (e) => likedSync.setQqCookie(e.target.value),
-              }),
-              h('div', { className: 'dshm-imp-hint' }, t('importQqCookieHint')),
-              h('div', { className: 'dshm-imp-actions' },
-                h('button', {
-                  type: 'button', className: 'dshm-chipbtn dshm-chipbtn-primary',
-                  disabled: s.connecting || !s.qqCookie.trim(),
-                  onClick: () => likedSync.connectQq(),
-                }, s.connecting ? h(IconRefresh, { size: 13, className: 'dshm-spin' }) : h(IconImport, { size: 13 }),
-                    s.connecting ? t('importConnecting') : t('importQqConnect'))));
+                h('p', { className: 'dshm-imp-hint' }, t('importQrHint')),
+                h('div', { className: 'dshm-imp-step', role: 'status' }, qrText),
+                h('div', null, h('button', {
+                  type: 'button', className: 'dshm-chipbtn', disabled: s.qrPhase === 'loading', onClick: () => likedSync.startQr(),
+                }, h(IconRefresh, { size: 13 }), t('importQrRegenerate')))))),
+          h(Step, { n: 2, state: neRes ? 'done' : neBusy ? 'active' : 'todo', title: t('importQrStep2') },
+            h('p', { className: 'dshm-imp-hint' }, t('importAutoNote')),
+            errLine('netease')));
       }
 
-      const resultBlock = shown && shown.total != null
-        ? h('div', { className: 'dshm-imp-result' },
-            h('div', { className: 'dshm-sync-chips' },
-              chips.filter(([, v]) => v != null).map(([key, value]) => h('span', {
-                key, className: cx('dshm-sync-chip', key === 'importResAdded' && value > 0 && 'dshm-sync-chip-ok', key === 'importResRemoved' && value > 0 && 'dshm-sync-chip-warn'),
-                title: key === 'importResRemoved' ? t('importResRemovedHint') : undefined,
-              }, t(key) + ' ' + value))),
-            shown.removedItems && shown.removedItems.length
-              ? h('div', { className: 'dshm-sync-detail' },
-                  shown.removedItems.slice(0, 8).map((it, i) => h('div', { key: i }, '· ' + (it.artist || '') + ' - ' + (it.title || ''))),
-                  shown.removedItems.length > 8 ? h('div', null, '… +' + (shown.removedItems.length - 8)) : null)
-              : null)
-        : null;
+      /* ── QQ 音乐：登录网页版 → 复制登录凭据 → 粘贴（自动连接并导入） ── */
+      let qqBody;
+      if (!enabled) {
+        qqBody = h('p', { className: 'dshm-imp-hint' }, t('importEnabledOff'));
+      } else if (qqOn) {
+        qqBody = h('div', { className: 'dshm-imp-logged' }, accountLine(qq), syncActions('qq', qq),
+          h(ImportResult, { t, result: resOf('qq'), onViewLikes: firstRun ? null : onViewLikes }), errLine('qq'));
+      } else {
+        const onCookieInput = (e) => {
+          const v = e.target.value;
+          likedSync.setQqCookie(v);
+          /* 粘贴即连接：像 Cookie 的内容（够长且含 =）直接发起，省掉一次「连接」 */
+          if (v.trim().length > 20 && v.indexOf('=') > 0 && !s.connecting) likedSync.connectQq();
+        };
+        qqBody = h(Steps, null,
+          h(Step, { n: 1, state: 'active', title: t('importQqStep1') },
+            h('div', { className: 'dshm-imp-actions' }, h('button', {
+              type: 'button', className: 'dshm-chipbtn', onClick: () => likedSync.openUrl('https://y.qq.com/'),
+            }, t('importQqOpen'), h(IconExternal, { size: 12 }))),
+            h('p', { className: 'dshm-imp-hint' }, t('importQqLoginHint'))),
+          h(Step, { n: 2, state: s.copied ? 'done' : 'active', title: t('importQqStep2') },
+            h('div', { className: 'dshm-imp-actions' }, h('button', {
+              type: 'button', className: 'dshm-chipbtn', onClick: () => likedSync.copyCookieCommand(),
+            }, s.copied ? h(IconCheck, { size: 13 }) : null, s.copied ? t('importQqCopied') : t('importQqCopy'))),
+            h('p', { className: 'dshm-imp-hint' }, fmt(t('importQqStep2Hint'), { keys: devtoolsKeys() })),
+            h('p', { className: 'dshm-imp-hint dshm-imp-hint-more' }, fmt(t('importQqFallback'), { keys: devtoolsKeys() }))),
+          h(Step, { n: 3, state: s.connecting ? 'active' : 'active', title: t('importQqStep3') },
+            h('input', {
+              className: 'dshm-imp-cookie', type: 'text', spellCheck: false, autoComplete: 'off', autoCapitalize: 'off',
+              placeholder: t('importQqPlaceholder'), value: s.qqCookie, 'aria-label': t('importQqStep3'),
+              onChange: onCookieInput,
+            }),
+            h('div', { className: 'dshm-imp-actions' }, h('button', {
+              type: 'button', className: 'dshm-chipbtn dshm-chipbtn-primary',
+              disabled: s.connecting || !s.qqCookie.trim(),
+              onClick: () => likedSync.connectQq(),
+            }, s.connecting ? h(IconRefresh, { size: 13, className: 'dshm-spin' }) : h(IconImport, { size: 13 }),
+                s.connecting ? t('importConnecting') : t('importQqConnect'))),
+            h('p', { className: 'dshm-imp-hint' }, t('importQqPrivacy')),
+            errLine('qq')));
+      }
 
-      return h('div', { className: cx('dshm-imp-card', 'dshm-imp-card-' + provider), 'data-provider': provider },
-        h('div', { className: 'dshm-imp-card-head' },
-          isNetease ? h(IconDisc, { size: 15 }) : h(IconNote, { size: 15 }),
-          h('span', { className: 'dshm-imp-card-title' }, isNetease ? t('importTabNetease') : t('importTabQq')),
-          h('span', {
-            className: cx('dshm-imp-dot', !connected && 'dshm-imp-dot-off'),
-            title: connected ? t('importConnected') : t('importNotConnected'),
-          }),
-          h('span', { className: 'dshm-imp-card-state' }, connected ? t('importConnected') : t('importNotConnected'))),
-        h('div', { className: 'dshm-imp-card-body' },
-          body,
-          notice ? h('div', { className: 'dshm-mode-hint', role: 'status' },
-            t('importConnected') + (notice.nickname ? '：' + notice.nickname : '')) : null,
-          resultBlock,
-          error ? h('div', { className: 'dshm-errorline', role: 'alert' }, h(IconAlert, { size: 14 }),
-            error === 'importCookieEmpty' ? t('importCookieEmpty') : error) : null));
+      /* ── Spotify 收藏（可选）：装 CLI → 授权 → 同步 ── */
+      let spBody = null;
+      if (sync) {
+        const st1 = spAvail === true ? 'done' : spAvail === false ? 'miss' : 'active';
+        const st2 = spAvail !== true ? 'todo' : spAuth === true ? 'done' : spAuth === false ? 'miss' : 'active';
+        const st3 = spRunning ? 'active' : ss.result ? 'done' : spAvail === false ? 'todo' : 'active';
+        spBody = h(Steps, null,
+          h(Step, { n: 1, state: st1, title: t('spStep1') },
+            h('p', { className: 'dshm-imp-hint' }, spAvail === true ? t('spStep1Ok') : t('spStep1Hint')),
+            spAvail === true ? null : recheck),
+          h(Step, { n: 2, state: st2, title: t('spStep2') },
+            h('p', { className: 'dshm-imp-hint' }, spAuth === true ? t('spStep2Ok') : t('spStep2Hint')),
+            spAvail === true ? recheck : null),
+          h(Step, { n: 3, state: st3, title: t('spStep3') },
+            h('p', { className: 'dshm-imp-hint' }, t('spBody')),
+            h('div', { className: 'dshm-imp-actions' }, h('button', {
+              type: 'button', className: cx('dshm-chipbtn', 'dshm-chipbtn-primary', spAvail === false && 'dshm-chipbtn-off'),
+              disabled: spRunning || spAvail === false,
+              onClick: () => sync.start(),
+            }, h(IconRefresh, { size: 13, className: spRunning ? 'dshm-spin' : undefined }),
+                spRunning ? t('syncing') : t('syncBtn'))),
+            h(SyncPanel, { t, sync, useSync, bare: true })));
+      }
+
+      const neState = neOn ? nameOf(ne) : (s.qrPhase === 'waiting' || s.qrPhase === 'confirmed' ? t('importQrWaiting') : t('prvNeteaseHow'));
+      const qqState = qqOn ? nameOf(qq) : t('prvQqHow');
+      const spState = spAvail === false ? t('spStateNoCli') : spAvail === true ? (spAuth === false ? t('spStateNoAuth') : t('spStateReady')) : t('spStateChecking');
+      return h('div', { className: 'dshm-prvs', role: 'list' },
+        h(ProviderRow, {
+          provider: 'netease', icon: IconDisc, title: t('importTabNetease'), stateText: neState,
+          stateTone: neOn ? 'ok' : (s.qrPhase === 'waiting' || s.qrPhase === 'confirmed' ? 'busy' : 'off'),
+          expanded: tab === 'netease', onToggle: () => toggle('netease'),
+        }, neteaseBody),
+        h(ProviderRow, {
+          provider: 'qq', icon: IconNote, title: t('importTabQq'), stateText: qqState, stateTone: qqOn ? 'ok' : 'off',
+          expanded: tab === 'qq', onToggle: () => toggle('qq'),
+        }, qqBody),
+        sync ? h(ProviderRow, {
+          provider: 'spotify', icon: IconSpotify, title: 'Spotify', stateText: spState,
+          stateTone: spAvail === true && spAuth !== false ? 'ok' : spAvail === false ? 'off' : 'busy',
+          expanded: tab === 'spotify', onToggle: () => toggle('spotify'),
+        }, spBody) : null);
     }
 
     /* ================================================================
@@ -4734,6 +4967,7 @@ window.__ModuleLoader__.load({
     function MusicPanel({ t, player, library, lyrics, reco, download, sync, history, likes, preview, warm, openView, openArtistPage, setMiniHidden, ui, artistImages, artistPage, onboarding, likedSync, useUi, useLibrary, usePlayer, useLyrics, useReco, useDownload, useSync, useHistory, useLikes, usePreview, useWarm, useArtistImages, useArtistPage, useOnboarding, useLikedSync }) {
       const view = useUi((s) => s.view);
       const settingsSection = useUi((s) => s.settingsSection);
+      const libTabWish = useUi((s) => s.libTabWish);
       const miniHidden = useUi((s) => s.miniHidden);
       const hasTrack = usePlayer((s) => !!s.track);
       const status = useLibrary((s) => s.status);
@@ -4766,6 +5000,8 @@ window.__ModuleLoader__.load({
         return h(SettingsView, {
           t, onboarding, useOnboarding, sync, useSync, likedSync, useLikedSync,
           section: settingsSection,
+          /* 导入结果里的「查看我喜欢」：回曲库并直接打开「我喜欢」子页 */
+          onViewLikes: () => { ui.set({ view: 'library', settingsSection: null, libTabWish: 'likes' }); openView('library'); },
           onExit: () => { ui.set({ view: 'library', settingsSection: null }); openView('library'); },
           onRoute: (target) => {
             ui.set({ settingsSection: null });
@@ -4786,7 +5022,7 @@ window.__ModuleLoader__.load({
       ];
 
       const body = view === 'library'
-        ? h(LibraryView, { t, player, library, sync, download, preview, likes, openArtistPage, artistImages, likedSync, openSettings, useLikes, useSync, useDownload, useLibrary, usePlayer, useArtistImages, useLikedSync })
+        ? h(LibraryView, { t, player, library, sync, download, preview, likes, openArtistPage, artistImages, likedSync, openSettings, useLikes, useSync, useDownload, useLibrary, usePlayer, useArtistImages, useLikedSync, tabWish: libTabWish, onTabWishDone: () => ui.set({ libTabWish: null }) })
         : view === 'reco'
           ? h(RecoView, { t, reco, download, player, library, likes, preview, history, openArtistPage, warm, useReco, useDownload, useLibrary, useLikes, usePlayer, useHistory, useWarm })
           : view === 'artist'
@@ -5155,6 +5391,7 @@ const DRAG_THRESHOLD = 4;
         miniCollapsed: miniPrefsOk ? !!savedPrefs.miniCollapsed : false,
         artistName: null,
         settingsSection: null,
+        libTabWish: null,
       });
       const openView = (view) => ui.set({ view });
       const openArtistPage = (name) => ui.set({ view: 'artist', artistName: name });

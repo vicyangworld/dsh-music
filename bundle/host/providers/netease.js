@@ -176,16 +176,38 @@ export function createNetease({ fetchImpl, timeoutMs = 15000 } = {}) {
     }
   }
 
-  /** 「我喜欢的音乐」歌单（按喜欢时间倒序，带 at 时间戳） */
+  /** trackIds 归一：[{ id, at }] → [{ id: String, likedAt }] */
+  function toTrackIds(value) {
+    return (Array.isArray(value) ? value : [])
+      .map((t) => ({ id: String(t.id), likedAt: t.at ? Number(t.at) || null : null }))
+  }
+
+  /** 「我喜欢的音乐」歌单（按喜欢时间倒序，带 at 时间戳）
+   *  user/playlist 的摘要线上已不带 trackIds（只有 trackCount）→ 再取 v6/playlist/detail：
+   *  trackIds 全量；tracks 只带前 n 首完整信息，其余交给 songDetails 补齐。 */
   async function likedPlaylist(cookie, uid) {
     const j = await either('获取网易云「我喜欢的音乐」', '/api/user/playlist', { uid, limit: '30', offset: '0', includeVideo: 'true' }, cookie)
     const list = Array.isArray(j.playlist) ? j.playlist : []
     const mine = list.filter((p) => p && p.creator && String(p.creator.userId) === String(uid))
     const liked = mine.find((p) => /喜欢的音乐$/.test(p.name || '')) || mine[0]
     if (!liked) throw httpError('未找到网易云「我喜欢的音乐」歌单', 502)
-    const trackIds = (Array.isArray(liked.trackIds) ? liked.trackIds : [])
-      .map((t) => ({ id: String(t.id), likedAt: t.at ? Number(t.at) || null : null }))
-    return { id: String(liked.id), name: cleanText(liked.name, 100), trackCount: Number(liked.trackCount) || trackIds.length, trackIds }
+    const out = {
+      id: String(liked.id),
+      name: cleanText(liked.name, 100),
+      trackCount: Number(liked.trackCount) || 0,
+      trackIds: toTrackIds(liked.trackIds),
+      details: new Map(),
+    }
+    if (out.trackIds.length === 0) {
+      const d = await either('获取网易云「我喜欢的音乐」详情', '/api/v6/playlist/detail', { id: out.id, n: '500', s: '0' }, cookie)
+      const p = d.playlist && typeof d.playlist === 'object' ? d.playlist : {}
+      out.trackIds = toTrackIds(p.trackIds)
+      out.trackCount = Number(p.trackCount) || out.trackCount || out.trackIds.length
+      for (const s of Array.isArray(p.tracks) ? p.tracks : []) {
+        if (s && s.id != null) out.details.set(String(s.id), s)
+      }
+    }
+    return out
   }
 
   /** 回退：喜欢列表（无序、无时间） */
@@ -217,10 +239,10 @@ export function createNetease({ fetchImpl, timeoutMs = 15000 } = {}) {
       list = await likedIds(cookie, uid)
     }
     if (list.trackIds.length === 0) return { playlist: list, tracks: [], unavailable: 0 }
-    const details = await songDetails(
-      cookie,
-      list.trackIds.map((t) => t.id),
-    )
+    const known = list.details instanceof Map ? list.details : new Map()
+    const missing = list.trackIds.map((t) => t.id).filter((id) => !known.has(id))
+    const details = missing.length > 0 ? await songDetails(cookie, missing) : new Map()
+    for (const [id, song] of known) if (!details.has(id)) details.set(id, song)
     const tracks = []
     for (const t of list.trackIds) {
       const s = details.get(t.id)

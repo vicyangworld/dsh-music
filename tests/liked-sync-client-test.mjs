@@ -151,9 +151,14 @@ await test('open() 拉取状态并自动生成二维码，之后 801 轮询 → 
   assert.equal(polls.length, 2, '2000ms 定时器触发第二次轮询');
   gates[1].resolve(); await tick(20);
   assert.equal(snap().qrPhase, 'confirmed', '802 → 已扫码待确认');
-  gates[2].resolve(); await tick(30);
+  /* 803 之后服务会自动导入一次（新用户不用再点「导入」） */
+  replies['/liked-sync/netease/sync'] = { provider: 'netease', at: 2, durationMs: 4, total: 12, unavailable: 0, playlistName: '喜欢的音乐', added: 10, existed: 2, skippedDisliked: 0, removed: 0, removedItems: [] };
+  gates[2].resolve(); await tick(40);
   assert.equal(snap().qrPhase, 'done', '803 → 登录成功');
-  assert.equal(JSON.stringify(snap().notice), JSON.stringify({ provider: 'netease', nickname: '小云' }));
+  assert.equal(snap().result && snap().result.provider, 'netease', '803 → 自动导入');
+  assert.equal(snap().result && snap().result.added, 10);
+  assert.equal(snap().syncing, null);
+  assert.ok(calls.some((c) => c.url.includes('/liked-sync/netease/sync') && c.method === 'POST'), '自动导入走了 sync 路由');
   assert.equal(snap().providers.netease.connected, true);
   assert.equal(snap().providers.netease.account.nickname, '小云');
   assert.ok(polls.every((u) => u.includes('key=k1')));
@@ -200,15 +205,19 @@ await test('QQ：空 Cookie → importCookieEmpty；连接成功 → notice + �
   assert.equal(snap().connecting, false);
   assert.match(snap().error, /已失效/);
   replies['/liked-sync/qq/connect'] = { account: { uid: '123', nickname: '小Q', loginAt: 9 }, likedDir: { tid: 1, name: '我喜欢', songCount: 3 } };
+  replies['/liked-sync/qq/sync'] = { provider: 'qq', at: 1, durationMs: 3, total: 10, unavailable: 0, playlistName: '我喜欢', added: 3, existed: 7, skippedDisliked: 0, removed: 0, removedItems: [] };
   replies['/liked-sync/status'] = statusBody(off, { ...off, connected: true, account: { uid: '123', nickname: '小Q', loginAt: 9 }, knownCount: 3 });
   await svc.connectQq();
   const c = calls.filter((x) => x.url.includes('/qq/connect')).pop();
   assert.equal(c.method, 'POST');
   assert.equal(JSON.stringify(c.body), JSON.stringify({ cookie: 'qm_keyst=abc; uin=123' }));
-  assert.equal(JSON.stringify(snap().notice), JSON.stringify({ provider: 'qq', nickname: '小Q' }));
-  assert.equal(snap().qqCookie, '');
+  assert.equal(snap().qqCookie, '', '连接成功后清空输入');
   assert.equal(snap().providers.qq.connected, true);
+  assert.equal(snap().connecting, false);
   assert.equal(snap().error, null);
+  assert.ok(calls.some((x) => x.url.includes('/qq/sync') && x.method === 'POST'), '连接成功 → 自动导入');
+  assert.equal(snap().result && snap().result.provider, 'qq', '自动导入的结果');
+  assert.equal(snap().result && snap().result.added, 3);
 });
 
 await test('sync(qq) → 结果带 provider，通知 onChange 刷新 ♥ 列表，再拉取状态', async () => {
@@ -271,8 +280,14 @@ await test('主机关闭导入（enabled:false）→ 服务报告 enabled=false'
   assert.equal(Object.keys(snap().providers).length, 0);
 });
 
+await test('QQ 新手工具：无剪贴板环境 copyCookieCommand 返回 false 不抛错；openUrl 无 window 也不抛错', async () => {
+  assert.equal(await svc.copyCookieCommand(), false);
+  assert.equal(snap().copied, false);
+  svc.openUrl('https://y.qq.com/');
+});
+
 /* 轮询定时器会让进程挂着：显式 dispose 再退出 */
 svc.dispose();
-const total = 18;
+const total = 19;
 console.log(passed === total ? '\n全部通过（' + passed + ' 项）' : '\n通过 ' + passed + '/' + total + ' 项');
 setTimeout(() => process.exit(process.exitCode || 0), 50).unref();

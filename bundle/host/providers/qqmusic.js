@@ -24,8 +24,20 @@ export function gtk(key) {
  * 解析粘贴的 Cookie 文本 → 登录所需字段。返回 `{ error }` 或 `{ keyst, uin, wxuin, musicid, cookie, nickname }`。
  * `cookie` 只保留登录字段，丢掉 pgv / 埋点等噪音。
  */
+/** 用户可能整段粘贴：cURL（-H 'cookie: …' / -b '…'）、请求头里的 cookie: 行，或纯 Cookie 串。
+ *  先把真正的 Cookie 内容抽出来，再交给 parseCookie。 */
+export function extractCookieText(text) {
+  const s = String(text || '')
+  /* 以 cookie: 开头（可能换行续写）→ 整段都是 Cookie，交给 parseCookie 按行拼接 */
+  if (/^\s*cookie:/i.test(s)) return s
+  const m = /-H\s+['"]cookie:\s*([^'"]+)['"]/i.exec(s)
+    || /(?:^|\n)[ \t]*cookie:[ \t]*([^\n]+)/i.exec(s)
+    || /(?:^|\s)-b\s+['"]([^'"]+)['"]/.exec(s)
+  return m ? m[1] : s
+}
+
 export function parseQQCookie(text) {
-  const pairs = parseCookie(text)
+  const pairs = parseCookie(extractCookieText(text))
   const keyst = pairs.qqmusic_key || pairs.qm_keyst || ''
   // uin 形如 o0123456789：去掉 o 前缀与前导零得到 QQ 号（QQ 号不以 0 开头）
   const rawUin = pairs.qqmusic_uin || pairs.uin || ''
