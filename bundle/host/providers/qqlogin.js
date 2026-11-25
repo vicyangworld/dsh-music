@@ -228,16 +228,75 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
   }
 
   /** 页面级跳转：优先最终落点 wx_redirect.html?…code=…，其次 location.href= / location.replace( / meta refresh 里的 qq.com 地址 */
-  function nextFromHtml(text) {
-    const t = String(text || '').slice(0, 262144)
-    const final = t.match(/https?:\/\/y\.qq\.com\/portal\/wx_redirect\.html[^"'\s<>]*/)
-    if (final) return final[0].replace(/&amp;/g, '&')
-    const m = t.match(/(?:location(?:\.href|\.replace|\.assign)?\s*[=(]\s*|http-equiv=["']refresh["'][^>]*url=)["']?(https?:\/\/[^"'\s<>)]+)/i)
-    if (!m) return ''
+  function safeUrl(raw, base) {
     try {
-      const u = new URL(m[1].replace(/&amp;/g, '&'))
-      return /(^|\.)qq\.com$/.test(u.hostname) ? u.href : ''
+      const u = new URL(String(raw).replace(/&amp;/g, '&'), base)
+      return /^https?:$/.test(u.protocol) && /(^|\.)qq\.com$/.test(u.hostname) ? u.href : ''
     } catch { return '' }
+  }
+
+  /** 从 HTML 里找下一个跳转：落点 URL / meta refresh / location 跳转 / 自动提交的表单（授权确认页） */
+  function nextFromHtml(text, base, seen = []) {
+    const t = String(text || '').slice(0, 262144)
+      .replace(/\\\//g, '/').replace(/\\u0026/g, '&').replace(/&#0*38;/gi, '&').replace(/&#x0*26;/gi, '&')
+    const final = t.match(/https?:\/\/y\.qq\.com\/portal\/wx_redirect\.html[^"'\s<>)]*/)
+    if (final) return { url: final[0].replace(/&amp;/g, '&') }
+    const m = t.match(/(?:location(?:\.href|\.replace|\.assign)?\s*[=(]\s*|http-equiv=["']?refresh["']?[^>]*?url=)["']?(https?:\/\/[^"'\s<>)]+)/i)
+    if (m) {
+      const url = safeUrl(m[1], base)
+      if (url) return { url }
+    }
+    /* 授权确认页 / 中转页：<form action=…> + 隐藏字段 + 自动 submit —— 照着表单提交一次 */
+    const form = t.match(/<form\b([^>]*)>([\s\S]*?)<\/form>/i)
+    if (form) {
+      const action = (form[1].match(/action=["']?([^"'\s>]+)/i) || [])[1] || ''
+      const url = safeUrl(action, base)
+      if (url && /graph\.qq\.com/.test(new URL(url).hostname)) {
+        const method = /method=["']?post/i.test(form[1]) ? 'POST' : 'GET'
+        const fields = new URLSearchParams()
+        const re = /<input\b([^>]*)>/gi
+        let input
+        let count = 0
+        while ((input = re.exec(form[2]))) {
+          if (!/type=["']?hidden/i.test(input[1])) continue
+          const name = (input[1].match(/name=["']?([^"'\s>]+)/i) || [])[1] || ''
+          if (!name) continue
+          const value = ((input[1].match(/value=("([^"]*)"|'([^']*)'|[^\s>]+)/i) || [])[1] || '')
+          fields.append(name, value.replace(/^["']|["']$/g, ''))
+          count++
+        }
+        if (count > 0) {
+          if (method === 'GET') return { url: url + (url.includes('?') ? '&' : '?') + fields.toString() }
+          return { url, method: 'POST', body: fields.toString() }
+        }
+      }
+    }
+    /* 兜底：页面里（例如内嵌 JSON 配置）出现的 qq.com 链接 —— 优先 OAuth 路径，排除静态资源 */
+    const re2 = /https?:\/\/[^"'\s<>)\\]{8,400}/g
+    const prefer = []
+    const rest = []
+    let m2
+    while ((m2 = re2.exec(t))) {
+      const u = safeUrl(m2[0], base)
+      if (!u || seen.includes(u)) continue
+      if (/\.(js|css|png|gif|jpe?g|webp|ico|svg|woff2?)(\?|$)/i.test(u) || /^https?:\/\/imgcache\.qq\.com\//.test(u)) continue
+      if (/\/oauth2\.0\/|login_jump|wx_redirect/.test(u)) prefer.push(u)
+      else rest.push(u)
+    }
+    const pick = prefer[0] || rest[0] || ''
+    return pick ? { url: pick } : null
+  }
+
+  /** 诊断信息（给用户看的错误文案用）：去掉标签、遮住长 token，只留前 200 字 */
+  function describeBody(text) {
+    const t = String(text || '')
+    const urls = []
+    const re = /https?:\/\/[^"'\s<>)\\]{8,200}/g
+    let m
+    while ((m = re.exec(t)) && urls.length < 4) urls.push(m[0].replace(/[A-Za-z0-9_\-]{17,}/g, '…'))
+    const plain = t.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]{0,300}>/g, ' ').replace(/[A-Za-z0-9_\-]{17,}/g, '…').replace(/\s+/g, ' ').trim().slice(0, 200)
+    return { len: t.length, plain, urls }
   }
 
   /** check_sig → login_jump → authorize → wx_redirect.html?code=… → musicu QQLogin 换音乐登录态 */
@@ -257,28 +316,56 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
     let referer = XLOGIN
     let code = ''
     let lastStatus = 0
-    for (let hop = 0; hop < 8 && url; hop++) {
-      const res = await request(url, { headers: { 'User-Agent': QQ_UA, Accept: 'text/html,*/*', Referer: referer, Cookie: jar.header() } })
+    let lastText = ''
+    let post = null /* 下一跳是表单 POST 时：{ body } */
+    const hops = []
+    const seen = []
+    for (let hop = 0; hop < 10 && url; hop++) {
+      if (seen.includes(url)) {
+        lastText = text || lastText
+        break
+      }
+      seen.push(url)
+      const init = { headers: { 'User-Agent': QQ_UA, Accept: 'text/html,*/*', Referer: referer, Cookie: jar.header() } }
+      if (post) {
+        init.method = 'POST'
+        init.headers['Content-Type'] = 'application/x-www-form-urlencoded'
+        init.body = post.body
+      }
+      post = null
+      const res = await request(url, init)
       jar.absorb(res)
       lastStatus = res.status
       const text = await res.text().catch(() => '')
+      const u = new URL(url)
+      hops.push(`${u.hostname}${u.pathname}→${res.status}`)
+      /* 到达落点（wx_redirect.html?…code=…）：授权码就在 URL 里，页面本身不用再解析 */
       if (url.includes('/portal/wx_redirect.html')) {
-        code = new URL(url).searchParams.get('code') || ''
+        code = u.searchParams.get('code') || ''
         break
       }
-      /* 302 Location 优先；没有的话（graph 的页面有用 JS / meta 跳的）从正文里找下一个 qq.com 落点 */
-      let next = res.headers.get('location') || ''
-      if (!next) next = nextFromHtml(text)
-      if (!next) break
+      /* 302 Location 优先；没有的话（graph 的页面有用 JS / meta / 表单跳的）从正文里找下一个 qq.com 落点 */
+      let step = null
+      const location = res.headers.get('location')
+      if (location) step = { url: safeUrl(location, url) }
+      if (!step) step = nextFromHtml(text, url, seen)
+      if (!step || !step.url) {
+        lastText = text
+        break
+      }
       referer = url
-      url = new URL(next, url).href.replace(/&amp;/g, '&')
-      /* 到达落点（wx_redirect.html?…code=…）就不用再请求页面本身了：授权码就在 URL 里 */
+      url = step.url
+      if (step.method === 'POST') post = { body: step.body }
       if (url.includes('/portal/wx_redirect.html')) {
         code = new URL(url).searchParams.get('code') || ''
         break
       }
     }
-    if (!code) throw httpError(`QQ 登录成功但没拿到授权码（跳转链异常，最后一跳 HTTP ${lastStatus}）`, 502)
+    if (!code) {
+      const d = describeBody(lastText)
+      const detail = `跳转链 ${hops.join(' › ') || '（空）'}；末页 ${d.len} 字节${d.plain ? `「${d.plain}」` : ''}${d.urls.length ? `；页面链接 ${d.urls.join(' | ')}` : ''}`
+      throw httpError(`QQ 登录成功但没拿到授权码（${detail.slice(0, 600)}）`, 502)
+    }
     const body = JSON.stringify({
       comm: { g_tk: 5381, platform: 'yqq', ct: 24, cv: 0 },
       req: { module: 'QQConnectLogin.LoginServer', method: 'QQLogin', param: { code } },

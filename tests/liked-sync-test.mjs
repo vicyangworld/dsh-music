@@ -583,6 +583,47 @@ try {
   const c2 = await bad.qrCreate()
   await assert.rejects(bad.qrPoll(c2), (err) => Boolean(err) && err.status === 502 && /跳转地址异常（evil\.example\.com\/check_sig/.test(err.message))
 })
+  await test('QQ 扫码：中转页是授权确认表单 → 自动提交拿 code；JSON 转义 URL 也能识别；拿不到 code 时错误文案带跳转链和末页摘要', async () => {
+    const mk = (loginJumpBody) => mockFetch(async (call) => {
+      const u = String(call.url.href || call.url)
+      if (u.startsWith('https://xui.ptlogin2.qq.com/cgi-bin/xlogin?')) return new Response('<html></html>', { headers: [['set-cookie', 'pt_login_sig=LS3; Path=/; Domain=ptlogin2.qq.com']] })
+      if (u.startsWith('https://xui.ptlogin2.qq.com/ssl/ptqrshow?')) return new Response(QQ_QR_PNG, { headers: [['set-cookie', 'qrsig=QRSIG3; Path=/; Domain=ptlogin2.qq.com']] })
+      if (u.startsWith('https://xui.ptlogin2.qq.com/ssl/ptqrlogin?')) return new Response("ptuiCB('0','0','https://ssl.ptlogin2.qq.com/check_sig?pttype=1&uin=43&ptsigx=zz','','登录成功！', '阿强')", { headers: { 'content-type': 'application/javascript' } })
+      if (u.startsWith('https://ssl.ptlogin2.qq.com/check_sig?')) return new Response('', { status: 302, headers: [['location', 'https://graph.qq.com/oauth2.0/login_jump?ptclient=1&pt_aid=100497308'], ['set-cookie', 'p_skey=PS3; Domain=qq.com; Path=/; HttpOnly']] })
+      if (u.startsWith('https://graph.qq.com/oauth2.0/login_jump?')) return new Response(loginJumpBody, { headers: [['content-type', 'text/html']] })
+      if (u.startsWith('https://graph.qq.com/oauth2.0/authorize?')) {
+        if (call.method === 'POST') { /* 授权确认表单：自动提交隐藏字段 */
+          assert.equal(call.headers['Content-Type'], 'application/x-www-form-urlencoded')
+          assert.match(String(call.body), /do=agree/)
+          assert.match(String(call.body), /response_type=code/)
+        } else { /* JSON 配置里的链接：普通 GET */
+          assert.equal(u, 'https://graph.qq.com/oauth2.0/authorize?response_type=code&a=1')
+        }
+        assert.match(String(call.headers.Cookie), /p_skey=PS3/)
+        return new Response('', { status: 302, headers: [['location', 'https://y.qq.com/portal/wx_redirect.html?login_type=1&surl=https%3A%2F%2Fy.qq.com%2F&code=CODE10&state=state']] })
+      }
+      if (u === 'https://u.y.qq.com/cgi-bin/musicu.fcg' && call.method === 'POST') {
+        assert.equal(JSON.parse(call.body).req.param.code, 'CODE10')
+        return new Response(JSON.stringify({ code: 0, req: { code: 0, data: { musickey: 'QK10', musicid: 'o10' } } }), { headers: [['content-type', 'application/json']] })
+      }
+      return undefined
+    })
+    const consent = '<html><body>QQ 音乐申请获取以下权限<form action="https://graph.qq.com/oauth2.0/authorize?response_type=code" method="post"><input type="hidden" name="do" value="agree"><input type="hidden" name="response_type" value="code"><input type="submit" value="同意"></form><script>document.forms[0].submit()</script></body></html>'
+    const login = createQQLogin({ fetchImpl: mk(consent) })
+    const done = await login.qrPoll(await login.qrCreate())
+    assert.equal(done.code, 803)
+    assert.equal(done.cookie, 'qqmusic_key=QK10; qm_keyst=QK10; uin=o10; qqmusic_uin=o10')
+
+    // JSON 转义的斜杠写法（页面内嵌配置）
+    const login2 = createQQLogin({ fetchImpl: mk('<script>var cfg={"redirect":"https:\\/\\/graph.qq.com\\/oauth2.0\\/authorize?response_type=code&a=1"};location.href=cfg.redirect</script>') })
+    assert.equal((await login2.qrPoll(await login2.qrCreate())).code, 803)
+
+    // 末页什么都没有：错误里要有跳转链和摘要（长 token 被遮住）
+    const login3 = createQQLogin({ fetchImpl: mk('<html><body><h1>登录遇到问题</h1><p>请稍后重试 abcdefghijklmnopqrstuvwxyz0123456789</p></body></html>') })
+    await assert.rejects(login3.qrPoll(await login3.qrCreate()), (err) => Boolean(err) && err.status === 502
+      && /跳转链 ssl\.ptlogin2\.qq\.com\/check_sig→302 › graph\.qq\.com\/oauth2\.0\/login_jump→200/.test(err.message)
+      && /登录遇到问题/.test(err.message) && !/abcdefghijklmnopqrstuvwxyz0123456789/.test(err.message))
+  })
 await test('liked-sync：未登录同步 → 401；扫码 → 登录；状态脱敏', async () => {
     let st = await likedSync.status()
     assert.equal(st.enabled, true)
