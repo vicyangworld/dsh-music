@@ -4,15 +4,21 @@
  *   GET/POST exact /dsh-music/api/playback  播放状态读取/上报（S1 可选，S3 历史用）
  *   GET/HEAD prefix /dsh-music/audio/<id>   Range 音频流
  *   GET/HEAD prefix /dsh-music/cover/<id>   内嵌封面
+ *   GET/HEAD exact  /dsh-music/icon.png      插件图标（设置页首启 Logo，读包内 icon.png）
  * 安全：id 只经内存索引解析为路径，绝不拼接用户输入； realpath 必须落在曲库根内。
  * 非 2xx 一律 JSON {error:"中文原因"}。 */
 import { readFile, writeFile, realpath } from 'node:fs/promises'
 import { sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { serveRangeFile } from './media-core.js'
 
 const ID_RE = /^[a-f0-9]{16}$/
 const AUDIO_PREFIX = '/dsh-music/audio/'
 const COVER_PREFIX = '/dsh-music/cover/'
+const ICON_PATH = '/dsh-music/icon.png'
+/* routes.js 位于 bundle/host/，图标在 bundle/icon.png（package.json 的 ./icon 导出） */
+const ICON_FILE = fileURLToPath(new URL('../icon.png', import.meta.url))
+let iconBuffer = null
 
 function sendJson(res, status, value) {
   const body = JSON.stringify(value)
@@ -117,6 +123,25 @@ async function serveCover(req, res, library, storage, warn) {
   res.end(req.method === 'HEAD' ? undefined : buf)
 }
 
+/** 插件图标：包内 icon.png 读一次后常驻内存；缺失时 404（客户端会退回内嵌 Logo）。 */
+async function serveIcon(req, res) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return fail(res, 405, '方法不允许')
+  if (!iconBuffer) {
+    try {
+      iconBuffer = await readFile(ICON_FILE)
+    } catch {
+      iconBuffer = null
+    }
+  }
+  if (!iconBuffer || iconBuffer.length === 0) return fail(res, 404, '插件图标不存在')
+  res.writeHead(200, {
+    'Content-Type': 'image/png',
+    'Content-Length': iconBuffer.length,
+    'Cache-Control': 'private, max-age=86400',
+  })
+  res.end(req.method === 'HEAD' ? undefined : iconBuffer)
+}
+
 export function registerRoutes(webServer, { library, playback, storage, logger }) {
   const warn = (msg) => logger?.warn?.(msg)
   const disposers = []
@@ -215,6 +240,14 @@ export function registerRoutes(webServer, { library, playback, storage, logger }
       kind: 'prefix',
       path: '/dsh-music/cover',
       handler: (req, res) => serveCover(req, res, library, storage, warn),
+    }),
+  )
+
+  disposers.push(
+    webServer.register({
+      kind: 'exact',
+      path: ICON_PATH,
+      handler: (req, res) => serveIcon(req, res),
     }),
   )
 

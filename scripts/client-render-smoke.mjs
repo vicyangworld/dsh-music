@@ -74,9 +74,15 @@ const windowMock = {
   confirm: () => true,
 };
 const fetchCalls = [];
-const fetchMock = async (url) => {
+const fetchBodies = [];
+const fetchMock = async (url, init) => {
   fetchCalls.push(url);
-  const body = url.includes('/sync/availability')
+  if (init && init.body != null) fetchBodies.push({ url: String(url), body: String(init.body) });
+  const body = url.includes('/onboarding/state')
+    ? { status: 'ready', completed: false, mode: 'none', libraryConfigured: false, libraryPath: null, prefs: {}, starter: null }
+    : url.includes('/onboarding/complete')
+      ? { state: { status: 'ready', completed: true, mode: 'local', libraryConfigured: true, libraryPath: null, prefs: {}, starter: null }, startedStarter: false }
+      : url.includes('/sync/availability')
     ? { available: true, hint: null }
     : url.includes('/sync/status')
       ? { running: false, result: null, error: null }
@@ -169,6 +175,8 @@ const walk = (node, out = []) => {
   return out;
 };
 const cls = (n) => (n && n.props && n.props.className) || '';
+/* 「dshm-imp-card」要按整段 class 匹配（dshm-imp-card-body / -spotify 不是卡片本身） */
+const isCard = (n) => cls(n).split(' ').includes('dshm-imp-card');
 const has = (tree, pred) => walk(tree).some(pred);
 
 const results = [];
@@ -256,8 +264,8 @@ const ctas = walk(emptyTree).find((n) => cls(n) === 'dshm-empty-ctas');
 check('empty library shows onboarding CTA row', !!ctas && ctas.children.length === 3,
   'ctas=' + (ctas ? ctas.children.length : 'none'));
 const ctaLabels = ctas ? JSON.stringify(ctas.children.map((c) => c.props && c.props.children)) : '';
-check('empty library has search / rescan / optional sync CTAs',
-  ctaLabels.includes('emptySearchCta') && ctaLabels.includes('emptyRescanCta') && ctaLabels.includes('syncOptional'),
+check('empty library has search / rescan / settings CTAs (sync lives in settings)',
+  ctaLabels.includes('emptySearchCta') && ctaLabels.includes('emptyRescanCta') && ctaLabels.includes('settingsTitle') && !ctaLabels.includes('syncOptional'),
   ctaLabels.slice(0, 140));
 check('empty library drops the old phase-3 copy', !ctaLabels.includes('phase'));
 check('empty library shows default folder hint', has(expand(music(baseProps)), (n) => cls(n) === 'dshm-empty-dir'));
@@ -283,47 +291,67 @@ check('reco explore note rendered', has(bootTree, (n) => cls(n) === 'dshm-explor
 check('reco explore chip rendered', has(bootTree, (n) => cls(n) === 'dshm-explore-chip'));
 recoState = savedReco2;
 
-/* 4w) first-run welcome: mascot, hero copy, taste copy route, preview entry */
-check('returning user is not forced into welcome', state.view !== 'welcome');
+/* 4w) 设置页（原欢迎流程的继任者）：首启 = 真实 Logo 欢迎区 + 三区块 + 完成/先随便看看；
+ *     finish()/save() 用源码提取的真实函数体跑一遍（POST 次数 / 路由 / 失败分支）。 */
+check('returning user is not forced into the settings page', state.view !== 'settings');
 check('onboarding payload matches the host contract', src.includes('payload.libraryPath') && src.includes('payload.useStarter'));
-state.view = 'welcome';
-const welcomeTree = expand(music(baseProps));
-check('welcome renders the fish mascot', has(welcomeTree, (n) => cls(n) === 'dshm-fish'));
-check('welcome shows title + start CTA', has(welcomeTree, (n) => cls(n).includes('dshm-wbtn-primary'))
-  && has(welcomeTree, (n) => (n.children || []).includes('welcomeTitle')));
-check('welcome shows the three selling points', has(welcomeTree, (n) => cls(n) === 'dshm-wpoint'));
-
-/* Preview mode must be side-effect free: run the real finish()/skipAll() bodies
- * extracted from source with mock services and count every call. */
-const finishBody = (src.match(/async function finish\(\) \{\n([\s\S]*?)\n      \}\n/) || [])[1];
-const skipBody = (src.match(/function skipAll\(\) \{\n([\s\S]*?)\n      \}\n/) || [])[1];
-async function runFinish(preview, mode) {
-  const calls = { complete: 0, exit: 0, route: 0 };
-  const fn = new Function('onboarding', 'preview', 'onExitPreview', 'onRoute', 'setStep', 'setBusy', 'setFailed', 'mode', 'genres', 'langs', 'dirPath', 'busy',
-    'return async function finish() {' + finishBody + '\n};');
-  await fn({ complete: async () => { calls.complete++; } }, preview, () => { calls.exit++; }, () => { calls.route++; },
-    () => {}, () => {}, () => {}, mode, [], [], '', false)();
+const firstRunSnap = { status: 'ready', completed: false, mode: 'none', libraryPath: null, starter: null, taste: null, error: null };
+state.view = 'settings';
+const firstTree = expand(music({ ...baseProps, useOnboarding: (sel) => sel(firstRunSnap) }));
+check('first run renders the settings page with the hero', has(firstTree, (n) => cls(n) === 'dshm-settings dshm-settings-first')
+  && has(firstTree, (n) => cls(n) === 'dshm-welcome-hero dshm-set-hero'));
+const logo = walk(firstTree).find((n) => n.type === 'img' && cls(n) === 'dshm-logo');
+check('hero logo is the real plugin icon served by the host', !!logo && String((logo.props || {}).src || '').includes('/dsh-music/icon.png'),
+  'src=' + ((logo && logo.props && logo.props.src) || ''));
+check('hero shows title + first-run note + three selling points', has(firstTree, (n) => (n.children || []).includes('welcomeTitle'))
+  && has(firstTree, (n) => cls(n) === 'dshm-set-first-note') && has(firstTree, (n) => cls(n) === 'dshm-wpoint'));
+check('first-run foot: skip + finish', has(firstTree, (n) => cls(n) === 'dshm-wbtn dshm-wbtn-primary' && (n.children || []).includes('welcomeFinish'))
+  && has(firstTree, (n) => cls(n) === 'dshm-wbtn' && (n.children || []).includes('welcomeSkip')));
+const sectionIds = walk(firstTree).filter((n) => cls(n) === 'dshm-set-section').map((n) => (n.props || {})['aria-label']);
+check('three sections in order: liked / taste / library', JSON.stringify(sectionIds) === JSON.stringify(['setLikedTitle', 'setTasteTitle', 'setLibTitle']),
+  JSON.stringify(sectionIds));
+check('liked section = Spotify card + 网易云 card + QQ card', walk(firstTree).filter(isCard).length === 3
+  && has(firstTree, (n) => cls(n) === 'dshm-imp-card dshm-imp-card-spotify')
+  && has(firstTree, (n) => cls(n) === 'dshm-imp-card dshm-imp-card-netease')
+  && has(firstTree, (n) => cls(n) === 'dshm-imp-card dshm-imp-card-qq'));
+const spotBtn = walk(firstTree).find((n) => cls(n) === 'dshm-chipbtn dshm-chipbtn-primary' && (n.children || []).includes('syncBtn'));
+check('Spotify card offers the sync action inside settings', !!spotBtn && !(spotBtn.props || {}).disabled);
+check('no standalone import/Spotify buttons outside the settings page', !has(firstTree, (n) => cls(n) === 'dshm-toolbar'));
+check('taste chips + library pick cards render', has(firstTree, (n) => cls(n) === 'dshm-wchip')
+  && walk(firstTree).filter((n) => /^dshm-wcard( |$)/.test(cls(n))).length === 2);
+/* finish() / save() 真实函数体：参数全部 mock，统计调用 */
+const finishBody2 = (src.match(/async function finish\(\) \{\n([\s\S]*?)\n      \}\n/) || [])[1];
+const saveBody = (src.match(/async function save\(\) \{\n([\s\S]*?)\n      \}\n/) || [])[1];
+async function runSettings(fnBody, args, impl) {
+  const calls = { complete: 0, route: 0, phase: 0, failed: 0, saved: 0 };
+  const onboarding = { complete: impl && impl.fail ? async () => { calls.complete++; throw new Error('boom'); } : async (payload) => { calls.complete++; calls.payload = payload; } };
+  const names = ['busy', 'setBusy', 'setFailed', 'onboarding', 'payloadFor', 'mode', 'starterStatus', 'setStarterPhase', 'onRoute', 'setSavedAt'];
+  const values = [false, noop, (v) => { if (v) calls.failed++; }, onboarding,
+    () => ({ taste: { genres: [], languages: [] }, libraryMode: args.mode, useStarter: args.mode === 'starter' }),
+    args.mode, args.starterStatus || 'idle', (v) => { if (v) calls.phase++; }, () => { calls.route++; }, () => { calls.saved++; }];
+  const fn = new Function(...names, 'return async function run() {' + fnBody + '\n};')(...values);
+  await fn();
   return calls;
 }
-function runSkip(preview) {
-  const calls = { exit: 0, route: 0 };
-  const fn = new Function('preview', 'onExitPreview', 'onRoute', 'return function skipAll() {' + skipBody + '\n};');
-  fn(preview, () => { calls.exit++; }, () => { calls.route++; })();
-  return calls;
-}
-const pvFinish = await runFinish(true, 'local');
-check('preview finish: zero POST, only closes preview', !!finishBody && pvFinish.complete === 0 && pvFinish.exit === 1 && pvFinish.route === 0);
-const realFinish = await runFinish(false, 'local');
-check('real finish: one POST then routes to library', realFinish.complete === 1 && realFinish.route === 1 && realFinish.exit === 0);
-const pvSkip = runSkip(true);
-check('preview skip closes preview without routing', !!skipBody && pvSkip.exit === 1 && pvSkip.route === 0);
-state.welcomePreview = true;
-check('welcome preview shows a close button', has(expand(music(baseProps)), (n) => cls(n) === 'dshm-wclose'));
-state.welcomePreview = false;
+const finStarter = await runSettings(finishBody2, { mode: 'starter' });
+check('first-run finish (starter): one POST with useStarter, stays for progress', !!finishBody2 && finStarter.complete === 1
+  && finStarter.payload.libraryMode === 'starter' && finStarter.payload.useStarter === true && finStarter.phase === 1 && finStarter.route === 0);
+const finLocal = await runSettings(finishBody2, { mode: 'local' });
+check('first-run finish (local): one POST then routes to library', finLocal.complete === 1 && finLocal.route === 1 && finLocal.phase === 0);
+const finFail = await runSettings(finishBody2, { mode: 'local' }, { fail: true });
+check('first-run finish failure: no route, failed flag set', finFail.complete === 1 && finFail.route === 0 && finFail.failed === 1);
+const finReady = await runSettings(finishBody2, { mode: 'starter', starterStatus: 'ready' });
+check('first-run finish when starter already ready: routes instead of re-downloading', finReady.complete === 1 && finReady.route === 1 && finReady.phase === 0);
+const saveOk = await runSettings(saveBody, { mode: 'starter' });
+check('returning save: one POST then saved flag', !!saveBody && saveOk.complete === 1 && saveOk.saved === 1 && saveOk.failed === 0 && saveOk.route === 0);
+const saveFail = await runSettings(saveBody, { mode: 'local' }, { fail: true });
+check('returning save failure: failed flag, no saved flag', saveFail.failed === 1 && saveFail.saved === 0);
 state.view = 'library';
 const backTree = expand(music(baseProps));
-check('returning user gets a preview-welcome entry', has(backTree, (n) => cls(n) === 'dshm-chipbtn'
-  && (n.children || []).includes('welcomePreview')));
+const gearBtn = walk(backTree).find((n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('settingsTitle'));
+check('returning user gets a header 「设置」entry (gear, hint title)', !!gearBtn && (gearBtn.props || {}).title === 'settingsHint'
+  && (gearBtn.props || {})['aria-label'] === 'settingsTitle');
+check('preview-welcome entry is gone', !has(backTree, (n) => (n.children || []).includes('welcomePreview')));
 
 /* 4a) small round artist avatars where the brief asks for them */
 const isRoundThumb = (n) => cls(n).includes('dshm-tile') && n.props.style && n.props.style.borderRadius === '50%';
@@ -522,28 +550,34 @@ check('zh locale has no duplicate keys (no shadowing)', !!zhBlock.text && zhBloc
 check('en locale has no duplicate keys (no shadowing)', !!enBlock.text && enBlock.dup.length === 0, 'dups=' + JSON.stringify(enBlock.dup));
 check('no stale "stage 3" copy in zh/en', !/阶段 ?3|stage ?3/i.test(zhBlock.text) && !/阶段 ?3|stage ?3/i.test(enBlock.text));
 
-/* 5y) integration: the real preview chipbtn writes the REAL ui store and the
- *     panel re-renders into the welcome view (closes the GUI-only gap). */
+/* 5y) integration: the real 「设置」chipbtn writes the REAL ui store and the panel
+ *     re-renders into the settings view (closes the GUI-only gap). */
 const uiStore = svc.hooks && svc.hooks.ui;
-uiStore.set({ view: 'library', welcomePreview: false, lyricsOpen: false });
+check('first run (host says completed=false) auto-opens the settings page', uiStore.getSnapshot().view === 'settings',
+  'view=' + uiStore.getSnapshot().view);
+uiStore.set({ view: 'library', settingsSection: null, lyricsOpen: false });
 const useUiReal = (sel) => sel(uiStore.getSnapshot());
 const realProps = { ...baseProps, useUi: useUiReal };
 const realHeader = expand(music(realProps));
-const previewBtn = walk(realHeader).find((n) => cls(n) === 'dshm-chipbtn'
-  && (n.children || []).includes('welcomePreview'));
-check('preview button is rendered and enabled', !!previewBtn && !(previewBtn.props || {}).disabled);
-previewBtn.props.onClick();
+const settingsBtn = walk(realHeader).find((n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('settingsTitle'));
+check('settings button is rendered and enabled', !!settingsBtn && !(settingsBtn.props || {}).disabled);
+settingsBtn.props.onClick();
 const afterClick = uiStore.getSnapshot();
-check('preview click writes the real ui store', afterClick.view === 'welcome' && afterClick.welcomePreview === true,
-  'view=' + afterClick.view + ' preview=' + afterClick.welcomePreview);
-const realPreviewTree = expand(music(realProps));
-check('preview view renders mascot + close button', has(realPreviewTree, (n) => cls(n) === 'dshm-fish')
-  && has(realPreviewTree, (n) => cls(n) === 'dshm-wclose'));
-const closeBtn = walk(realPreviewTree).find((n) => cls(n) === 'dshm-wclose');
-closeBtn.props.onClick();
-const afterClose = uiStore.getSnapshot();
-check('preview close returns to the library view', afterClose.view === 'library' && afterClose.welcomePreview === false,
-  'view=' + afterClose.view);
+check('settings click writes the real ui store', afterClick.view === 'settings' && afterClick.settingsSection === null,
+  'view=' + afterClick.view + ' section=' + afterClick.settingsSection);
+const realSettingsTree = expand(music(realProps));
+check('returning settings view renders the title row (no first-run hero) + three cards', has(realSettingsTree, (n) => cls(n) === 'dshm-set-top' && has(n, (x) => (x.children || []).includes('settingsTitle')))
+  && !has(realSettingsTree, (n) => cls(n) === 'dshm-logo') && walk(realSettingsTree).filter(isCard).length === 3);
+const backBtn = walk(realSettingsTree).find((n) => cls(n) === 'dshm-wbtn' && (n.children || []).includes('settingsBack'));
+check('returning foot has back + save', !!backBtn && has(realSettingsTree, (n) => cls(n) === 'dshm-wbtn dshm-wbtn-primary' && (n.children || []).includes('settingsSave')));
+backBtn.props.onClick();
+const afterBack = uiStore.getSnapshot();
+check('back returns to the library view', afterBack.view === 'library' && afterBack.settingsSection === null, 'view=' + afterBack.view);
+const saveBtn = walk(realSettingsTree).find((n) => cls(n) === 'dshm-wbtn dshm-wbtn-primary' && (n.children || []).includes('settingsSave'));
+saveBtn.props.onClick();
+await new Promise((r) => setTimeout(r, 50));
+check('save POSTs the taste payload to onboarding/complete', fetchBodies.some((x) => x.url.includes('/onboarding/complete') && /"genres"/.test(x.body)),
+  JSON.stringify(fetchBodies.filter((x) => x.url.includes('/onboarding'))));
 
 /* 5x) v8 taste plumbing + v9 card rail / background loads */
 check('library renders the liked card rail', has(realHeader, (n) => cls(n) === 'dshm-favs'));
@@ -576,65 +610,60 @@ historyState = { ...historyState, stats: { ...historyState.stats, dislikes: { co
 const histTree = expand(music({ ...realProps, useUi: (sel) => sel({ ...uiStore.getSnapshot(), view: 'history' }) }));
 check('history stats shows the dislike summary block', has(histTree, (n) => cls(n) === 'dshm-dislike-row'));
 
-/* 5w) 喜欢列表导入（网易云扫码 / QQ Cookie，只读）：入口按钮 → 对话框 → 二维码 SVG →
- *     QQ 已连接卡片 → 同步结果 chips → 关闭；来源小标随 sources 渲染。 */
+/* 5w) 喜欢列表导入（网易云扫码 / QQ Cookie，只读）住在「设置 → 喜欢列表同步」：
+ *     网易云卡自动出二维码 SVG → QQ 卡已连接 → 同步 → 结果 chips；来源小标随 sources 渲染。 */
 const svcLiked = svc.likedSync;
 check('liked-sync service is injected into the panel', !!svcLiked && !!svcLiked.source && typeof svcLiked.open === 'function');
-const importBtn = walk(realHeader).find((n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('importBtn'));
-check('toolbar renders the import-liked button (not primary, not the Spotify sync)', !!importBtn
-  && !(importBtn.props || {}).disabled && (importBtn.props || {}).title === 'importBtnHint');
 const useLikedSyncReal = (sel) => sel(svcLiked.source.getSnapshot());
-importBtn.props.onClick();
-check('import click opens the service store', svcLiked.source.getSnapshot().open === true);
+uiStore.set({ view: 'settings', settingsSection: 'liked' });
+const setProps = { ...realProps, useLikedSync: useLikedSyncReal };
+svcLiked.open('netease');
 await new Promise((r) => setTimeout(r, 50));
 const qrSnap = svcLiked.source.getSnapshot();
 check('QR session created from the host route and encoded locally', qrSnap.qr && qrSnap.qr.key === 'k1'
-  && qrSnap.qr && qrSnap.qr.matrix && qrSnap.qr.matrix.size > 20 && qrSnap.qrPhase === 'waiting',
+  && qrSnap.qr.matrix && qrSnap.qr.matrix.size > 20 && qrSnap.qrPhase === 'waiting',
   'phase=' + qrSnap.qrPhase + ' size=' + (qrSnap.qr && qrSnap.qr.matrix && qrSnap.qr.matrix.size));
+const setTree = expand(music(setProps));
 check('status route fetched on open', fetchCalls.some((u) => u.includes('/liked-sync/status')));
-uiStore.set({ view: 'library' });
-const dlgProps = { ...realProps, useUi: useUiReal, useLikedSync: useLikedSyncReal };
-const dlgTree = expand(music(dlgProps));
-const modal = walk(dlgTree).find((n) => cls(n) === 'dshm-modal');
-check('dialog renders as aria-modal with two provider tabs', !!modal && (modal.props || {})['aria-modal'] === true
-  && walk(dlgTree).filter((n) => /(^| )dshm-imp-tab( |$)/.test(cls(n))).length === 2
-  && walk(dlgTree).filter((n) => /dshm-imp-tab-on/.test(cls(n))).length === 1);
-const qrSvg = walk(dlgTree).find((n) => cls(n) === 'dshm-qr');
-check('QR renders as a crisp SVG with a 4-module quiet zone', !!qrSvg && (qrSvg.props || {}).shapeRendering === 'crispEdges'
+const qrSvg = walk(setTree).find((n) => cls(n) === 'dshm-qr');
+check('netease card renders the QR as a crisp SVG with a 4-module quiet zone', !!qrSvg && (qrSvg.props || {}).shapeRendering === 'crispEdges'
   && /^-4 -4 /.test((qrSvg.props || {}).viewBox || ''), 'viewBox=' + ((qrSvg && qrSvg.props.viewBox) || ''));
-check('QR tab shows the waiting status + regenerate button', has(dlgTree, (n) => cls(n) === 'dshm-imp-step' && (n.children || []).includes('importQrWaiting'))
-  && has(dlgTree, (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('importQrRegenerate')));
-check('dialog footer states the read-only contract', has(dlgTree, (n) => cls(n) === 'dshm-modal-foot' && (n.children || []).includes('importFootNote')));
-const qqTab = walk(dlgTree).find((n) => cls(n) === 'dshm-imp-tab' && (n.children || []).includes('importTabQq'));
-qqTab.props.onClick();
-check('switching to the QQ tab keeps the dialog open', svcLiked.source.getSnapshot().tab === 'qq' && svcLiked.source.getSnapshot().open === true);
-const qqTree = expand(music(dlgProps));
-check('connected QQ account card renders nickname + known count', has(qqTree, (n) => cls(n) === 'dshm-imp-account')
-  && has(qqTree, (n) => cls(n) === 'dshm-imp-nick' && (n.children || []).includes('小Q')));
-const syncBtn = walk(qqTree).find((n) => cls(n) === 'dshm-chipbtn dshm-chipbtn-primary' && (n.children || []).includes('importSyncNow'));
-check('QQ tab offers the import action', !!syncBtn && !(syncBtn.props || {}).disabled);
+check('QR card shows the waiting status + regenerate button', has(setTree, (n) => cls(n) === 'dshm-imp-step' && (n.children || []).includes('importQrWaiting'))
+  && has(setTree, (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('importQrRegenerate')));
+check('read-only contract note is stated in the settings page', has(setTree, (n) => (n.children || []).includes('importFootNote')));
+check('connected QQ card renders nickname + known count', has(setTree, (n) => cls(n) === 'dshm-imp-nick' && (n.children || []).includes('小Q'))
+  && has(setTree, (n) => cls(n) === 'dshm-imp-card-state' && (n.children || []).includes('importConnected')));
+const syncBtn = walk(setTree).find((n) => cls(n) === 'dshm-chipbtn dshm-chipbtn-primary' && (n.children || []).includes('importSyncNow'));
+check('QQ card offers the import action', !!syncBtn && !(syncBtn.props || {}).disabled);
 syncBtn.props.onClick();
 await new Promise((r) => setTimeout(r, 50));
 check('sync POSTs to the provider route and stores the result', fetchCalls.some((u) => u.includes('/liked-sync/qq/sync'))
   && svcLiked.source.getSnapshot().result && svcLiked.source.getSnapshot().result.added === 3);
-const resTree = expand(music(dlgProps));
+const resTree = expand(music(setProps));
 check('result chips render added/existed/removed', has(resTree, (n) => cls(n) === 'dshm-sync-chip dshm-sync-chip-ok' && (n.children || []).includes('importResAdded 3'))
   && has(resTree, (n) => cls(n) === 'dshm-sync-chip' && (n.children || []).includes('importResExisted 5'))
   && has(resTree, (n) => cls(n) === 'dshm-sync-chip dshm-sync-chip-warn' && (n.children || []).includes('importResRemoved 2')));
 check('removed items are listed (informational only)', has(resTree, (n) => cls(n) === 'dshm-sync-detail' && (n.children || []).some((c) => typeof c === 'object' && (c.children || []).includes('· 某人 - 旧歌'))));
-const closeBtn2 = walk(resTree).find((n) => cls(n) === 'dshm-iconbtn' && (n.props || {})['aria-label'] === 'importClose');
-check('close button present', !!closeBtn2);
-closeBtn2.props.onClick();
-check('close hides the dialog', svcLiked.source.getSnapshot().open === false);
+/* 错误按平台分卡：QQ 连接错误只出现在 QQ 卡 */
+svcLiked.source.set({ error: 'Cookie 已失效', errorProvider: 'qq' });
+const errTree = expand(music(setProps));
+const errCards = walk(errTree).filter((n) => isCard(n) && has(n, (x) => cls(x) === 'dshm-errorline'));
+check('error line shows only on the owning provider card', errCards.length === 1 && cls(errCards[0]) === 'dshm-imp-card dshm-imp-card-qq',
+  errCards.map(cls).join('|'));
+svcLiked.source.set({ error: null, errorProvider: null });
 const withSources = (sel) => sel({
   keys: {}, dislikes: {}, loaded: true, error: null,
   items: [{ key: 'k9', artist: '甲', title: '乙', trackId: null, audioUrl: null, coverUrl: null, inLibrary: false, durationMs: 1000,
     sources: { netease: { id: 1, likedAt: 1 }, qq: { id: 2, likedAt: 2 } } }],
 });
 libTabDefault = 'likes';
-const srcTree2 = expand(music({ ...realProps, useUi: (sel) => sel({ ...uiStore.getSnapshot(), view: 'library' }), useLikes: withSources, useLikedSync: useLikedSyncReal }));
+const srcTree2 = expand(music({ ...realProps, useUi: (sel) => sel({ ...uiStore.getSnapshot(), view: 'library' }), useLikes: withSources }));
 libTabDefault = 'library';
-check('likes tab header offers the import button too', has(srcTree2, (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('importBtn')));
+const likedEntry = walk(srcTree2).find((n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('setLikedTitle'));
+check('likes tab header offers the 「喜欢列表同步」entry', !!likedEntry && (likedEntry.props || {}).title === 'importBtnHint');
+likedEntry.props.onClick();
+check('liked entry opens settings at the liked section', uiStore.getSnapshot().view === 'settings' && uiStore.getSnapshot().settingsSection === 'liked');
+uiStore.set({ view: 'library', settingsSection: null });
 check('liked rows show a source chip per platform', has(srcTree2, (n) => cls(n) === 'dshm-src-chip dshm-src-netease')
   && has(srcTree2, (n) => cls(n) === 'dshm-src-chip dshm-src-qq'));
 /* 文案必须走真实字典键（曾出现 t('src' + p) 拼出 srcqq 这种不存在的键 → 界面裸露键名） */
@@ -642,10 +671,14 @@ const chipText = (name) => { const n = walk(srcTree2).find((x) => cls(x) === 'ds
 const zhKeys = new Set([...src.slice(src.indexOf('    const zh = {'), src.indexOf('    const en = {')).matchAll(/^      (\w+): '/gm)].map((m) => m[1]));
 check('source chip labels resolve to dictionary keys', chipText('netease') === 'srcNetease' && chipText('qq') === 'srcQq'
   && zhKeys.has('srcNetease') && zhKeys.has('srcQq') && !zhKeys.has('srcqq') && !zhKeys.has('srcnetease'));
-uiStore.set({ view: 'library' });
-const noLikesTree = expand(music({ ...realProps, useLikes: (sel) => sel({ keys: {}, dislikes: {}, loaded: true, error: null, items: [] }), useLikedSync: useLikedSyncReal }));
-check('empty likes rail still renders with the import service present', has(noLikesTree, (n) => cls(n) === 'dshm-favs-empty')
-  && has(noLikesTree, (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('importBtn')));
+/* 老页面上的「导入喜欢列表」「同步 Spotify」按钮已收进设置：工具栏只剩同步进行中的状态钮 */
+const runningTree = expand(music({ ...realProps, useUi: (sel) => sel({ ...uiStore.getSnapshot(), view: 'library' }), useSync: (sel) => sel({ phase: 'running', result: null, error: null, tracks: [], available: true }) }));
+check('library toolbar shows only a running-sync status chip (→ settings)', has(runningTree, (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('syncing'))
+  && !has(runningTree, (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('importBtn')));
+const noLikesTree = expand(music({ ...realProps, useLikes: (sel) => sel({ keys: {}, dislikes: {}, loaded: true, error: null, items: [] }) }));
+check('empty likes rail still renders and the header keeps the settings entry', has(noLikesTree, (n) => cls(n) === 'dshm-favs-empty')
+  && has(noLikesTree, (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('settingsTitle')));
+uiStore.set({ view: 'library', settingsSection: null });
 
 /* 6) report */
 const fail = results.filter((r) => !r.ok);

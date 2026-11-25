@@ -152,10 +152,16 @@ export function createOnboarding({ storage, library, starter, config = {}, logge
 
     let startedStarter = false
     if (mode === 'starter' && starter) {
-      try {
-        startedStarter = starter.provision() === true
-      } catch (err) {
-        warn(`dsh-music: starter provisioning 启动失败: ${err.message}`)
+      /* 已就绪的 starter 不重复下载（设置页反复保存不应重取）；failed/skipped 才允许重试 */
+      const st = await starterState()
+      if (st && st.status === 'ready') {
+        startedStarter = false
+      } else {
+        try {
+          startedStarter = starter.provision() === true
+        } catch (err) {
+          warn(`dsh-music: starter provisioning 启动失败: ${err.message}`)
+        }
       }
     }
     return { state: await state(), startedStarter }

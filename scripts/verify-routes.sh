@@ -43,6 +43,11 @@ if [ -n "$NOCOVER" ]; then
 else
   echo "INFO: 全部曲目都有封面，跳过无封面 404 用例"
 fi
+check "插件图标 → 200" 200 "$(code "$B/dsh-music/icon.png")"
+check "插件图标 HEAD → 200" 200 "$(code -I "$B/dsh-music/icon.png")"
+ICT=$(curl -s -D - -o /dev/null "$B/dsh-music/icon.png" | tr -d '\r' | awk 'tolower($1)=="content-type:"{print $2}')
+check "插件图标 MIME=image/png" "image/png" "$ICT"
+check "插件图标 POST → 405" 405 "$(code -X POST "$B/dsh-music/icon.png")"
 
 # 路径穿越：期望全部 4xx 拒绝（--path-as-is 保留原始 ../）
 for p in "../../.config/spotify-sync/refresh_token" "%2e%2e%2f%2e%2e%2f.config%2fspotify-sync%2frefresh_token" "..%252f..%252fetc%252fpasswd" "/etc/passwd" "$ID/../../x" "ffffffffffffffff"; do
