@@ -552,7 +552,38 @@ try {
   }
   const likedSync = createLikedSync({ likes, accounts, storage, logger: null, netease: fakeNetease, qqmusic: fakeQQ, qqlogin: fakeQQLogin })
 
-  await test('liked-sync：未登录同步 → 401；扫码 → 登录；状态脱敏', async () => {
+  await test('QQ 扫码：check_sig 落在其它 qq.com 主机、页面用 JS 跳转也能拿到授权码；非 qq.com 地址 → 502 且文案带 host', async () => {
+  const mk = (checkSig, loginJump) => mockFetch(async (call) => {
+    const u = String(call.url.href || call.url)
+    if (u.startsWith('https://xui.ptlogin2.qq.com/cgi-bin/xlogin?')) return new Response('<html></html>', { headers: [['set-cookie', 'pt_login_sig=LS2; Path=/; Domain=ptlogin2.qq.com']] })
+    if (u.startsWith('https://xui.ptlogin2.qq.com/ssl/ptqrshow?')) return new Response(QQ_QR_PNG, { headers: [['set-cookie', 'qrsig=QRSIG2; Path=/; Domain=ptlogin2.qq.com']] })
+    if (u.startsWith('https://xui.ptlogin2.qq.com/ssl/ptqrlogin?')) {
+      return new Response("ptuiCB('0','0','" + checkSig + "','0','登录成功！', '阿强')", { headers: { 'content-type': 'application/javascript' } })
+    }
+    if (u.startsWith(checkSig)) {
+      assert.ok(String(call.headers.Referer).startsWith('https://xui.ptlogin2.qq.com/cgi-bin/xlogin'), '首跳 Referer 是 xlogin 页')
+      return new Response('<html><script>location.replace("' + loginJump + '")</script></html>', { headers: [['set-cookie', 'p_skey=PS2; Domain=qq.com; Path=/; HttpOnly']] })
+    }
+    if (u.startsWith('https://graph.qq.com/oauth2.0/login_jump?')) {
+      assert.match(call.headers.Cookie, /p_skey=PS2/)
+      return new Response('<html><script>location.href="https://y.qq.com/portal/wx_redirect.html?login_type=1&surl=https%3A%2F%2Fy.qq.com%2F&amp;code=CODE9&amp;state=state"</script></html>')
+    }
+    if (u === 'https://u.y.qq.com/cgi-bin/musicu.fcg' && call.method === 'POST') {
+      assert.equal(JSON.parse(call.body).req.param.code, 'CODE9')
+      return new Response(JSON.stringify({ code: 0, req: { code: 0, data: { musickey: 'QK9', musicid: 'o0987' } } }), { headers: [['content-type', 'application/json']] })
+    }
+    return undefined
+  })
+  const login = createQQLogin({ fetchImpl: mk('http://ptlogin2.qq.com/check_sig?pttype=1&uin=42&service=ptqrlogin&ptsigx=zz', 'https://graph.qq.com/oauth2.0/login_jump?ptclient=1&pt_aid=100497308') })
+  const created = await login.qrCreate()
+  const done = await login.qrPoll(created)
+  assert.equal(done.code, 803)
+  assert.equal(done.cookie, 'qqmusic_key=QK9; qm_keyst=QK9; uin=o0987; qqmusic_uin=o0987')
+  const bad = createQQLogin({ fetchImpl: mk('https://evil.example.com/check_sig?x=1', '') })
+  const c2 = await bad.qrCreate()
+  await assert.rejects(bad.qrPoll(c2), (err) => Boolean(err) && err.status === 502 && /跳转地址异常（evil\.example\.com\/check_sig/.test(err.message))
+})
+await test('liked-sync：未登录同步 → 401；扫码 → 登录；状态脱敏', async () => {
     let st = await likedSync.status()
     assert.equal(st.enabled, true)
     assert.equal(st.providers.netease.connected, false)

@@ -227,29 +227,58 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
     return { code: 803, message: '登录成功', cookie }
   }
 
+  /** 页面级跳转：优先最终落点 wx_redirect.html?…code=…，其次 location.href= / location.replace( / meta refresh 里的 qq.com 地址 */
+  function nextFromHtml(text) {
+    const t = String(text || '').slice(0, 262144)
+    const final = t.match(/https?:\/\/y\.qq\.com\/portal\/wx_redirect\.html[^"'\s<>]*/)
+    if (final) return final[0].replace(/&amp;/g, '&')
+    const m = t.match(/(?:location(?:\.href|\.replace|\.assign)?\s*[=(]\s*|http-equiv=["']refresh["'][^>]*url=)["']?(https?:\/\/[^"'\s<>)]+)/i)
+    if (!m) return ''
+    try {
+      const u = new URL(m[1].replace(/&amp;/g, '&'))
+      return /(^|\.)qq\.com$/.test(u.hostname) ? u.href : ''
+    } catch { return '' }
+  }
+
   /** check_sig → login_jump → authorize → wx_redirect.html?code=… → musicu QQLogin 换音乐登录态 */
   async function exchange(jumpUrl, session) {
-    if (typeof jumpUrl !== 'string' || !/^https:\/\/(ssl\.ptlogin2\.qq\.com|graph\.qq\.com)\//.test(jumpUrl)) {
-      throw httpError('QQ 登录跳转地址异常', 502)
+    /* 跳转地址由服务端下发（check_sig…），主机只认 qq.com 下的 http(s) 地址；错误文案带上 host/path 方便定位 */
+    let parsed = null
+    try { parsed = new URL(String(jumpUrl)) } catch { parsed = null }
+    const hostOk = !!parsed && /^https?:$/.test(parsed.protocol) && /(^|\.)qq\.com$/.test(parsed.hostname)
+    if (!hostOk) {
+      const shown = parsed ? `${parsed.hostname}${parsed.pathname}`.slice(0, 80) : String(jumpUrl || '').slice(0, 60)
+      throw httpError(`QQ 登录跳转地址异常（${shown}）`, 502)
     }
     // ptlogin2 的会话 cookie（qrsig / pt_login_sig 等）只在内存里跟着这条跳转链走
     const jar = createJar()
     jar.seed(session.cookies)
-    let url = jumpUrl
+    let url = parsed.href
+    let referer = XLOGIN
     let code = ''
-    for (let hop = 0; hop < 6 && url; hop++) {
-      const res = await request(url, { headers: { 'User-Agent': QQ_UA, Accept: 'text/html,*/*', Cookie: jar.header() } })
+    let lastStatus = 0
+    for (let hop = 0; hop < 8 && url; hop++) {
+      const res = await request(url, { headers: { 'User-Agent': QQ_UA, Accept: 'text/html,*/*', Referer: referer, Cookie: jar.header() } })
       jar.absorb(res)
-      await res.arrayBuffer().catch(() => {})
-      const loc = res.headers.get('location')
-      if (!loc) break
-      url = new URL(loc, url).href
+      lastStatus = res.status
+      const text = await res.text().catch(() => '')
+      if (url.includes('/portal/wx_redirect.html')) {
+        code = new URL(url).searchParams.get('code') || ''
+        break
+      }
+      /* 302 Location 优先；没有的话（graph 的页面有用 JS / meta 跳的）从正文里找下一个 qq.com 落点 */
+      let next = res.headers.get('location') || ''
+      if (!next) next = nextFromHtml(text)
+      if (!next) break
+      referer = url
+      url = new URL(next, url).href.replace(/&amp;/g, '&')
+      /* 到达落点（wx_redirect.html?…code=…）就不用再请求页面本身了：授权码就在 URL 里 */
       if (url.includes('/portal/wx_redirect.html')) {
         code = new URL(url).searchParams.get('code') || ''
         break
       }
     }
-    if (!code) throw httpError('QQ 登录成功但没拿到授权码（跳转链异常）', 502)
+    if (!code) throw httpError(`QQ 登录成功但没拿到授权码（跳转链异常，最后一跳 HTTP ${lastStatus}）`, 502)
     const body = JSON.stringify({
       comm: { g_tk: 5381, platform: 'yqq', ct: 24, cv: 0 },
       req: { module: 'QQConnectLogin.LoginServer', method: 'QQLogin', param: { code } },
