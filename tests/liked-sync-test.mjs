@@ -566,7 +566,27 @@ try {
     }
     if (u.startsWith('https://graph.qq.com/oauth2.0/login_jump?')) {
       assert.match(call.headers.Cookie, /p_skey=PS2/)
-      return new Response('<html><script>location.href="https://y.qq.com/portal/wx_redirect.html?login_type=1&surl=https%3A%2F%2Fy.qq.com%2F&amp;code=CODE9&amp;state=state"</script></html>')
+      /* 真实的 login_jump 页：iframe 里只向父页 postMessage qclogin_success */
+      return new Response('<!DOCTYPE html><html lang="zh-cn"><head><meta charset="UTF-8"><script>if(window.parent.postMessage){window.parent.postMessage("{\"action\":\"qclogin_success\"}", "https://graph.qq.com");}else if(window.parent.agree){window.parent.agree();}</script></head><body></body></html>', { headers: [['content-type', 'text/html']] })
+    }
+    if (u === 'https://graph.qq.com/oauth2.0/authorize' && call.method === 'POST') {
+      /* 官方授权页 agree() 提交的表单 */
+      assert.equal(call.headers['Content-Type'], 'application/x-www-form-urlencoded')
+      assert.match(String(call.headers.Referer), /^https:\/\/graph\.qq\.com\/oauth2\.0\/show\?which=Login&display=pc&response_type=code&redirect_uri=/)
+      assert.equal(call.headers.Origin, 'https://graph.qq.com')
+      assert.match(String(call.headers.Cookie), /p_skey=PS2/)
+      const f = new URLSearchParams(call.body)
+      assert.equal(f.get('response_type'), 'code')
+      assert.equal(f.get('client_id'), '100497308')
+      assert.equal(f.get('redirect_uri'), 'https://y.qq.com/portal/wx_redirect.html?login_type=1&surl=https%3A%2F%2Fy.qq.com%2F')
+      assert.equal(f.get('state'), 'state')
+      assert.equal(f.get('from_ptlogin'), '1')
+      assert.equal(f.get('update_auth'), '1')
+      assert.equal(f.get('openapi'), '1010')
+      assert.equal(f.get('g_tk'), String((() => { let h = 5381; for (const ch of 'PS2') h += (h << 5) + ch.charCodeAt(0); return h & 0x7fffffff })()))
+      assert.match(f.get('ui'), /^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/)
+      assert.ok(Math.abs(Number(f.get('auth_time')) - Date.now()) < 60000)
+      return new Response('', { status: 302, headers: [['location', 'https://y.qq.com/portal/wx_redirect.html?login_type=1&surl=https%3A%2F%2Fy.qq.com%2F&code=CODE9&state=state']] })
     }
     if (u === 'https://u.y.qq.com/cgi-bin/musicu.fcg' && call.method === 'POST') {
       assert.equal(JSON.parse(call.body).req.param.code, 'CODE9')

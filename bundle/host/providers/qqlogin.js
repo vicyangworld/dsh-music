@@ -16,6 +16,9 @@ const QQ_CLIENT_ID = '100497308' // QQ 音乐的 QQ 互联 client_id（pt_3rd_ai
 const S_URL = 'https://graph.qq.com/oauth2.0/login_jump'
 const PTUI_VERSION = '26111016' // xlogin 页面下发的 ptui_version（2026-11）
 const WX_REDIRECT = 'https://y.qq.com/portal/wx_redirect.html?login_type=1&surl=https%3A%2F%2Fy.qq.com%2F'
+const AUTHORIZE_URL = 'https://graph.qq.com/oauth2.0/authorize'
+/* QQ 音乐登录页（y.qq.com）用的授权页参数：authorize?which=Login&display=pc&response_type=code&redirect_uri=…&client_id=…&state=state（无 scope） */
+const AUTHORIZE_PAGE = `https://graph.qq.com/oauth2.0/show?which=Login&display=pc&response_type=code&redirect_uri=${encodeURIComponent(WX_REDIRECT)}&client_id=${QQ_CLIENT_ID}&state=state`
 const XLOGIN = `${PT_HOST}/cgi-bin/xlogin?appid=${PT_APPID}&daid=${PT_DAID}&style=33&login_text=%E7%99%BB%E5%BD%95&hide_title_bar=1&hide_border=1&target=self&s_url=${encodeURIComponent(S_URL)}&pt_3rd_aid=${QQ_CLIENT_ID}&theme=2&hide_close_icon=1&hide_title_bar=1`
 const COOKIE_FIELDS = ['uin', 'qqmusic_uin', 'wxuin', 'wxrefresh_token', 'psrf_qqaccess_token', 'psrf_qqunionid', 'psrf_musickey_createtime', 'psrf_qqopenid', 'qqmusic_nick']
 
@@ -287,6 +290,44 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
     return pick ? { url: pick } : null
   }
 
+  /** g_tk：QQ 互联的防 CSRF 值 = hash33 变体（种子 5381）作用于 p_skey cookie */
+  function gtkOf(jar) {
+    const str = jar.get('p_skey') || ''
+    let hash = 5381
+    for (let i = 0; i < str.length; i++) hash += (hash << 5) + str.charCodeAt(i)
+    return hash & 0x7fffffff
+  }
+
+  function uuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.floor(Math.random() * 16)
+      const v = c === 'x' ? r : (r & 0x3) | 0x8
+      return v.toString(16).toUpperCase()
+    })
+  }
+
+  /**
+   * login_jump 只是 iframe 里的一个 postMessage 页面（告诉父页 qclogin_success）；
+   * 父页（authorize/show）收到后用表单 POST authorize 完成授权：openapi=1010（头像昵称）、from_ptlogin=1、update_auth=1、g_tk=hash33(p_skey)
+   */
+  function authorizeStep(jar) {
+    const f = new URLSearchParams()
+    f.set('response_type', 'code')
+    f.set('client_id', QQ_CLIENT_ID)
+    f.set('redirect_uri', WX_REDIRECT)
+    f.set('scope', '')
+    f.set('state', 'state')
+    f.set('switch', '')
+    f.set('from_ptlogin', '1')
+    f.set('src', '1')
+    f.set('update_auth', '1')
+    f.set('openapi', '1010')
+    f.set('g_tk', String(gtkOf(jar)))
+    f.set('auth_time', String(Date.now()))
+    f.set('ui', jar.get('ui') || uuid())
+    return { url: AUTHORIZE_URL, method: 'POST', body: f.toString(), headers: { Referer: AUTHORIZE_PAGE, Origin: 'https://graph.qq.com' } }
+  }
+
   /** 诊断信息（给用户看的错误文案用）：去掉标签、遮住长 token，只留前 200 字 */
   function describeBody(text) {
     const t = String(text || '')
@@ -326,11 +367,12 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
         break
       }
       seen.push(url)
-      const init = { headers: { 'User-Agent': QQ_UA, Accept: 'text/html,*/*', Referer: referer, Cookie: jar.header() } }
+      const init = { headers: { 'User-Agent': QQ_UA, Accept: 'text/html,application/json,*/*', Referer: referer, Cookie: jar.header() } }
       if (post) {
         init.method = 'POST'
         init.headers['Content-Type'] = 'application/x-www-form-urlencoded'
         init.body = post.body
+        if (post.headers) Object.assign(init.headers, post.headers)
       }
       post = null
       const res = await request(url, init)
@@ -348,6 +390,12 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
       let step = null
       const location = res.headers.get('location')
       if (location) step = { url: safeUrl(location, url) }
+      /* login_jump 的 200 页只是 iframe 里的 postMessage（qclogin_success）→ 按官方授权页的逻辑提交 authorize 表单 */
+      if (!step && /\/oauth2\.0\/login_jump/.test(u.pathname) && /qclogin_success/.test(text)) step = authorizeStep(jar)
+      if (!step) {
+        const cb = text.match(/"callback"\s*:\s*"(https?:\/\/[^"\s]+)"/)
+        if (cb) step = { url: safeUrl(cb[1].replace(/\\\//g, '/'), url) }
+      }
       if (!step) step = nextFromHtml(text, url, seen)
       if (!step || !step.url) {
         lastText = text
@@ -355,7 +403,7 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
       }
       referer = url
       url = step.url
-      if (step.method === 'POST') post = { body: step.body }
+      if (step.method === 'POST') post = { body: step.body, headers: step.headers || null }
       if (url.includes('/portal/wx_redirect.html')) {
         code = new URL(url).searchParams.get('code') || ''
         break
