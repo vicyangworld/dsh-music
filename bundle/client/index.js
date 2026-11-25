@@ -354,6 +354,7 @@ window.__ModuleLoader__.load({
       importQqQrNote: '登录后自动导入到「我喜欢」。用微信登录 QQ 音乐的账号扫不了，请改用 Cookie。',
       importQqUseCookie: '用 Cookie 连接（微信登录的账号）',
       importQqUseQr: '改用手机 QQ 扫码',
+      importQrReportHint: '重新生成后再扫一次；还是不行的话，把括号里的内容发给我们。',
       prvQqHowCookie: '扫码或粘贴 Cookie',
       importQqStep1: '在浏览器登录 QQ 音乐网页版',
       importQqOpen: '打开 y.qq.com',
@@ -718,6 +719,7 @@ window.__ModuleLoader__.load({
       importQqQrNote: 'Once you confirm, the first import starts right away. Accounts that sign in to QQ Music with WeChat cannot scan here — use the cookie instead.',
       importQqUseCookie: 'Connect with a cookie (WeChat accounts)',
       importQqUseQr: 'Scan with the QQ app instead',
+      importQrReportHint: 'Regenerate and scan again; if it still fails, send us the text in brackets.',
       prvQqHowCookie: 'Scan or paste cookie',
       importQqStep1: 'Sign in to QQ Music on the web',
       importQqOpen: 'Open y.qq.com',
@@ -2387,6 +2389,8 @@ window.__ModuleLoader__.load({
       });
       let pollTimer = null;
       let copiedTimer = null;
+      /* 二维码到期能自动换一张：每次打开设置只自动续一次（风控 804 不自动续，要用户亲自点） */
+      const qrAutoRetries = { netease: 0, qq: 0 };
       let pollSeq = 0;
       function stopPolling() {
         if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
@@ -2409,6 +2413,8 @@ window.__ModuleLoader__.load({
       function open(tab) {
         const next = tab || store.getSnapshot().tab || 'netease';
         stopPolling();
+        qrAutoRetries.netease = 0;
+        qrAutoRetries.qq = 0;
         store.set({ open: true, tab: next, qr: null, qrPhase: 'idle', qrMessage: '', result: null, notice: null, error: null, errorProvider: null, copied: false });
         load();
         autoStartQr(next);
@@ -2419,6 +2425,8 @@ window.__ModuleLoader__.load({
       }
       function selectTab(tab) {
         stopPolling();
+        const fresh = qrProviderFor(tab);
+        if (fresh) qrAutoRetries[fresh] = 0; /* 用户亲自切到这家 = 新会话，重新给一次自动续码机会 */
         store.set({ tab, qr: null, qrPhase: 'idle', qrMessage: '', result: null, notice: null, error: null, errorProvider: null });
         autoStartQr(tab);
       }
@@ -2470,6 +2478,13 @@ window.__ModuleLoader__.load({
             await sync(provider);
             return;
           }
+          if (code === 800 && qrAutoRetries[provider] < 1 && isConnected(provider) === false) {
+            /* 二维码 2 分钟到期是常态（新用户 often 来不及）：不打扰用户，自动换一张；每家只自动续一次 */
+            qrAutoRetries[provider]++;
+            store.set({ qrPhase: 'loading', qrMessage: '', qr: null });
+            startQr(provider);
+            return;
+          }
           if (code === 800 || code === 804) {
             /* 800 = 服务端说过期（文案通用即可）；804 = 风控等，把服务端原话带给用户 */
             store.set({ qrPhase: 'expired', qrMessage: code === 804 ? ((r && r.message) || '') : '' });
@@ -2489,6 +2504,7 @@ window.__ModuleLoader__.load({
         const s = store.getSnapshot();
         if (s.qqMode === next) return;
         stopPolling();
+        qrAutoRetries.qq = 0;
         store.set({ qqMode: next, qr: null, qrPhase: 'idle', qrMessage: '', result: null, notice: null, error: null, errorProvider: null });
         if (s.open && s.tab === 'qq' && next === 'qr') startQr('qq');
       }
@@ -4601,7 +4617,10 @@ window.__ModuleLoader__.load({
               ? (qr.matrix
                 ? h(QrSvg, { matrix: qr.matrix, label: t('importQrWaiting') })
                 : h('img', { className: 'dshm-qr dshm-qr-img', src: qr.png, alt: t('importQrWaiting') }))
-              : h('div', { className: 'dshm-imp-qr-fallback' }, h(IconAlert, { size: 22 }), h('div', null, text))),
+              : h('div', { className: 'dshm-imp-qr-fallback' }, h(IconAlert, { size: 22 }), h('div', null, text),
+                (s.qrPhase === 'expired' || s.qrPhase === 'error') && s.qrMessage
+                  ? h('p', { className: 'dshm-imp-hint dshm-imp-hint-more' }, t('importQrReportHint'))
+                  : null)),
         h('div', { className: 'dshm-imp-qr-side' },
           h('p', { className: 'dshm-imp-hint' }, hint),
           h('div', { className: 'dshm-imp-step', role: 'status' }, text),

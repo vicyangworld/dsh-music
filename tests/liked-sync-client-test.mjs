@@ -186,6 +186,43 @@ await test('主机 404（会话过期）→ qrPhase expired，不再轮询', asy
   sandbox.fetch = origFetch;
 });
 
+await test('服务端 800（二维码到期）→ 自动换一张继续等；再到期才显示过期', async () => {
+  replies = { '/liked-sync/status': statusBody(off, off), '/liked-sync/netease/qr': { key: 'k3', url: 'https://music.163.com/login?codekey=auto' } };
+  await svc.load();
+  const origFetch = sandbox.fetch;
+  const origSetTimeout = sandbox.setTimeout;
+  sandbox.setTimeout = (fn) => { setTimeout(fn, 0); return 1; };
+  let creates = 0;
+  let pollCode = 801;
+  const gate = Promise.withResolvers();
+  sandbox.fetch = async (url, init) => {
+    if (url.includes('/netease/qr/poll')) return { ok: true, status: 200, json: async () => ({ code: pollCode, message: pollCode === 801 ? '二维码未失效' : '' }) };
+    if (url.endsWith('/liked-sync/netease/qr') && init && init.method === 'POST') { creates++; if (creates === 2) await gate.promise; }
+    return origFetch(url, init);
+  };
+  svc.open('netease');
+  await tick(30);
+  assert.equal(snap().qrPhase, 'waiting');
+  assert.equal(creates, 1);
+  // 服务端说到期 → 自动重新取码（creates=2，新码请求先卡住）；新码之后回 801 → 回到 waiting
+  pollCode = 800;
+  await tick(30);
+  assert.equal(creates, 2);
+  assert.equal(snap().qrPhase, 'loading');
+  pollCode = 801;
+  gate.resolve();
+  await tick(30);
+  assert.equal(snap().qrPhase, 'waiting');
+  assert.equal(snap().qr && snap().qr.key, 'k3');
+  // 之后每次轮询都 800 → 只自动续一次，最终显示过期
+  pollCode = 800;
+  await tick(60);
+  assert.equal(creates, 2);
+  assert.equal(snap().qrPhase, 'expired');
+  sandbox.fetch = origFetch;
+  sandbox.setTimeout = origSetTimeout;
+});
+
 await test('close() 停止轮询并关闭', async () => {
   svc.close();
   assert.equal(snap().open, false);
@@ -350,6 +387,6 @@ await test('QQ 新手工具：无剪贴板环境 copyCookieCommand 返回 false 
 
 /* 轮询定时器会让进程挂着：显式 dispose 再退出 */
 svc.dispose();
-const total = 20;
+const total = 21;
 console.log(passed === total ? '\n全部通过（' + passed + ' 项）' : '\n通过 ' + passed + '/' + total + ' 项');
 setTimeout(() => process.exit(process.exitCode || 0), 50).unref();
