@@ -384,7 +384,80 @@ const miniProps = { t: (k) => k, ...(services['dsh-music.mini-player'] || {}), .
 state.miniHidden = false; state.miniCollapsed = false;
 const expanded = expand(mini(miniProps));
 check('mini expanded renders', !!expanded);
-check('mini has drag grip', has(expanded, (n) => cls(n) === 'dshm-mini-grip' && typeof n.props.onPointerDown === 'function'));
+const miniBox = walk(expanded).find((n) => cls(n) === 'dshm-mini');
+check('mini bar itself is the drag surface (pointer handlers on the bar, not only on the grip)',
+  !!miniBox && ['onPointerDown', 'onPointerMove', 'onPointerUp', 'onPointerCancel'].every((k) => typeof miniBox.props[k] === 'function'));
+check('mini grip stays as the keyboard handle (arrow keys) without its own pointer handlers',
+  has(expanded, (n) => cls(n) === 'dshm-mini-grip' && typeof n.props.onKeyDown === 'function' && n.props.onPointerDown == null));
+/* simulate the real contract (verified against Chrome via CDP): the bar captures the pointer on
+ * press, moves only past a 4px threshold, clamps inside the viewport, persists on drop; a plain tap
+ * on the title button is forwarded as a click (capture made Chrome retarget the click to the bar);
+ * controls never capture or drag. */
+{
+  const capturedIds = [], releasedIds = [];
+  let clicks = 0;
+  const mainEl = { click: () => { clicks++; } };
+  const fakeEl = {
+    getBoundingClientRect: () => ({ left: 100, top: 500, width: 380, height: 96 }),
+    setPointerCapture: (id) => capturedIds.push(id), releasePointerCapture: (id) => releasedIds.push(id),
+    contains: (el) => el === mainEl,
+  };
+  miniBox.props.ref.current = fakeEl;
+  const target = (inMain, inControl) => ({
+    closest: (sel) => {
+      if (sel === '.dshm-mini-grip') return inMain === 'grip' ? {} : null;
+      if (sel === '.dshm-mini-main') return inMain === true ? mainEl : null;
+      return inControl ? {} : null; /* 'button:not(.dshm-mini-main), a, …, [role="slider"]' */
+    },
+  });
+  const lyrics = target(false, false), title = target(true, false), control = target(false, true), grip = target('grip', false);
+  const mk = (x, y, tgt = lyrics) => ({ button: 0, buttons: 1, pointerId: 7, clientX: x, clientY: y, target: tgt, currentTarget: fakeEl, preventDefault: noop });
+  let prevented = 0;
+  const press = (x, y, tgt) => { const ev = mk(x, y, tgt); ev.preventDefault = () => { prevented++; }; miniBox.props.onPointerDown(ev); return ev; };
+  localStorage.removeItem('dsh-music.prefs');
+  press(200, 520);
+  check('mini captures the pointer on press (so a fast flick that leaves the bar still drags)', capturedIds.length === 1 && capturedIds[0] === 7, JSON.stringify(capturedIds));
+  check('pressing the lyrics area does not preventDefault (normal clicks untouched)', prevented === 0);
+  miniBox.props.onPointerMove(mk(201, 521));
+  miniBox.props.onPointerUp(mk(201, 521));
+  let prefs = JSON.parse(localStorage.getItem('dsh-music.prefs') || '{}');
+  check('a sub-threshold press/release is not a drag (nothing persisted)', !prefs.miniPos && releasedIds.length === 1, JSON.stringify(prefs));
+  press(200, 520);
+  miniBox.props.onPointerMove(mk(320, 560));
+  miniBox.props.onPointerMove(mk(5000, 5000));
+  miniBox.props.onPointerUp(mk(5000, 5000));
+  prefs = JSON.parse(localStorage.getItem('dsh-music.prefs') || '{}');
+  check('mini drag persists a position clamped inside the viewport', prefs.miniPos && prefs.miniPos.left === 1440 - 380 - 8 && prefs.miniPos.top === 900 - 96 - 8, JSON.stringify(prefs.miniPos));
+  check('mini drag releases pointer capture on drop', releasedIds.length === 2);
+  press(200, 520, title);
+  miniBox.props.onPointerUp(mk(200, 520, title));
+  check('a plain tap on the title button is forwarded as a click (open now-playing)', clicks === 1 && releasedIds.length === 3, 'clicks=' + clicks);
+  press(200, 520, title);
+  miniBox.props.onPointerMove(mk(320, 560, title));
+  miniBox.props.onPointerUp(mk(320, 560, title));
+  check('dragging from the title area moves the bar without firing the title click', clicks === 1 && releasedIds.length === 4, 'clicks=' + clicks);
+  press(200, 520, title);
+  miniBox.props.onPointerCancel(mk(200, 520, title));
+  check('a cancelled pointer (e.g. browser gesture) never forwards a click', clicks === 1 && releasedIds.length === 5, 'clicks=' + clicks);
+  press(110, 520, grip);
+  check('pressing the grip prevents text selection', prevented === 1);
+  miniBox.props.onPointerUp(mk(110, 520, grip));
+  press(200, 520, control);
+  miniBox.props.onPointerMove(mk(320, 560, control));
+  miniBox.props.onPointerUp(mk(320, 560, control));
+  check('pressing a control (button / slider) never captures or drags', capturedIds.length === 6 && prevented === 1, JSON.stringify(capturedIds));
+  const right = mk(200, 520);
+  right.button = 2;
+  miniBox.props.onPointerDown(right);
+  miniBox.props.onPointerMove(mk(320, 560));
+  check('non-primary buttons do not start a drag', capturedIds.length === 6);
+  const other = mk(200, 520);
+  other.pointerId = 9;
+  miniBox.props.onPointerDown(other);
+  miniBox.props.onPointerMove(mk(320, 560, lyrics));
+  miniBox.props.onPointerUp(mk(320, 560, lyrics));
+  check('a second pointer never disturbs the current drag', capturedIds.length === 7 && clicks === 1);
+}
 check('mini has seek slider', has(expanded, (n) => cls(n).includes('dshm-slider')));
 check('mini shows 3 lyric lines', walk(expanded).filter((n) => /dshm-mini-lyric\b/.test(cls(n))).length === 3,
   'count=' + walk(expanded).filter((n) => /dshm-mini-lyric\b/.test(cls(n))).length);

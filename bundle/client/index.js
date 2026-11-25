@@ -1289,6 +1289,7 @@ window.__ModuleLoader__.load({
 .dshm-mini-fab-dragging{cursor:grabbing;animation:none;box-shadow:0 16px 40px var(--dsw-alias-bg-mask-2);}
 .dshm-mini-fab-badge{position:absolute;right:1px;bottom:1px;width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);border:2px solid var(--dsw-alias-bg-layer-1);pointer-events:none;}
 .dshm-mini-dragging{box-shadow:0 16px 40px var(--dsw-alias-bg-mask-2);transition:none;animation:none;}
+.dshm-mini{touch-action:none;user-select:none;-webkit-user-select:none;cursor:default;}
 @keyframes dshm-mini-in{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
 .dshm-mini-inner{display:flex;align-items:center;gap:6px;padding:8px 10px 8px 20px;}
 .dshm-mini-main{display:flex;align-items:center;gap:10px;flex:1;min-width:0;border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;padding:2px;border-radius:9px;text-align:left;}
@@ -4799,6 +4800,7 @@ window.__ModuleLoader__.load({
           const dx = e.clientX - d.px, dy = e.clientY - d.py;
           fabMoved.current = Math.max(fabMoved.current, Math.abs(dx) + Math.abs(dy));
           if (fabMoved.current < 3) return;
+          if (!dragging) setDragging(true);
           const next = {
             left: Math.max(0, Math.min(d.left + dx, window.innerWidth - 56)),
             top: Math.max(0, Math.min(d.top + dy, window.innerHeight - 56)),
@@ -4810,6 +4812,7 @@ window.__ModuleLoader__.load({
           if (!fabDragRef.current) return;
           fabDragRef.current = null;
           if (fabMoved.current < 5) { setMiniCollapsed(false); return; }
+          setDragging(false);
           if (fabPosRef.current) writePrefs({ miniFabPos: fabPosRef.current });
           try { if (fabRef.current) fabRef.current.releasePointerCapture(e.pointerId); } catch { /* released */ }
         };
@@ -4829,34 +4832,59 @@ window.__ModuleLoader__.load({
       }
 
       /* ---------------- expanded: the full mini bar ---------------- */
-      const gripDown = (e) => {
+      /* 整条可拖：把手 / 标题 / 歌词 / 空白处按下并移动 ≥4px 即开始拖动；控件按钮、链接、滑块不参与，
+       * 所以拖动不会吞掉播放/切歌/进度条的操作。指针捕获必须设在挂事件的元素上：
+       * 旧实现把捕获设在 box、move/up 却挂在 grip 上，捕获后事件全部落到 box，
+       * grip 收不到 move，整条只有在指针不离开把手的慢速拖动下才偶尔能动。
+       * 这里统一挂在 box 上并按下即捕获（快速一甩时首个 move 可能已在条外，延迟捕获会丢拖动）；
+       * 捕获会让 Chrome 把 click 投递给 box，所以未拖动的轻点由我们转发给标题按钮，单击行为不变。 */
+const DRAG_THRESHOLD = 4;
+      /* 只有真正的控件排除在拖动区之外；标题主按钮(.dshm-mini-main)既是拖动区也保留单击 */
+      const interactiveTarget = (target) => Boolean(target && typeof target.closest === 'function'
+        && target.closest('button:not(.dshm-mini-main), a, input, textarea, select, [role="slider"]'));
+      const barDown = (e) => {
+        if (e.button !== 0 || interactiveTarget(e.target)) return;
         const el = boxRef.current;
         if (!el) return;
-        e.preventDefault();
         const box = el.getBoundingClientRect();
-        dragRef.current = { px: e.clientX, py: e.clientY, left: box.left, top: box.top, w: box.width, h: box.height };
-        setDragging(true);
+        dragRef.current = { target: e.target, px: e.clientX, py: e.clientY, left: box.left, top: box.top, w: box.width, h: box.height, active: false, pointerId: e.pointerId };
+        /* 按下即捕获：快速一甩时第一个 move 往往已落在条外，等越过阈值再捕获就收不到它（CDP 实测会丢拖动） */
         try { el.setPointerCapture(e.pointerId); } catch { /* unsupported */ }
+        /* 把手没有自己的 click，按下即阻止选中文本 */
+        if (typeof e.target.closest === 'function' && e.target.closest('.dshm-mini-grip')) e.preventDefault();
       };
-      const gripMove = (e) => {
+      const barMove = (e) => {
         const d = dragRef.current;
-        if (!d) return;
+        if (!d || e.pointerId !== d.pointerId) return;
+        const dx = e.clientX - d.px, dy = e.clientY - d.py;
+        if (!d.active) {
+          if (Math.abs(dx) + Math.abs(dy) < DRAG_THRESHOLD) return;
+          d.active = true;
+          setDragging(true);
+        }
         const next = {
-          left: Math.max(0, Math.min(d.left + (e.clientX - d.px), window.innerWidth - d.w - 8)),
-          top: Math.max(0, Math.min(d.top + (e.clientY - d.py), window.innerHeight - d.h - 8)),
+          left: Math.max(0, Math.min(d.left + dx, window.innerWidth - d.w - 8)),
+          top: Math.max(0, Math.min(d.top + dy, window.innerHeight - d.h - 8)),
         };
         posRef.current = next;
         setPos(next);
       };
-      const gripUp = (e) => {
-        if (!dragRef.current) return;
+      const barUp = (e, cancelled) => {
+        const d = dragRef.current;
+        if (!d || e.pointerId !== d.pointerId) return;
         dragRef.current = null;
+        try { if (boxRef.current) boxRef.current.releasePointerCapture(e.pointerId); } catch { /* released */ }
+        if (!d.active) {
+          /* 未拖动的轻点：捕获让 Chrome 把 click 投递给了 box，这里把标题按钮的单击补回去 */
+          const main = !cancelled && d.target && typeof d.target.closest === 'function' ? d.target.closest('.dshm-mini-main') : null;
+          if (main && boxRef.current && boxRef.current.contains(main)) main.click();
+          return;
+        }
         setDragging(false);
         if (posRef.current) writePrefs({ miniPos: posRef.current });
-        try { if (boxRef.current) boxRef.current.releasePointerCapture(e.pointerId); } catch { /* released */ }
       };
 
-      const frac = duration > 0 ? Math.min(1, position / duration) : 0;
+            const frac = duration > 0 ? Math.min(1, position / duration) : 0;
       const lines = snap && snap.data && snap.data.synced ? snap.data.lines : null;
       let activeIdx = -1;
       if (lines) {
@@ -4887,12 +4915,12 @@ window.__ModuleLoader__.load({
         ref: boxRef, style,
         className: cx('dshm-mini', dragging && 'dshm-mini-dragging'),
         role: 'region', 'aria-label': t('miniLabel'),
+        onPointerDown: barDown, onPointerMove: barMove,
+        onPointerUp: barUp, onPointerCancel: (e) => barUp(e, true),
       },
         h('div', {
           className: 'dshm-mini-grip', role: 'button', tabIndex: 0,
           title: t('miniDrag'), 'aria-label': t('miniDrag'),
-          onPointerDown: gripDown, onPointerMove: gripMove,
-          onPointerUp: gripUp, onPointerCancel: gripUp,
           onKeyDown: (e) => {
             const step = 12;
             const cur = posRef.current || (boxRef.current ? { left: boxRef.current.getBoundingClientRect().left, top: boxRef.current.getBoundingClientRect().top } : { left: 0, top: 0 });
