@@ -297,6 +297,19 @@ window.__ModuleLoader__.load({
       downloadDone: '已入库',
       downloadFail: '失败',
       downloadPlay: '已入库，曲库已刷新，可直接播放。',
+      downloadClose: '关闭下载面板',
+      downloadCollapse: '收起',
+      downloadExpand: '展开',
+      downloadQueued: '排队中',
+      downloadSkip: '已存在',
+      downloadFinished: '已结束',
+      downloadPillRunning: '入库中 {done}/{total}',
+      downloadPillDone: '已入库 {ok} 首',
+      downloadPillDoneFail: '已入库 {ok} 首，{fail} 首失败',
+      downloadSummary: '完成：{ok} 首入库，{fail} 首失败',
+      downloadSummaryAll: '全部 {ok} 首已入库',
+      downloadOpenLibrary: '打开曲库',
+      downloadPlayOne: '播放这首',
       downloadError: '入库失败',
       downloadIdle: '暂无入库任务',
       syncBtn: '同步 Spotify',
@@ -648,6 +661,19 @@ window.__ModuleLoader__.load({
       downloadDone: 'In library',
       downloadFail: 'Failed',
       downloadPlay: 'Added — the library was refreshed; play it from Library.',
+      downloadClose: 'Close download panel',
+      downloadCollapse: 'Collapse',
+      downloadExpand: 'Expand',
+      downloadQueued: 'Queued',
+      downloadSkip: 'Already in library',
+      downloadFinished: 'Finished',
+      downloadPillRunning: 'Adding {done}/{total}',
+      downloadPillDone: '{ok} added',
+      downloadPillDoneFail: '{ok} added, {fail} failed',
+      downloadSummary: 'Done: {ok} added, {fail} failed',
+      downloadSummaryAll: 'All {ok} added',
+      downloadOpenLibrary: 'Open library',
+      downloadPlayOne: 'Play this track',
       downloadError: 'Could not add to library',
       downloadIdle: 'Nothing queued',
       syncBtn: 'Sync Spotify',
@@ -1425,6 +1451,19 @@ window.__ModuleLoader__.load({
 .dshm-dl-status{font-size:11px;color:var(--dsw-alias-label-tertiary);flex:none;}
 .dshm-dl-bar{height:3px;border-radius:2px;background:var(--dsw-alias-bg-layer-3);overflow:hidden;margin:2px 0 4px;}
 .dshm-dl-bar>div{height:100%;background:var(--dsw-alias-brand-primary);transition:width .4s ease;}
+.dshm-dl-float{position:fixed;left:16px;bottom:16px;z-index:2147483000;width:min(340px,calc(100% - 32px));background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:14px;box-shadow:0 10px 30px var(--dsw-alias-bg-mask-2);padding:10px 12px;display:flex;flex-direction:column;gap:8px;animation:dshm-mini-in .22s ease-out;}
+.dshm-dl-head{display:flex;align-items:center;gap:8px;min-width:0;}
+.dshm-dl-title{font-size:13px;font-weight:600;}
+.dshm-dl-list{display:flex;flex-direction:column;gap:4px;max-height:min(40vh,320px);overflow:auto;padding-right:2px;}
+.dshm-dl-wait{background:var(--dsw-alias-brand-primary);opacity:.45;}
+.dshm-dl-note{font-size:11px;color:var(--dsw-alias-label-tertiary);max-width:40%;flex:none;}
+.dshm-dl-foot{display:flex;align-items:center;gap:8px;border-top:1px solid var(--dsw-alias-border-l1);padding-top:8px;}
+.dshm-dl-sum{font-size:12px;flex:1;min-width:0;}
+.dshm-dl-sum-ok{color:var(--dsw-alias-state-success-primary);}
+.dshm-dl-sum-warn{color:var(--dsw-alias-state-warn-primary);}
+.dshm-dl-pill{position:fixed;left:16px;bottom:16px;z-index:2147483000;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);box-shadow:0 6px 20px var(--dsw-alias-bg-mask-2);font-size:12.5px;color:var(--dsw-alias-label-primary);cursor:pointer;max-width:calc(100% - 32px);}
+.dshm-dl-pill-bar{width:56px;height:3px;border-radius:2px;background:var(--dsw-alias-bg-layer-3);overflow:hidden;flex:none;}
+.dshm-dl-pill-bar>span{display:block;height:100%;background:var(--dsw-alias-brand-primary);transition:width .4s ease;}
 .dshm-sync{margin:12px 24px 0;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:10px;}
 .dshm-sync-chips{display:flex;gap:8px;flex-wrap:wrap;}
 .dshm-sync-chip{font-size:11.5px;border:1px solid var(--dsw-alias-border-l1);border-radius:99px;padding:4px 12px;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-2);}
@@ -3987,31 +4026,6 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 11. Recommendations view (S3 live): batch cards + download queue
      * ================================================================ */
-    function DownloadPanel({ t, download, useDownload }) {
-      const s = useDownload((st) => st);
-      if (!s.running && s.items.length === 0 && !s.error) return null;
-      const anyOk = s.items.some((it) => it.status === 'ok');
-      return h('div', { className: 'dshm-dl' },
-        h('div', { className: 'dshm-asec-title' },
-          h(IconDownload, { size: 13 }), t('downloadTitle'),
-          s.running ? h('span', { className: 'dshm-count' }, s.done + ' / ' + s.total) : null),
-        s.total > 0 ? h('div', { className: 'dshm-dl-bar', 'aria-hidden': true },
-          h('div', { style: { width: Math.round((s.done / s.total) * 100) + '%' } })) : null,
-        s.error
-          ? h('div', { className: 'dshm-errorline', role: 'alert' }, h(IconAlert, { size: 14 }), t('downloadError') + '：' + s.error)
-          : null,
-        s.items.map((it, i) => h('div', { className: 'dshm-dl-row', key: i },
-          h('span', { className: cx('dshm-dl-dot', it.status === 'ok' && 'dshm-dl-ok', it.status === 'fail' && 'dshm-dl-fail') }),
-          h('span', { className: 'dshm-ellipsis', style: { flex: 1 } },
-            (it.artist || '') + ' - ' + (it.title || '')),
-          h('span', { className: 'dshm-dl-status' },
-            it.status === 'ok' ? t('downloadDone')
-              : it.status === 'fail' ? t('downloadFail')
-                : t('downloading')),
-          it.status === 'fail' && it.note ? h('span', { className: 'dshm-sim-chip-reason' }, it.note) : null)),
-        !s.running && anyOk ? h('div', { className: 'dshm-lyrics-hint' }, t('downloadPlay')) : null);
-    }
-
     /* V3 helpers: shared play-or-preview flow (preview never enters the
      * library; only ♥-like downloads it — the Host handles that on like). */
     function playSong(item, player, tracks, preview, setNotice, t, warm) {
@@ -4317,7 +4331,6 @@ window.__ModuleLoader__.load({
       }
       return h('div', { className: 'dshm-reco-page', style: { padding: '12px 16px 0', display: 'flex', flexDirection: 'column' } },
         toolbar,
-        h(DownloadPanel, { t, download, useDownload }),
         s.bootstrapNote
           ? h('div', { className: 'dshm-explore-note', role: 'note' },
               h(IconSparkles, { size: 13 }),
@@ -5486,6 +5499,78 @@ const DRAG_THRESHOLD = 4;
     }
 
     /* ================================================================
+     * 14b. Download status float (shell.overlay — persistent, bottom-left)
+     *     入库/下载进度悬浮面板：运行中自动弹出；结束后可收成胶囊或关闭；
+     *     每行可播放已入库曲目；「打开曲库」跳回曲库。
+     * ================================================================ */
+    function DownloadFloat({ t, download, library, player, ui, useUi, useDownload, openLibrary }) {
+      const s = useDownload((st) => st);
+      const panel = useUi((st) => st.downloadFloat);
+      const running = !!s.running;
+      useEffect(() => {
+        if (running && !panel) ui.set({ downloadFloat: 'open' });
+        return undefined;
+      }, [running, panel]);
+      if (!panel) return null;
+      if (!running && s.items.length === 0 && !s.error) return null;
+      const total = s.total || s.items.length;
+      const done = s.done || s.items.filter((it) => it.status !== 'pending' && it.status !== 'downloading').length;
+      const okN = s.items.filter((it) => it.status === 'ok' || it.status === 'skip').length;
+      const failN = s.items.filter((it) => it.status === 'fail').length;
+      const pct = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
+      const tracks = library && library.source ? (library.source.getSnapshot().tracks || []) : [];
+      const playOne = (it) => {
+        const tr = tracks.find((x) => x.id === it.trackId);
+        if (tr && player) player.playTracks([tr], 0);
+      };
+      const close = () => ui.set({ downloadFloat: null });
+      const statusText = (st) => (st === 'ok' ? t('downloadDone')
+        : st === 'skip' ? t('downloadSkip')
+          : st === 'fail' ? t('downloadFail')
+            : st === 'downloading' ? t('downloading') : t('downloadQueued'));
+      if (panel === 'collapsed') {
+        return portalToBody(h('button', {
+          type: 'button', className: 'dshm-dl-pill', title: t('downloadExpand'), 'aria-label': t('downloadTitle'),
+          onClick: () => ui.set({ downloadFloat: 'open' }),
+        },
+          running ? h(IconRefresh, { size: 13, className: 'dshm-spin' }) : h(IconDownload, { size: 13 }),
+          h('span', { className: 'dshm-ellipsis' }, running
+            ? fmt(t('downloadPillRunning'), { done, total })
+            : (failN ? fmt(t('downloadPillDoneFail'), { ok: okN, fail: failN }) : fmt(t('downloadPillDone'), { ok: okN }))),
+          h('span', { className: 'dshm-dl-pill-bar', 'aria-hidden': true }, h('span', { style: { width: pct + '%' } }))));
+      }
+      return portalToBody(h('div', { className: 'dshm-dl-float', role: 'region', 'aria-label': t('downloadTitle') },
+        h('div', { className: 'dshm-dl-head' },
+          h(IconDownload, { size: 14 }),
+          h('span', { className: 'dshm-dl-title' }, t('downloadTitle')),
+          h('span', { className: 'dshm-count' }, running ? done + ' / ' + total : t('downloadFinished')),
+          h('span', { style: { marginLeft: 'auto' } }),
+          h(IconButton, { label: t('downloadCollapse'), onClick: () => ui.set({ downloadFloat: 'collapsed' }) }, h(IconChevronDown, { size: 14 })),
+          h(IconButton, { label: t('downloadClose'), onClick: close }, h(IconClose, { size: 14 }))),
+        h('div', { className: 'dshm-dl-bar', 'aria-hidden': true }, h('div', { style: { width: pct + '%' } })),
+        s.error
+          ? h('div', { className: 'dshm-errorline', role: 'alert' }, h(IconAlert, { size: 14 }), t('downloadError') + '：' + s.error)
+          : null,
+        h('div', { className: 'dshm-dl-list' },
+          s.items.map((it, i) => h('div', { className: 'dshm-dl-row', key: i, title: it.note || '' },
+            h('span', { className: cx('dshm-dl-dot', (it.status === 'ok' || it.status === 'skip') && 'dshm-dl-ok', it.status === 'fail' && 'dshm-dl-fail', (it.status === 'pending' || it.status === 'downloading') && 'dshm-dl-wait') }),
+            h('span', { className: 'dshm-ellipsis', style: { flex: 1 } }, (it.artist || '') + ' - ' + (it.title || '')),
+            it.note && it.status !== 'ok' && it.status !== 'skip'
+              ? h('span', { className: 'dshm-dl-note dshm-ellipsis', title: it.note }, it.note)
+              : null,
+            h('span', { className: 'dshm-dl-status' }, statusText(it.status)),
+            (it.status === 'ok' || it.status === 'skip') && it.trackId && !running
+              ? h(IconButton, { label: t('downloadPlayOne'), onClick: () => playOne(it) }, h(IconPlay, { size: 12 }))
+              : null))),
+        !running
+          ? h('div', { className: 'dshm-dl-foot' },
+            h('span', { className: cx('dshm-dl-sum', failN ? 'dshm-dl-sum-warn' : 'dshm-dl-sum-ok') },
+              failN ? fmt(t('downloadSummary'), { ok: okN, fail: failN }) : fmt(t('downloadSummaryAll'), { ok: okN })),
+            h('button', { className: 'dshm-chipbtn', type: 'button', onClick: () => { close(); openLibrary(); } }, t('downloadOpenLibrary')))
+          : null));
+    }
+
+    /* ================================================================
      * 15. Plugin body
      * ================================================================ */
     const inject = ['slots', 'locale', 'layout'];
@@ -5539,6 +5624,7 @@ const DRAG_THRESHOLD = 4;
         artistName: null,
         settingsSection: null,
         libTabWish: null,
+        downloadFloat: null,
       });
       const openView = (view) => ui.set({ view });
       const openArtistPage = (name) => ui.set({ view: 'artist', artistName: name });
@@ -5605,6 +5691,18 @@ const DRAG_THRESHOLD = 4;
           hooks: { player: player.source, ui, lyrics: lyricsService.source, artistImages: artistImageService.source },
         }),
       }, MiniPlayer)), 'dsh-music: mini player');
+
+      // Persistent download/add-to-library status float (bottom-left), above every column.
+      ctx.effect(() => ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+        name: 'shell.overlay',
+        id: 'dsh-music.download-float',
+        locale: NS,
+        inject: () => ({
+          download: downloadService, library, player, ui,
+          openLibrary: () => openView('library'),
+          hooks: { download: downloadService.source, library: library.source, ui },
+        }),
+      }, DownloadFloat)), 'dsh-music: download float');
 
       // Warm the library so the panel opens populated; errors surface in-view.
       library.load();

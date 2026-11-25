@@ -812,6 +812,67 @@ check('empty likes rail still renders and the header keeps the settings entry', 
   && has(noLikesTree, (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('settingsTitle')));
 uiStore.set({ view: 'library', settingsSection: null });
 
+/* 5x) download status float (shell.overlay): opens itself while a batch runs, lists per-song status,
+   plays finished items, collapses to a pill, closes — and 「打开曲库」 returns to the library */
+{
+  const floatComp = comps['dsh-music.download-float'];
+  const floatSvc = services['dsh-music.download-float'] || {};
+  check('download float is registered on shell.overlay with download/library/player/ui', !!floatComp && !!floatSvc.download && !!floatSvc.library && !!floatSvc.ui && typeof floatSvc.openLibrary === 'function');
+  const played = [];
+  const says = (node, text) => !!node && has(node, (x) => (x.children || []).includes(text));
+  const fp = (dlState) => ({ t: (k) => k, ...floatSvc, library: { source: { getSnapshot: () => ({ status: 'ready', tracks: [{ id: 'a'.repeat(16), title: '乙' }], error: null }) } }, player: { playTracks: (...a) => played.push(a) }, useUi: (sel) => sel(uiStore.getSnapshot()), useDownload: (sel) => sel(dlState) });
+  const runningState = { running: true, total: 3, done: 1, error: null, items: [
+    { artist: '甲', title: '乙', status: 'ok', note: null, trackId: 'a'.repeat(16) },
+    { artist: '丙', title: '丁', status: 'downloading', note: null, trackId: null },
+    { artist: '戊', title: '己', status: 'pending', note: null, trackId: null }] };
+  uiStore.set({ downloadFloat: null, view: 'reco' });
+  const firstPass = expand(floatComp(fp(runningState)));            // 首帧 panel 为空 → null，副作用把面板设为 open
+  const opened = uiStore.getSnapshot().downloadFloat;
+  const runTree = expand(floatComp(fp(runningState)));
+  const runRows = walk(runTree).filter((n) => cls(n) === 'dshm-dl-row');
+  check('download float opens itself when a batch is running and shows progress + per-song status',
+    (!firstPass || firstPass.length === 0) && opened === 'open' && has(runTree, (n) => cls(n) === 'dshm-dl-float' && n.props.role === 'region')
+    && has(runTree, (n) => cls(n) === 'dshm-count' && (n.children || []).includes('1 / 3'))
+    && runRows.length === 3 && says(runRows[1], 'downloading') && says(runRows[2], 'downloadQueued')
+    && !has(runTree, (n) => cls(n) === 'dshm-dl-foot'),
+    JSON.stringify({ opened, rows: runRows.length }));
+  const barNode = walk(runTree).find((n) => cls(n) === 'dshm-dl-bar' && n.children && n.children[0] && n.children[0].props);
+  check('progress bar reflects done/total while running', !!barNode && barNode.children[0].props.style.width === '33%');
+  const doneState = { running: false, total: 4, done: 4, error: null, items: [
+    { artist: '甲', title: '乙', status: 'ok', note: null, trackId: 'a'.repeat(16) },
+    { artist: '庚', title: '辛', status: 'skip', note: '文件已存在', trackId: 'b'.repeat(16) },
+    { artist: '壬', title: '癸', status: 'fail', note: '搜索无结果', trackId: null },
+    { artist: '子', title: '丑', status: 'fail', note: '下载失败: 超时', trackId: null }] };
+  const doneTree = expand(floatComp(fp(doneState)));
+  const doneRows = walk(doneTree).filter((n) => cls(n) === 'dshm-dl-row');
+  const sumNode = walk(doneTree).find((n) => cls(n).split(' ').includes('dshm-dl-sum'));
+  const playBtns = walk(doneTree).filter((n) => n.type === 'button' && n.props['aria-label'] === 'downloadPlayOne');
+  check('finished batch lists ok/skip/fail with notes and a summary line',
+    doneRows.length === 4 && says(doneRows[1], 'downloadSkip') && says(doneRows[2], 'downloadFail')
+    && says(doneRows[2], '搜索无结果') && !!sumNode && (sumNode.children || []).includes('downloadSummary') && sumNode.props.className.includes('dshm-dl-sum-warn'),
+    JSON.stringify({ rows: doneRows.length, skip: says(doneRows[1] || {}, 'downloadSkip'), fail: says(doneRows[2] || {}, 'downloadFail'), sum: !!sumNode }));
+  check('only in-library items get a play button; play resolves the trackId through the library', playBtns.length === 2 && played.length === 0, 'playBtns=' + playBtns.length + ' labels=' + JSON.stringify(walk(doneTree).filter((n) => n.type === 'button').map((n) => n.props['aria-label'])));
+  if (playBtns[0]) playBtns[0].props.onClick();
+  check('play button plays the resolved library track', played.length === 1 && Array.isArray(played[0] && played[0][0]) && played[0][0].length === 1 && played[0][0][0].id === 'a'.repeat(16), JSON.stringify(played.map((a) => (a[0] || []).map((x) => x && x.id))));
+  uiStore.set({ downloadFloat: 'collapsed', view: 'reco' });
+  const pillTree = expand(floatComp(fp(doneState)));
+  const pill = walk(pillTree).find((n) => cls(n) === 'dshm-dl-pill');
+  check('collapsed state renders a pill with the result text', !!pill && (pill.children || []).some((c) => c && c.type === 'span' && (c.children || []).includes('downloadPillDoneFail')));
+  if (pill) pill.props.onClick();
+  check('pill click expands the panel again', uiStore.getSnapshot().downloadFloat === 'open');
+  const openTree = expand(floatComp(fp(doneState)));
+  const libBtn = walk(openTree).find((n) => n.type === 'button' && (n.children || []).includes('downloadOpenLibrary'));
+  if (libBtn) libBtn.props.onClick();
+  check('「打开曲库」 closes the float and returns to the library view', uiStore.getSnapshot().downloadFloat === null && uiStore.getSnapshot().view === 'library');
+  uiStore.set({ downloadFloat: 'open', view: 'reco' });
+  const closeTree = expand(floatComp(fp(doneState)));
+  const closeBtn = walk(closeTree).find((n) => n.type === 'button' && n.props['aria-label'] === 'downloadClose');
+  if (closeBtn) closeBtn.props.onClick();
+  check('close button hides the float', !!closeBtn && uiStore.getSnapshot().downloadFloat === null);
+  { const idleTree = expand(floatComp(fp({ running: false, total: 0, done: 0, items: [], error: null }))); check('nothing renders when idle and closed', !idleTree || idleTree.length === 0); }
+  uiStore.set({ downloadFloat: null, view: 'library' });
+}
+
 /* 6) report */
 const fail = results.filter((r) => !r.ok);
 for (const r of results) console.log((r.ok ? 'PASS' : 'FAIL') + '  ' + r.name + (r.detail ? '  (' + r.detail + ')' : ''));
