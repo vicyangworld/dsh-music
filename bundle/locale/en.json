@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Local music",
-    "description": "Play your local library, show lyrics and artist stories, recommend and download new songs from listening history, and sync Spotify liked songs in one click.",
+    "description": "Play your local library, show lyrics and artist stories, recommend and download new songs from listening history, sync Spotify liked songs in one click, and read-only import your NetEase Cloud Music / QQ Music liked lists via QR code or pasted cookie.",
     "detail": "docs/DETAIL.md"
   }
 }

@@ -3,7 +3,8 @@
  * download 管线下载入库；已在曲库的曲只标记不重复下载。unlike 只去标记，绝不删文件
  * （红线：删除仅由用户主动触发）。不喜欢（dislike）只记口味信号，永不下载、永不删文件。
  * 喜欢与不喜欢互斥（同一 key 不能同时成立）：口味是二值信号，避免推荐读到矛盾偏好；
- * 切换方向只改标记，不动本地文件。数据仅存 ~/.dsh/dsh-music/，不上传。 */
+ * 切换方向只改标记，不动本地文件。数据仅存 ~/.dsh/dsh-music/，不上传。
+ * importItems：外部平台（QQ音乐/网易云）喜欢列表的只读导入入口——只打 ♥、不下载、不写平台账号。 */
 import { normalizeZh } from './t2s.js'
 
 const ID_RE = /^[a-f0-9]{16}$/
@@ -157,6 +158,71 @@ export function createLikes({ storage, library, download, logger, history }) {
     return { key, disliked: true, liked: false, clearedLike, trackId: resolvedId, inLibrary: Boolean(local) }
   }
 
+  /** 宽松键：仅用于导入去重（歌手分隔符 / feat. / 空白差异），不改变 likeKey 体系与既有数据。 */
+  function looseKey(artist, title) {
+    const norm = (s) => normalizeZh(String(s || ''))
+      .replace(/\s*(\/|、|，|,|;|；|&|\+|feat\.?|ft\.?)\s*/gi, '/')
+      .replace(/\s+/g, '')
+      .trim()
+    return `${norm(artist)}::${norm(title)}`
+  }
+
+  /**
+   * 批量导入外部平台（QQ音乐 / 网易云）的喜欢列表——只打 ♥ 标记，绝不触发下载（导入 ≠ 自动入库）。
+   * - 已在「不喜欢」里的曲跳过并计数（本地显式 👎 优先于平台旧喜欢）；
+   * - 同一曲多平台来源合并进同一条目的 sources（{ netease: {id, likedAt}, qq: {...} }）；
+   * - 去重：先按 likeKey 精确命中，再按 looseKey 宽松命中，命中即视为「已在喜欢」只补来源。
+   * tracks: [{ platformId, title, artist, album, durationMs, likedAt }]
+   */
+  async function importItems(source, tracks = []) {
+    await library.ensureScanned()
+    const data = await load()
+    const looseItems = new Map()
+    const looseDislikes = new Map()
+    for (const key of Object.keys(data.items)) {
+      const e = data.items[key]
+      looseItems.set(looseKey(e.artist, e.title), key)
+    }
+    for (const key of Object.keys(data.dislikes)) {
+      const e = data.dislikes[key]
+      looseDislikes.set(looseKey(e.artist, e.title), key)
+    }
+    const now = Date.now()
+    let added = 0
+    let existed = 0
+    let skippedDisliked = 0
+    for (const tr of Array.isArray(tracks) ? tracks : []) {
+      const artist = typeof tr.artist === 'string' ? tr.artist.trim() : ''
+      const title = typeof tr.title === 'string' ? tr.title.trim() : ''
+      if (!artist || !title) continue
+      const key = likeKey(artist, title)
+      const lk = looseKey(artist, title)
+      const itemKey = data.items[key] ? key : looseItems.get(lk)
+      const src = {
+        id: tr.platformId == null ? null : String(tr.platformId),
+        likedAt: Number.isFinite(tr.likedAt) && tr.likedAt > 0 ? tr.likedAt : null,
+      }
+      if (!itemKey) {
+        if (data.dislikes[key] || looseDislikes.has(lk)) { skippedDisliked++; continue }
+        data.items[key] = {
+          key, artist, title,
+          album: typeof tr.album === 'string' && tr.album ? tr.album : null,
+          durationMs: Number.isFinite(tr.durationMs) && tr.durationMs > 0 ? tr.durationMs : null,
+          likedAt: src.likedAt || now,
+          sources: { [source]: src },
+        }
+        looseItems.set(lk, key)
+        added++
+      } else {
+        const entry = data.items[itemKey]
+        entry.sources = { ...(entry.sources || {}), [source]: src }
+        existed++
+      }
+    }
+    await persist()
+    return { source, added, existed, skippedDisliked }
+  }
+
   function decorate(entry) {
     const local = findInLibrary(entry.key)
     return {
@@ -229,7 +295,7 @@ export function createLikes({ storage, library, download, logger, history }) {
     }
   }
 
-  return { set, setDislike, list, listDislikes, summary, statusOf, tasteOf, file }
+  return { set, setDislike, importItems, list, listDislikes, summary, statusOf, tasteOf, file }
 }
 
 export function registerLikesRoutes(webServer, { likes, logger }) {

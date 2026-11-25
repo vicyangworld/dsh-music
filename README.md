@@ -27,6 +27,7 @@ DeepSeek Harness Desktop 的音乐插件：播放本地曲库、同步歌词与�
 | 推荐 | **传统算法（零 LLM）**：7 相近 + 3 探索，探索位轮换流派/语言/年代/场景/意外之喜轴，避开高频歌手；每首经 MusicBrainz 联网核实、带推荐理由 |
 | 下载 | 推荐歌曲经核实后下载到本地，带封面标签，自动入库即可播放；共享锁防并发 |
 | Spotify 同步 | 一键同步收藏到本地，显示新增/缺失/失败；只经 spotify-sync CLI 间接用凭据 |
+| 喜欢列表导入 | 网易云音乐**扫码**登录 / QQ 音乐**粘贴 Cookie**，把两平台的「我喜欢」**只读**导入到本地 ♥ 列表：不下载、不改云端账号、不取消本地 ♥ |
 | 收听历史 | 记录播放完整度/跳过，仅存本地，作为推荐画像输入 |
 
 ## 二期新增
@@ -111,6 +112,15 @@ DeepSeek Harness Desktop 的音乐插件：播放本地曲库、同步歌词与�
 | 每栏重新推荐 | 每栏标题行「重新推荐」按钮只重算本栏，其余两栏不受影响；重算期间该栏独立显示进度 |
 | 播放转圈反馈 | 点行播放 ▶ 变转圈（试听准备中），就绪恢复播放态；「播放本栏」整栏转圈、逐首就绪逐首恢复；转圈期间防重复点击 |
 
+## 十一期新增（网易云 / QQ 音乐喜欢列表导入）
+| 模块 | 说明 |
+|---|---|
+| 网易云扫码登录 | 对话框内本地生成二维码（自带零依赖 QR 编码器，SVG 渲染），手机 App 扫码确认即连上；登录态只存本机 `accounts.json`（权限 0600） |
+| QQ 音乐 Cookie 连接 | 粘贴 y.qq.com 的 Cookie（需 `qm_keyst`/`qqmusic_key` + `uin`/`wxuin`），自动定位「我喜欢」歌单并显示歌曲数 |
+| 只读导入 | 「导入到「我喜欢」」把两平台喜欢列表与本地 ♥ 合并：新增 ♥ / 已有 ♥ / 本地 👎 跳过 / 云端已下架 / 云端已移除（仅提示）；行内显示来源小标（网易云 / QQ 音乐） |
+| 增量 | 记住每个平台的歌曲 id，再次导入只处理差异；断开连接保留 ♥ 标记 |
+| 主机开关 | `config.likedSync = false` 可整体关闭（默认开启但完全被动：不连接就不发任何请求） |
+
 ## 安装
 插件以 bundle 形式安装在 desktop profile，**只用 `plugin_manager install_bundle`**（不手写 profile 配置）：
 ```
@@ -125,6 +135,7 @@ plugin_manager install_bundle  target=@vicyangorg/dsh-music@0.6.0
 3. 「推荐」页点「生成推荐」→ 得到 7 相近 + 3 探索，逐首可「试听」（不入库）；点 ♥ 喜欢才下载入库。
 4. 入库队列看进度，完成后自动入库可播放。
 5. 曲库工具栏「同步 Spotify」一键同步收藏。
+5a. 曲库工具栏「导入喜欢列表」：网易云页扫码 / QQ 音乐页粘贴 Cookie → 点「导入到「我喜欢」」；导入的歌只打 ♥，想入库再到推荐/曲库里处理。
 6. 「历史」页查看收听记录。
 
 ## 数据位置（全部本地，无上传/无遥测）
@@ -136,6 +147,9 @@ plugin_manager install_bundle  target=@vicyangorg/dsh-music@0.6.0
 | `~/.dsh/dsh-music/history.jsonl` | 收听历史 |
 | `~/.dsh/dsh-music/cache/` | 歌词/歌手/推荐发现/核实/封面与歌手图缓存 |
 | `~/.dsh/dsh-music/reco-history.json` | 推荐批次留档 |
+| `~/.dsh/dsh-music/likes.json` | ♥ / 👎 列表（含网易云 / QQ 音乐导入来源 id） |
+| `~/.dsh/dsh-music/accounts.json` | 网易云 / QQ 音乐登录态（Cookie），**权限 0600**，仅在你主动连接时写入 |
+| `~/.dsh/dsh-music/liked-sync.json` | 两平台喜欢列表的导入状态（已知 id、上次结果） |
 
 ## 卸载
 ```
@@ -147,6 +161,7 @@ plugin_manager remove_bundle  target=@vicyangorg/dsh-music
 - 音源上限 YT Music ~128k AAC；个别曲目源头无封面或时长与 MusicBrainz 目标略有出入（软警告，仍可播放）。
 - 推荐为传统算法 + MusicBrainz 发现，探索多样性依赖曲库与历史规模；不依赖任何 LLM。
 - Spotify 取消收藏不触发本地删除，是否删本地文件由您决定。
+- 网易云 / QQ 音乐喜欢列表导入走的是两家**未公开的 Web 接口**，可能随版本变动或风控失效；登录态会过期（网易云重新扫码、QQ 重新粘贴 Cookie 即可），Cookie 只存本机。导入**只读**：不会把本地 ♥ 推到云端，也不会从 QQ / 网易云取音频（音源仍只有 YT Music）。
 
 ## 红线（设计约束）
 不并发下载管线；绝不查看/移动/删除 `~/.config/spotify-sync/refresh_token`；推荐候选先联网核实再下载；推荐下载只写 `~/Music/dsh-music/`；歌手内容注明来源与日期；历史/缓存仅存本地。

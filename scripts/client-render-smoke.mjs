@@ -39,6 +39,7 @@ let recoState = { status: 'ready', items: [], sections: { today: [{ title: '推�
 
 const noop = () => {};
 let groupDefault = 'none';
+let libTabDefault = 'library';
 const React = {
   Fragment: 'Fragment',
   createElement: (type, props, ...children) => {
@@ -51,6 +52,8 @@ const React = {
     let v = typeof init === 'function' ? init() : init;
     /* test hook: force the library grouping mode so the group-header avatar path renders */
     if (v === 'none') v = groupDefault;
+    /* test hook: force the library sub-tab so the「我喜欢」list renders */
+    if (v === 'library') v = libTabDefault;
     return [v, noop];
   },
   useEffect: (fn) => { try { fn(); } catch (e) { throw e; } },
@@ -77,13 +80,25 @@ const fetchMock = async (url) => {
     ? { available: true, hint: null }
     : url.includes('/sync/status')
       ? { running: false, result: null, error: null }
-      : url.includes('/library/preview')
-        ? { status: 'ready', audioUrl: '/dsh-music/preview/abc.m4a' }
-        : { imageUrl: 'http://img/orig.jpg', thumbnailUrl: 'http://img/thumb.jpg' };
+      : url.includes('/liked-sync/status')
+        ? { enabled: true, providers: {
+          netease: { label: '网易云音乐', connected: false, account: null, busy: false, lastSyncAt: null, lastResult: null, knownCount: 0 },
+          qq: { label: 'QQ 音乐', connected: true, account: { uid: '1001', nickname: '小Q', loginAt: 1 }, busy: false, lastSyncAt: 0, lastResult: null, knownCount: 5 },
+        } }
+        : url.includes('/liked-sync/netease/qr/poll')
+          ? { code: 801, message: '等待扫码' }
+          : url.includes('/liked-sync/netease/qr')
+            ? { key: 'k1', url: 'https://music.163.com/login?codekey=8126df9b-smoke' }
+            : url.includes('/liked-sync/qq/sync')
+              ? { provider: 'qq', at: 1, durationMs: 5, total: 10, unavailable: 1, playlistName: '我喜欢', added: 3, existed: 5, skippedDisliked: 1, removed: 2, removedItems: [{ title: '旧歌', artist: '某人' }] }
+              : url.includes('/library/preview')
+                ? { status: 'ready', audioUrl: '/dsh-music/preview/abc.m4a' }
+                : { imageUrl: 'http://img/orig.jpg', thumbnailUrl: 'http://img/thumb.jpg' };
   return { ok: true, json: async () => body };
 };
 const sandbox = { window: windowMock, localStorage, console, setTimeout, clearTimeout, fetch: fetchMock,
-  document: { createElement: () => ({ setAttribute: noop, textContent: '', remove: noop }), head: { appendChild: noop } } };
+  document: { createElement: () => ({ setAttribute: noop, textContent: '', remove: noop }), head: { appendChild: noop }, addEventListener: noop, removeEventListener: noop },
+  TextEncoder };
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
 vm.runInContext(src, sandbox, { filename: 'client/index.js' });
@@ -487,6 +502,77 @@ check('dislike POSTs to the host route', fetchCalls.slice(dislikesBefore).some((
 historyState = { ...historyState, stats: { ...historyState.stats, dislikes: { count: 1, events: 1, songs: [{ title: '不喜欢歌', artist: '某歌手', dislikedAt: Date.now(), inLibrary: true }] } } };
 const histTree = expand(music({ ...realProps, useUi: (sel) => sel({ ...uiStore.getSnapshot(), view: 'history' }) }));
 check('history stats shows the dislike summary block', has(histTree, (n) => cls(n) === 'dshm-dislike-row'));
+
+/* 5w) 喜欢列表导入（网易云扫码 / QQ Cookie，只读）：入口按钮 → 对话框 → 二维码 SVG →
+ *     QQ 已连接卡片 → 同步结果 chips → 关闭；来源小标随 sources 渲染。 */
+const svcLiked = svc.likedSync;
+check('liked-sync service is injected into the panel', !!svcLiked && !!svcLiked.source && typeof svcLiked.open === 'function');
+const importBtn = walk(realHeader).find((n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('importBtn'));
+check('toolbar renders the import-liked button (not primary, not the Spotify sync)', !!importBtn
+  && !(importBtn.props || {}).disabled && (importBtn.props || {}).title === 'importBtnHint');
+const useLikedSyncReal = (sel) => sel(svcLiked.source.getSnapshot());
+importBtn.props.onClick();
+check('import click opens the service store', svcLiked.source.getSnapshot().open === true);
+await new Promise((r) => setTimeout(r, 50));
+const qrSnap = svcLiked.source.getSnapshot();
+check('QR session created from the host route and encoded locally', qrSnap.qr && qrSnap.qr.key === 'k1'
+  && qrSnap.qr && qrSnap.qr.matrix && qrSnap.qr.matrix.size > 20 && qrSnap.qrPhase === 'waiting',
+  'phase=' + qrSnap.qrPhase + ' size=' + (qrSnap.qr && qrSnap.qr.matrix && qrSnap.qr.matrix.size));
+check('status route fetched on open', fetchCalls.some((u) => u.includes('/liked-sync/status')));
+uiStore.set({ view: 'library' });
+const dlgProps = { ...realProps, useUi: useUiReal, useLikedSync: useLikedSyncReal };
+const dlgTree = expand(music(dlgProps));
+const modal = walk(dlgTree).find((n) => cls(n) === 'dshm-modal');
+check('dialog renders as aria-modal with two provider tabs', !!modal && (modal.props || {})['aria-modal'] === true
+  && walk(dlgTree).filter((n) => /(^| )dshm-imp-tab( |$)/.test(cls(n))).length === 2
+  && walk(dlgTree).filter((n) => /dshm-imp-tab-on/.test(cls(n))).length === 1);
+const qrSvg = walk(dlgTree).find((n) => cls(n) === 'dshm-qr');
+check('QR renders as a crisp SVG with a 4-module quiet zone', !!qrSvg && (qrSvg.props || {}).shapeRendering === 'crispEdges'
+  && /^-4 -4 /.test((qrSvg.props || {}).viewBox || ''), 'viewBox=' + ((qrSvg && qrSvg.props.viewBox) || ''));
+check('QR tab shows the waiting status + regenerate button', has(dlgTree, (n) => cls(n) === 'dshm-imp-step' && (n.children || []).includes('importQrWaiting'))
+  && has(dlgTree, (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('importQrRegenerate')));
+check('dialog footer states the read-only contract', has(dlgTree, (n) => cls(n) === 'dshm-modal-foot' && (n.children || []).includes('importFootNote')));
+const qqTab = walk(dlgTree).find((n) => cls(n) === 'dshm-imp-tab' && (n.children || []).includes('importTabQq'));
+qqTab.props.onClick();
+check('switching to the QQ tab keeps the dialog open', svcLiked.source.getSnapshot().tab === 'qq' && svcLiked.source.getSnapshot().open === true);
+const qqTree = expand(music(dlgProps));
+check('connected QQ account card renders nickname + known count', has(qqTree, (n) => cls(n) === 'dshm-imp-account')
+  && has(qqTree, (n) => cls(n) === 'dshm-imp-nick' && (n.children || []).includes('小Q')));
+const syncBtn = walk(qqTree).find((n) => cls(n) === 'dshm-chipbtn dshm-chipbtn-primary' && (n.children || []).includes('importSyncNow'));
+check('QQ tab offers the import action', !!syncBtn && !(syncBtn.props || {}).disabled);
+syncBtn.props.onClick();
+await new Promise((r) => setTimeout(r, 50));
+check('sync POSTs to the provider route and stores the result', fetchCalls.some((u) => u.includes('/liked-sync/qq/sync'))
+  && svcLiked.source.getSnapshot().result && svcLiked.source.getSnapshot().result.added === 3);
+const resTree = expand(music(dlgProps));
+check('result chips render added/existed/removed', has(resTree, (n) => cls(n) === 'dshm-sync-chip dshm-sync-chip-ok' && (n.children || []).includes('importResAdded 3'))
+  && has(resTree, (n) => cls(n) === 'dshm-sync-chip' && (n.children || []).includes('importResExisted 5'))
+  && has(resTree, (n) => cls(n) === 'dshm-sync-chip dshm-sync-chip-warn' && (n.children || []).includes('importResRemoved 2')));
+check('removed items are listed (informational only)', has(resTree, (n) => cls(n) === 'dshm-sync-detail' && (n.children || []).some((c) => typeof c === 'object' && (c.children || []).includes('· 某人 - 旧歌'))));
+const closeBtn2 = walk(resTree).find((n) => cls(n) === 'dshm-iconbtn' && (n.props || {})['aria-label'] === 'importClose');
+check('close button present', !!closeBtn2);
+closeBtn2.props.onClick();
+check('close hides the dialog', svcLiked.source.getSnapshot().open === false);
+const withSources = (sel) => sel({
+  keys: {}, dislikes: {}, loaded: true, error: null,
+  items: [{ key: 'k9', artist: '甲', title: '乙', trackId: null, audioUrl: null, coverUrl: null, inLibrary: false, durationMs: 1000,
+    sources: { netease: { id: 1, likedAt: 1 }, qq: { id: 2, likedAt: 2 } } }],
+});
+libTabDefault = 'likes';
+const srcTree2 = expand(music({ ...realProps, useUi: (sel) => sel({ ...uiStore.getSnapshot(), view: 'library' }), useLikes: withSources, useLikedSync: useLikedSyncReal }));
+libTabDefault = 'library';
+check('likes tab header offers the import button too', has(srcTree2, (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('importBtn')));
+check('liked rows show a source chip per platform', has(srcTree2, (n) => cls(n) === 'dshm-src-chip dshm-src-netease')
+  && has(srcTree2, (n) => cls(n) === 'dshm-src-chip dshm-src-qq'));
+/* 文案必须走真实字典键（曾出现 t('src' + p) 拼出 srcqq 这种不存在的键 → 界面裸露键名） */
+const chipText = (name) => { const n = walk(srcTree2).find((x) => cls(x) === 'dshm-src-chip dshm-src-' + name); return n ? String(n.children[0]) : ''; };
+const zhKeys = new Set([...src.slice(src.indexOf('    const zh = {'), src.indexOf('    const en = {')).matchAll(/^      (\w+): '/gm)].map((m) => m[1]));
+check('source chip labels resolve to dictionary keys', chipText('netease') === 'srcNetease' && chipText('qq') === 'srcQq'
+  && zhKeys.has('srcNetease') && zhKeys.has('srcQq') && !zhKeys.has('srcqq') && !zhKeys.has('srcnetease'));
+uiStore.set({ view: 'library' });
+const noLikesTree = expand(music({ ...realProps, useLikes: (sel) => sel({ keys: {}, dislikes: {}, loaded: true, error: null, items: [] }), useLikedSync: useLikedSyncReal }));
+check('empty likes rail still renders with the import service present', has(noLikesTree, (n) => cls(n) === 'dshm-favs-empty')
+  && has(noLikesTree, (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('importBtn')));
 
 /* 6) report */
 const fail = results.filter((r) => !r.ok);

@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "本地音乐",
-    "description": "播放本地曲库，展示歌词与歌手故事，按收听历史推荐并下载新歌，一键同步 Spotify 收藏。",
+    "description": "播放本地曲库，展示歌词与歌手故事，按收听历史推荐并下载新歌，一键同步 Spotify 收藏，扫码/粘贴 Cookie 只读导入网易云音乐与 QQ 音乐的喜欢列表。",
     "detail": "docs/DETAIL.md"
   }
 }

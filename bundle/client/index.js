@@ -305,6 +305,45 @@ window.__ModuleLoader__.load({
       syncFail: '失败',
       syncMissing: '本地缺失',
       syncError: '同步失败',
+      /* 喜欢列表导入（网易云 / QQ 音乐，只读） */
+      importBtn: '导入喜欢列表',
+      importBtnHint: '从网易云音乐 / QQ 音乐的「我喜欢」只读导入到本地（不下载）',
+      importTitle: '导入喜欢列表',
+      importClose: '关闭',
+      importTabNetease: '网易云音乐',
+      importTabQq: 'QQ 音乐',
+      importConnected: '已连接',
+      importNotConnected: '未连接',
+      importQrLoading: '正在生成二维码…',
+      importQrWaiting: '等待扫码…',
+      importQrConfirmed: '已扫码，请在手机上确认登录',
+      importQrDone: '登录成功',
+      importQrExpired: '二维码已过期，请重新生成',
+      importQrRegenerate: '重新生成',
+      importQrHint: '打开网易云音乐 App → 左侧菜单「我的」→ 右上角「+」或设置里的「扫一扫」，对准二维码，登录后自动完成连接。',
+      importQqCookieLabel: '粘贴 y.qq.com 的 Cookie',
+      importQqCookieHint: '电脑浏览器登录 y.qq.com → 按 F12 打开开发者工具 → Network（网络）→ 刷新页面 → 点任意请求 → Request Headers 里复制 Cookie 整行。需包含 qm_keyst（或 qqmusic_key）和 uin（或 wxuin）。Cookie 只保存在本机 ~/.dsh/dsh-music/accounts.json（权限 0600）。',
+      importQqConnect: '连接',
+      importConnecting: '连接中…',
+      importSyncNow: '导入到「我喜欢」',
+      importSyncing: '导入中…',
+      importReQr: '重新扫码登录',
+      importDisconnect: '断开连接',
+      importLastSync: '上次导入',
+      importNever: '尚未导入',
+      importKnown: '已导入',
+      importResTotal: '云端喜欢',
+      importResAdded: '新增 ♥',
+      importResExisted: '已有 ♥',
+      importResDisliked: '本地 👎 跳过',
+      importResUnavailable: '云端已下架',
+      importResRemoved: '云端已移除',
+      importResRemovedHint: '仅提示：不会取消本地 ♥，也不会删除文件',
+      importFootNote: '只读导入：不修改云端账号，不自动下载；只标记 ♥，后续可在推荐或曲库里决定是否入库。',
+      importEnabledOff: '主机已关闭喜欢列表导入（配置项 likedSync = false）',
+      importCookieEmpty: '请先粘贴 Cookie',
+      srcNetease: '网易云',
+      srcQq: 'QQ 音乐',
       tabHistory: '历史',
       historyTitle: '收听历史',
       historyEmpty: '还没有播放记录，去曲库放几首歌吧。',
@@ -575,6 +614,45 @@ window.__ModuleLoader__.load({
       syncFail: 'Failed',
       syncMissing: 'Missing locally',
       syncError: 'Sync failed',
+      /* Liked-list import (NetEase / QQ Music, read-only) */
+      importBtn: 'Import liked',
+      importBtnHint: 'Read-only import of your NetEase Cloud Music / QQ Music liked list (no downloads)',
+      importTitle: 'Import liked lists',
+      importClose: 'Close',
+      importTabNetease: 'NetEase Cloud Music',
+      importTabQq: 'QQ Music',
+      importConnected: 'Connected',
+      importNotConnected: 'Not connected',
+      importQrLoading: 'Generating QR code…',
+      importQrWaiting: 'Waiting for scan…',
+      importQrConfirmed: 'Scanned — confirm the login on your phone',
+      importQrDone: 'Signed in',
+      importQrExpired: 'QR code expired — generate a new one',
+      importQrRegenerate: 'Regenerate',
+      importQrHint: 'Open the NetEase Cloud Music app → “Mine” → the “+” / scan entry, point it at the QR code; the connection completes right after login.',
+      importQqCookieLabel: 'Paste your y.qq.com Cookie',
+      importQqCookieHint: 'Sign in at y.qq.com in a desktop browser → F12 → Network → reload → pick any request → copy the whole Cookie line from Request Headers. It must contain qm_keyst (or qqmusic_key) and uin (or wxuin). The cookie stays on this machine in ~/.dsh/dsh-music/accounts.json (mode 0600).',
+      importQqConnect: 'Connect',
+      importConnecting: 'Connecting…',
+      importSyncNow: 'Import into “Liked”',
+      importSyncing: 'Importing…',
+      importReQr: 'Sign in again (QR)',
+      importDisconnect: 'Disconnect',
+      importLastSync: 'Last import',
+      importNever: 'Not imported yet',
+      importKnown: 'Imported',
+      importResTotal: 'Cloud liked',
+      importResAdded: 'New ♥',
+      importResExisted: 'Already ♥',
+      importResDisliked: 'Skipped (local 👎)',
+      importResUnavailable: 'Unavailable in cloud',
+      importResRemoved: 'Removed in cloud',
+      importResRemovedHint: 'Informational only: local ♥ marks and files are kept',
+      importFootNote: 'Read-only import: your cloud account is never modified and nothing is downloaded — songs are only marked ♥; decide later whether to add them to the library.',
+      importEnabledOff: 'Liked-list import is disabled on this host (config likedSync = false)',
+      importCookieEmpty: 'Paste the cookie first',
+      srcNetease: 'NetEase',
+      srcQq: 'QQ Music',
       tabHistory: 'History',
       historyTitle: 'Listening history',
       historyEmpty: 'No plays yet — go play something from the library.',
@@ -667,6 +745,226 @@ window.__ModuleLoader__.load({
         },
       };
     }
+
+    /* ================================================================
+     * 2b. Minimal QR encoder (Model 2, byte mode, v1–10, EC level M) — renders the
+     *     NetEase login URL as SVG modules. Zero deps; verified with zxing-cpp + OpenCV.
+     *     ================================================================ */
+    /* QR-BEGIN：极简 QR Code 编码器（Model 2，byte 模式，版本 1–10，纠错级 M，自动选版 + 8 掩码择优）。
+       只用于把网易云登录 URL 渲染成二维码；零依赖、纯函数，返回扁平模块矩阵供 SVG 渲染。 */;
+    const QR_EC_LEVEL = 'M';
+    const QR_EC_BITS = { L: 1, M: 0, Q: 3, H: 2 }
+    // [每块纠错码字, 组1块数, 组1数据码字, 组2块数, 组2数据码字]（版本 1–10 × L/M/Q/H，ISO/IEC 18004 表 9）
+    const QR_EC_TABLE = [
+      [[7, 1, 19, 0, 0], [10, 1, 16, 0, 0], [13, 1, 13, 0, 0], [17, 1, 9, 0, 0]],
+      [[10, 1, 34, 0, 0], [16, 1, 28, 0, 0], [22, 1, 22, 0, 0], [28, 1, 16, 0, 0]],
+      [[15, 1, 55, 0, 0], [26, 1, 44, 0, 0], [18, 2, 17, 0, 0], [22, 2, 13, 0, 0]],
+      [[20, 1, 80, 0, 0], [18, 2, 32, 0, 0], [26, 2, 24, 0, 0], [16, 4, 9, 0, 0]],
+      [[26, 1, 108, 0, 0], [24, 2, 43, 0, 0], [18, 2, 15, 2, 16], [22, 2, 11, 2, 12]],
+      [[18, 2, 68, 0, 0], [16, 4, 27, 0, 0], [24, 4, 19, 0, 0], [28, 4, 15, 0, 0]],
+      [[20, 2, 78, 0, 0], [18, 4, 31, 0, 0], [18, 2, 14, 4, 15], [26, 4, 13, 1, 14]],
+      [[24, 2, 97, 0, 0], [22, 2, 38, 2, 39], [22, 4, 18, 2, 19], [26, 4, 14, 2, 15]],
+      [[30, 2, 116, 0, 0], [22, 3, 36, 2, 37], [20, 4, 16, 4, 17], [24, 4, 12, 4, 13]],
+      [[18, 2, 68, 2, 69], [26, 4, 43, 1, 44], [24, 6, 19, 2, 20], [28, 6, 15, 2, 16]],
+    ];
+    // 校正图形中心坐标（版本 1–10）
+    // 总码字数（版本 1–10）
+    const QR_TOTAL = [26, 44, 70, 100, 134, 172, 196, 242, 292, 346];
+    const QR_ALIGN = [[], [6, 18], [6, 22], [6, 26], [6, 30], [6, 34], [6, 22, 38], [6, 24, 42], [6, 26, 46], [6, 28, 50]];
+    const QR_GF_EXP = new Uint8Array(512);
+    const QR_GF_LOG = new Uint8Array(256);
+    for (let i = 0, x = 1; i < 255; i++) { QR_GF_EXP[i] = x; QR_GF_LOG[x] = i; x <<= 1; if (x & 0x100) x ^= 0x11d }
+    for (let i = 255; i < 512; i++) QR_GF_EXP[i] = QR_GF_EXP[i - 255];
+    const qrGfMul = (a, b) => (a && b ? QR_GF_EXP[QR_GF_LOG[a] + QR_GF_LOG[b]] : 0);
+    // RS 生成多项式 ∏(x - α^i)，降幂系数，首项为 1
+    function qrRsGenerator(degree) {
+      let poly = [1];
+      for (let i = 0; i < degree; i++) {
+        const next = new Array(poly.length + 1).fill(0);
+        for (let j = 0; j < poly.length; j++) { next[j] ^= poly[j]; next[j + 1] ^= qrGfMul(poly[j], QR_GF_EXP[i]) }
+        poly = next;
+      }
+      return poly;
+    }
+    function qrRsRemainder(data, degree) {
+      const gen = qrRsGenerator(degree);
+      const rem = new Uint8Array(degree);
+      for (const d of data) {
+        const factor = d ^ rem[0];
+        rem.copyWithin(0, 1);
+        rem[degree - 1] = 0;
+        if (factor) for (let i = 0; i < degree; i++) rem[i] ^= qrGfMul(gen[i + 1], factor);
+      }
+      return rem;
+    }
+    /** 把字节编成数据码字：模式指示 0100 + 8/16 位长度 + 数据 + 终止符 + 0xEC/0x11 填充 */
+    function qrCodewords(bytes, version, dataCodewords) {
+      const capacityBits = dataCodewords * 8;
+      const bits = [];
+      const push = (value, n) => { for (let i = n - 1; i >= 0; i--) bits.push((value >>> i) & 1) }
+      push(4, 4);
+      push(bytes.length, version <= 9 ? 8 : 16);
+      for (const b of bytes) push(b, 8);
+      push(0, Math.min(4, capacityBits - bits.length));
+      if (bits.length % 8) push(0, 8 - (bits.length % 8));
+      for (let pad = 0xec; bits.length < capacityBits; pad ^= 0xec ^ 0x11) push(pad, 8);
+      const out = new Uint8Array(dataCodewords);
+      for (let i = 0; i < dataCodewords; i++) { let v = 0; for (let j = 0; j < 8; j++) v = (v << 1) | bits[i * 8 + j]; out[i] = v }
+      return out;
+    }
+    /** 分块 + RS 纠错 + 交织 */
+    function qrInterleave(data, spec) {
+      const [ecPerBlock, g1Count, g1Data, g2Count, g2Data] = spec;
+      const blocks = [];
+      let offset = 0;
+      for (let i = 0; i < g1Count; i++) { blocks.push(Array.from(data.slice(offset, offset + g1Data))); offset += g1Data }
+      for (let i = 0; i < g2Count; i++) { blocks.push(Array.from(data.slice(offset, offset + g2Data))); offset += g2Data }
+      const ecc = blocks.map((b) => Array.from(qrRsRemainder(Uint8Array.from(b), ecPerBlock)));
+      const maxData = Math.max(g1Data, g2Data);
+      const out = [];
+      for (let i = 0; i < maxData; i++) for (const b of blocks) if (i < b.length) out.push(b[i]);
+      for (let i = 0; i < ecPerBlock; i++) for (const e of ecc) out.push(e[i]);
+      return Uint8Array.from(out);
+    }
+    function qrBuildBase(version) {
+      const size = version * 4 + 17;
+      const modules = new Uint8Array(size * size);
+      const isFunction = new Uint8Array(size * size);
+      const set = (r, c, v) => { modules[r * size + c] = v; isFunction[r * size + c] = 1 }
+      const finder = (r0, c0) => {
+        for (let r = -1; r <= 7; r++) for (let c = -1; c <= 7; c++) {
+          const rr = r0 + r, cc = c0 + c;
+          if (rr < 0 || cc < 0 || rr >= size || cc >= size) continue;
+          const dark = r >= 0 && r <= 6 && c >= 0 && c <= 6 && (r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4));
+          set(rr, cc, dark ? 1 : 0);
+        }
+      }
+      finder(0, 0); finder(0, size - 7); finder(size - 7, 0);
+      for (let i = 8; i < size - 8; i++) { const v = i % 2 === 0 ? 1 : 0; set(6, i, v); set(i, 6, v) }
+      const centers = QR_ALIGN[version - 1];
+      const last = centers.length - 1;
+      for (const ci of centers.keys()) for (const cj of centers.keys()) {
+        if ((ci === 0 && cj === 0) || (ci === 0 && cj === last) || (ci === last && cj === 0)) continue;
+        const cr = centers[ci], cc = centers[cj];
+        for (let r = -2; r <= 2; r++) for (let c = -2; c <= 2; c++) set(cr + r, cc + c, Math.max(Math.abs(r), Math.abs(c)) !== 1 ? 1 : 0);
+      }
+      set(size - 8, 8, 1);
+      for (let i = 0; i <= 8; i++) if (i !== 6) { isFunction[8 * size + i] = 1; isFunction[i * size + 8] = 1 }
+      for (let i = 0; i < 8; i++) isFunction[8 * size + size - 1 - i] = 1;
+      for (let i = 0; i < 7; i++) isFunction[(size - 1 - i) * size + 8] = 1;
+      if (version >= 7) {
+        let rem = version << 12;
+        for (let i = 17; i >= 12; i--) if ((rem >>> i) & 1) rem ^= 0x1f25 << (i - 12);
+        const bits = (version << 12) | (rem & 0xfff);
+        for (let i = 0; i < 18; i++) {
+          const bit = (bits >>> i) & 1;
+          const a = size - 11 + (i % 3), b = Math.floor(i / 3);
+          set(b, a, bit);
+          set(a, b, bit);
+        }
+      }
+      return { size, modules, isFunction }
+    }
+    const QR_MASKS = [
+      (x, y) => (x + y) % 2 === 0,
+      (x, y) => y % 2 === 0,
+      (x, y) => x % 3 === 0,
+      (x, y) => (x + y) % 3 === 0,
+      (x, y) => (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0,
+      (x, y) => ((x * y) % 2) + ((x * y) % 3) === 0,
+      (x, y) => (((x * y) % 2) + ((x * y) % 3)) % 2 === 0,
+      (x, y) => (((x + y) % 2) + ((x * y) % 3)) % 2 === 0,
+    ];
+    function qrWriteFormat(base, mask) {
+      const { size, modules } = base;
+      const data = QR_EC_BITS[QR_EC_LEVEL] << 3 | mask;
+      let rem = data << 10;
+      for (let i = 14; i >= 10; i--) if ((rem >>> i) & 1) rem ^= 0x537 << (i - 10);
+      const bits = ((data << 10) | (rem & 0x3ff)) ^ 0x5412;
+      const put = (r, c, i) => { modules[r * size + c] = (bits >>> i) & 1 }
+      for (let i = 0; i <= 5; i++) put(i, 8, i);
+      put(7, 8, 6); put(8, 8, 7); put(8, 7, 8);
+      for (let i = 9; i < 15; i++) put(8, 14 - i, i);
+      for (let i = 0; i < 8; i++) put(8, size - 1 - i, i);
+      for (let i = 8; i < 15; i++) put(size - 15 + i, 8, i);
+      modules[(size - 8) * size + 8] = 1;
+    }
+    function qrPenalty(base) {
+      const { size, modules } = base;
+      let score = 0;
+      const at = (r, c) => modules[r * size + c];
+      // N1：行/列连续同色 ≥5
+      for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) {
+        let runH = 1;
+        while (c + runH < size && at(r, c + runH) === at(r, c)) runH++
+        let runV = 1;
+        while (r + runV < size && at(r + runV, c) === at(r, c)) runV++
+        if (runH >= 5) score += 3 + runH - 5;
+        if (runV >= 5) score += 3 + runV - 5;
+      }
+      // N2：2×2 同色块
+      for (let r = 0; r < size - 1; r++) for (let c = 0; c < size - 1; c++) {
+        const v = at(r, c);
+        if (at(r, c + 1) === v && at(r + 1, c) === v && at(r + 1, c + 1) === v) score += 3;
+      }
+      // N3：1011101 且一侧有 0000（行与列）
+      const P1 = 0b00001011101, P2 = 0b10111010000;
+      const scan = (get) => {
+        let acc = 0;
+        for (let i = 0; i < size; i++) {
+          acc = ((acc << 1) | get(i)) & 0x7ff;
+          if (i >= 10 && (acc === P1 || acc === P2)) score += 40;
+        }
+      }
+      for (let r = 0; r < size; r++) { scan((c) => at(r, c)); scan((c) => at(c, r)) }
+      // N4：暗模块比例偏离 50%
+      let dark = 0;
+      for (let i = 0; i < modules.length; i++) dark += modules[i];
+      score += 10 * Math.floor(Math.abs((dark * 100) / modules.length - 50) / 5);
+      return score;
+    }
+    /** 入口：文本 → { version, size, mask, modules: Uint8Array(size*size) }；超出容量返回 null */
+    function qrEncode(text, encoder = new TextEncoder()) {
+      const bytes = encoder.encode(String(text ?? ''));
+      let version = 0;
+      let spec = null;
+      let dataCodewords = 0;
+      for (let v = 1; v <= 10; v++) {
+        const s = QR_EC_TABLE[v - 1][['L', 'M', 'Q', 'H'].indexOf(QR_EC_LEVEL)];
+        const dc = QR_TOTAL[v - 1] - s[0] * (s[1] + s[3]);
+        const countBits = v <= 9 ? 8 : 16;
+        if (4 + countBits + bytes.length * 8 <= dc * 8) { version = v; spec = s; dataCodewords = dc; break }
+      }
+      if (!version) return null;
+      const base = qrBuildBase(version);
+      const codewords = qrInterleave(qrCodewords(bytes, version, dataCodewords), spec);
+      const { size, modules, isFunction } = base;
+      let bit = 0;
+      const totalBits = codewords.length * 8;
+      for (let right = size - 1; right >= 1; right -= 2) {
+        if (right === 6) right = 5;
+        for (let vert = 0; vert < size; vert++) for (let j = 0; j < 2; j++) {
+          const x = right - j;
+          const upward = ((right + 1) & 2) === 0;
+          const y = upward ? size - 1 - vert : vert;
+          if (isFunction[y * size + x] || bit >= totalBits) continue;
+          modules[y * size + x] = (codewords[bit >>> 3] >>> (7 - (bit & 7))) & 1;
+          bit++
+        }
+      }
+      // 8 个掩码择优：在未掩码副本上逐个试
+      const clean = Uint8Array.from(modules);
+      let best = null;
+      for (let m = 0; m < 8; m++) {
+        modules.set(clean);
+        for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (!isFunction[y * size + x] && QR_MASKS[m](x, y)) modules[y * size + x] ^= 1;
+        qrWriteFormat(base, m);
+        const score = qrPenalty(base);
+        if (!best || score < best.score) best = { mask: m, score, modules: Uint8Array.from(modules) }
+      }
+      return { version, size, mask: best.mask, modules: best.modules }
+    }
+    /* QR-END */
 
     /* ================================================================
      * 3. Original icon set (hand-drawn paths, currentColor, 24 viewBox)
@@ -766,6 +1064,12 @@ window.__ModuleLoader__.load({
       ['path', { d: 'M12 4v10' }],
       ['path', { d: 'M8 10.5 12 14.5 16 10.5' }],
       ['path', { d: 'M5 18.5h14' }],
+    ]);
+    /* 喜欢列表导入：箭头进入一个盒（区别于下载的“落入托盘”）。 */
+    const IconImport = makeIcon([
+      ['path', { d: 'M10 5H6.5A1.5 1.5 0 0 0 5 6.5v11A1.5 1.5 0 0 0 6.5 19h11a1.5 1.5 0 0 0 1.5-1.5V14' }],
+      ['path', { d: 'M14 4h6v6' }],
+      ['path', { d: 'M20 4l-9 9' }],
     ]);
     const IconHeart = makeIcon([
       ['path', { d: 'M12 20s-7.4-4.6-9.3-9C1.4 7.6 3.4 4.5 6.6 4.5c2 0 3.4 1.1 4.2 2.4l1.2 2 1.2-2c.8-1.3 2.2-2.4 4.2-2.4 3.2 0 5.2 3.1 3.9 6.5-1.9 4.4-9.3 9-9.3 9z' }],
@@ -1037,6 +1341,42 @@ window.__ModuleLoader__.load({
 .dshm-sync-chips{display:flex;gap:8px;flex-wrap:wrap;}
 .dshm-sync-chip{font-size:11.5px;border:1px solid var(--dsw-alias-border-l1);border-radius:99px;padding:4px 12px;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-2);}
 .dshm-sync-detail{font-size:11.5px;color:var(--dsw-alias-label-tertiary);line-height:1.7;}
+.dshm-sync-chip-ok{color:var(--dsw-alias-state-success-primary);border-color:currentColor;}
+.dshm-sync-chip-warn{color:var(--dsw-alias-state-warn-primary);border-color:currentColor;}
+.dshm-imp-result{display:flex;flex-direction:column;gap:8px;}
+.dshm-state-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+.dshm-chipbtn-plain{background:transparent;}
+.dshm-src-chips{display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle;}
+.dshm-src-chip{font-size:10px;line-height:1;border:1px solid var(--dsw-alias-border-l1);border-radius:99px;padding:2px 6px;color:var(--dsw-alias-label-tertiary);background:var(--dsw-alias-bg-layer-2);}
+.dshm-src-netease{color:var(--dsw-alias-state-error-primary);}
+.dshm-src-qq{color:var(--dsw-alias-label-secondary);}
+.dshm-modal-mask{position:absolute;inset:0;background:var(--dsw-alias-bg-mask-1);z-index:8;display:flex;align-items:center;justify-content:center;padding:20px;animation:dshm-fade-in .15s ease-out;}
+.dshm-modal{width:min(520px,100%);max-height:100%;overflow:auto;box-sizing:border-box;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:14px;box-shadow:0 18px 48px var(--dsw-alias-bg-mask-2);display:flex;flex-direction:column;animation:dshm-modal-in .18s ease-out;}
+.dshm-modal-head{flex:none;display:flex;align-items:center;gap:8px;padding:12px 12px 12px 16px;border-bottom:1px solid var(--dsw-alias-border-l1);color:var(--dsw-alias-label-primary);}
+.dshm-modal-title{font-size:14px;font-weight:600;flex:1;}
+.dshm-imp-tabs{display:flex;gap:4px;padding:10px 16px 0;}
+.dshm-imp-tab{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12.5px;border:1px solid transparent;border-radius:9px;padding:6px 12px;cursor:pointer;color:var(--dsw-alias-label-secondary);background:transparent;}
+.dshm-imp-tab-on{background:var(--dsw-alias-bg-layer-2);border-color:var(--dsw-alias-border-l1);color:var(--dsw-alias-label-primary);}
+.dshm-imp-dot{width:7px;height:7px;border-radius:50%;background:var(--dsw-alias-state-success-primary);display:inline-block;flex:none;}
+.dshm-imp-dot-off{background:var(--dsw-alias-label-tertiary);opacity:.55;}
+.dshm-modal-body{display:flex;flex-direction:column;gap:12px;padding:14px 16px;}
+.dshm-modal-foot{flex:none;padding:10px 16px 14px;font-size:11.5px;line-height:1.6;color:var(--dsw-alias-label-tertiary);border-top:1px solid var(--dsw-alias-border-l1);}
+.dshm-imp-account{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:10px;padding:10px 12px;}
+.dshm-imp-nick{font-weight:600;}
+.dshm-imp-time{font-size:11.5px;color:var(--dsw-alias-label-tertiary);}
+.dshm-imp-qr{display:flex;gap:16px;align-items:flex-start;}
+.dshm-imp-qr-box{flex:none;width:196px;height:196px;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--dsw-alias-label-tertiary);}
+.dshm-imp-qr-fallback{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:12px;color:var(--dsw-alias-label-tertiary);text-align:center;padding:12px;}
+.dshm-imp-qr-side{flex:1;display:flex;flex-direction:column;gap:10px;min-width:0;}
+.dshm-imp-step{font-size:13px;font-weight:600;color:var(--dsw-alias-label-primary);}
+.dshm-imp-hint{font-size:12px;line-height:1.7;color:var(--dsw-alias-label-tertiary);}
+.dshm-imp-qq{display:flex;flex-direction:column;gap:8px;}
+.dshm-imp-label{font-size:12.5px;font-weight:600;color:var(--dsw-alias-label-primary);}
+.dshm-imp-cookie{font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:9px;padding:8px 10px;resize:vertical;min-height:96px;box-sizing:border-box;width:100%;}
+.dshm-imp-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.dshm-qr{display:block;}
+@keyframes dshm-modal-in{from{opacity:0;transform:translateY(6px) scale(.98);}to{opacity:1;transform:none;}}
+@media (max-width:520px){.dshm-imp-qr{flex-direction:column;align-items:center;}.dshm-modal{border-radius:12px;}}
 .dshm-hrow{display:grid;grid-template-columns:40px minmax(0,1fr) auto auto auto;gap:10px;align-items:center;padding:6px 8px;border-radius:10px;}
 .dshm-hrow-click{cursor:pointer;}
 .dshm-hrow-click:hover{background:var(--dsw-alias-interactive-bg-hover);}
@@ -1198,7 +1538,7 @@ window.__ModuleLoader__.load({
 .dshm-artist-btn{appearance:none;background:none;border:0;color:inherit;font:inherit;padding:0;cursor:pointer;text-align:left;display:inline-flex;align-items:center;gap:5px;max-width:100%;vertical-align:middle;}
 .dshm-artist-btn:hover{text-decoration:underline;text-underline-offset:3px;}
 @media (prefers-reduced-motion:reduce){
-  .dshm-eq-on i,.dshm-tab-dot,.dshm-skel-box,.dshm-spin,.dshm-state-spin,.dshm-mini,.dshm-mini-fab,.dshm-drawer,.dshm-welcome,.dshm-welcome-fish{animation:none;}
+  .dshm-eq-on i,.dshm-tab-dot,.dshm-skel-box,.dshm-spin,.dshm-state-spin,.dshm-mini,.dshm-mini-fab,.dshm-drawer,.dshm-welcome,.dshm-welcome-fish,.dshm-modal,.dshm-modal-mask{animation:none;}
   .dshm-mini{animation:none;}
   .dshm-row,.dshm-iconbtn,.dshm-chipbtn,.dshm-playbtn,.dshm-slider-thumb,.dshm-mini-progress>div,.dshm-reco-card,.dshm-dl-bar>div,.dshm-like-btn,.dshm-playround,.dshm-artcard,.dshm-mode-btn{transition:none;}
 }
@@ -1302,6 +1642,14 @@ window.__ModuleLoader__.load({
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
         }),
         previewStatus: () => request('/dsh-music/api/library/preview/status'),
+        /* 喜欢列表导入（网易云 / QQ 音乐，只读） */
+        likedSyncStatus: () => request('/dsh-music/api/liked-sync/status'),
+        likedSyncNeteaseQr: () => request('/dsh-music/api/liked-sync/netease/qr', { method: 'POST' }),
+        likedSyncNeteaseQrPoll: (key) => request('/dsh-music/api/liked-sync/netease/qr/poll?key=' + encodeURIComponent(key || '')),
+        likedSyncQqConnect: (cookie) => request('/dsh-music/api/liked-sync/qq/connect', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cookie }),
+        }),
+        likedSyncAction: (provider, action) => request('/dsh-music/api/liked-sync/' + encodeURIComponent(provider) + '/' + encodeURIComponent(action), { method: 'POST' }),
       };
     }
 
@@ -1839,6 +2187,128 @@ window.__ModuleLoader__.load({
       }
       load();
       return { source: store, toggle, setDislike, isLiked, isDisliked, load };
+    }
+
+    /* ================================================================
+     * 6d-2. 喜欢列表导入服务：网易云扫码 / QQ 音乐 Cookie → 本地「我喜欢」
+     *       只读契约（host/liked-sync.js）：不改云端、不下载，只标记 ♥。
+     *       store 字段：open/tab/enabled/providers/loaded/error ·
+     *       qr{key,url,matrix}/qrPhase(idle|loading|waiting|confirmed|done|expired|error)/qrMessage ·
+     *       qqCookie/connecting · syncing/provider · result · notice
+     * ================================================================ */
+    function createLikedSyncService(api, onChange) {
+      const store = createStore({
+        open: false, tab: 'netease', enabled: true, providers: {}, loaded: false, error: null,
+        qr: null, qrPhase: 'idle', qrMessage: '', qqCookie: '', connecting: false, syncing: null, result: null, notice: null,
+      });
+      let pollTimer = null;
+      let pollSeq = 0;
+      function stopPolling() {
+        if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+        pollSeq++;
+        return pollSeq;
+      }
+      function isConnected(provider) {
+        const p = store.getSnapshot().providers[provider];
+        return !!(p && p.connected);
+      }
+      async function load() {
+        try {
+          const s = await api.likedSyncStatus();
+          /* 不碰 error：同步/连接失败后紧跟的 load() 不能把主机文案冲掉 */
+          store.set({ enabled: !s || s.enabled !== false, providers: (s && s.providers) || {}, loaded: true });
+        } catch (err) {
+          store.set({ loaded: true, error: (err && err.message) || String(err) });
+        }
+      }
+      function open(tab) {
+        const next = tab || store.getSnapshot().tab || 'netease';
+        stopPolling();
+        store.set({ open: true, tab: next, qr: null, qrPhase: 'idle', qrMessage: '', result: null, notice: null, error: null });
+        load();
+        if (next === 'netease' && !isConnected('netease')) startQr();
+      }
+      function close() {
+        stopPolling();
+        store.set({ open: false });
+      }
+      function selectTab(tab) {
+        stopPolling();
+        store.set({ tab, qr: null, qrPhase: 'idle', qrMessage: '', result: null, notice: null, error: null });
+        if (tab === 'netease' && !isConnected('netease')) startQr();
+      }
+      async function startQr() {
+        const seq = stopPolling();
+        store.set({ qr: null, qrPhase: 'loading', qrMessage: '', error: null });
+        try {
+          const res = await api.likedSyncNeteaseQr();
+          const matrix = qrEncode(res && res.url);
+          if (!matrix) throw new Error('QR too long');
+          if (seq !== pollSeq) return;
+          store.set({ qr: { key: res.key, url: res.url, matrix }, qrPhase: 'waiting', qrMessage: '' });
+          pollQr(res.key, seq);
+        } catch (err) {
+          if (seq !== pollSeq) return;
+          store.set({ qrPhase: 'error', qrMessage: (err && err.message) || String(err) });
+        }
+      }
+      async function pollQr(key, seq) {
+        try {
+          const r = await api.likedSyncNeteaseQrPoll(key);
+          if (seq !== pollSeq) return;
+          const code = r && r.code;
+          if (code === 803) {
+            store.set({ qrPhase: 'done', qrMessage: (r && r.message) || '', notice: r && r.account ? { provider: 'netease', nickname: r.account.nickname || '' } : null });
+            await load();
+            return;
+          }
+          if (code === 800 || code === 804) {
+            store.set({ qrPhase: 'expired', qrMessage: (r && r.message) || '' });
+            return;
+          }
+          store.set({ qrPhase: code === 802 ? 'confirmed' : 'waiting', qrMessage: (r && r.message) || '' });
+          pollTimer = setTimeout(() => { pollTimer = null; pollQr(key, seq); }, 2000);
+        } catch (err) {
+          if (seq !== pollSeq) return;
+          /* 主机只对未知/过期 key 返回 404；其余按过期处理，让用户重新生成。 */
+          store.set({ qrPhase: 'expired', qrMessage: (err && err.message) || String(err) });
+        }
+      }
+      function setQqCookie(value) {
+        store.set({ qqCookie: String(value || ''), error: null });
+      }
+      async function connectQq() {
+        const cookie = (store.getSnapshot().qqCookie || '').trim();
+        if (!cookie) { store.set({ error: 'importCookieEmpty' }); return; }
+        store.set({ connecting: true, error: null, result: null });
+        try {
+          const res = await api.likedSyncQqConnect(cookie);
+          store.set({ connecting: false, qqCookie: '', notice: { provider: 'qq', nickname: (res && res.account && res.account.nickname) || '' } });
+          await load();
+        } catch (err) {
+          store.set({ connecting: false, error: (err && err.message) || String(err) });
+        }
+      }
+      async function sync(provider) {
+        if (store.getSnapshot().syncing) return;
+        store.set({ syncing: provider, error: null, result: null, notice: null });
+        try {
+          const res = await api.likedSyncAction(provider, 'sync');
+          store.set({ syncing: null, result: Object.assign({ provider }, res || {}) });
+          if (onChange) onChange(provider, res);
+        } catch (err) {
+          store.set({ syncing: null, error: (err && err.message) || String(err) });
+        }
+        await load();
+      }
+      async function disconnect(provider) {
+        store.set({ error: null, result: null });
+        try { await api.likedSyncAction(provider, 'disconnect'); } catch (err) { store.set({ error: (err && err.message) || String(err) }); }
+        await load();
+        if (provider === 'netease' && store.getSnapshot().open) startQr();
+      }
+      function dispose() { stopPolling(); }
+      return { source: store, load, open, close, selectTab, startQr, setQqCookie, connectQq, sync, disconnect, dispose };
     }
 
     function createPreviewService(api) {
@@ -2679,7 +3149,13 @@ window.__ModuleLoader__.load({
                   onClick: (e) => { e.stopPropagation(); onOpenArtist(track.artist); },
                 }, track.artist)
               : (track.artist || t('unknownArtist')),
-            track.album ? ' · ' + track.album : '')),
+            track.album ? ' · ' + track.album : '',
+            track.sources
+              ? h('span', { className: 'dshm-src-chips' }, Object.keys(track.sources).map((p) => {
+                const label = p === 'netease' ? t('srcNetease') : p === 'qq' ? t('srcQq') : p;
+                return h('span', { key: p, className: 'dshm-src-chip dshm-src-' + p, title: label }, label);
+              }))
+              : null)),
         h('span', { className: 'dshm-row-dur' }, formatTime(track.duration)),
         likes ? h(LikeButton, { t, item: track, likes, useLikes }) : null,
         likes ? h(DislikeButton, { t, item: track, likes, useLikes }) : null,
@@ -2693,7 +3169,7 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 9. Library view — search, grouping, play-all / shuffle
      * ================================================================ */
-    function LibraryView({ t, player, library, sync, download, preview, likes, openArtistPage, artistImages, useSync, useDownload, useLibrary, usePlayer, useLikes, useArtistImages }) {
+    function LibraryView({ t, player, library, sync, download, preview, likes, openArtistPage, artistImages, likedSync, useSync, useDownload, useLibrary, usePlayer, useLikes, useArtistImages, useLikedSync }) {
       const status = useLibrary((s) => s.status);
       const tracks = useLibrary((s) => s.tracks);
       const error = useLibrary((s) => s.error);
@@ -2718,10 +3194,13 @@ window.__ModuleLoader__.load({
        * for everything inside the library, so those rows are directly playable. */
       const likedTracks = useMemo(() => likeItems.map((it) => ({
         id: it.trackId || ('liked::' + it.key),
+        key: it.key,
         title: it.title, artist: it.artist, album: it.album,
         duration: it.durationMs ? Math.round(it.durationMs / 1000) : (it.duration || 0),
         audioUrl: it.audioUrl || null, coverUrl: it.coverUrl || null,
         muted: !it.audioUrl,
+        /* 来自网易云 / QQ 音乐导入的条目带 sources，行内显示来源小标 */
+        sources: it.sources && Object.keys(it.sources).length ? it.sources : null,
       })), [likeItems]);
       const likedPlayable = useMemo(() => likedTracks.filter((tr) => !!tr.audioUrl), [likedTracks]);
 
@@ -2862,10 +3341,15 @@ window.__ModuleLoader__.load({
           ? h(EmptyState, {
               icon: h(IconHeart, { size: 28 }),
               title: t('likesEmptyTitle'), body: t('likesEmptyBody'),
-            }, h('button', {
-              type: 'button', className: 'dshm-chipbtn dshm-chipbtn-primary',
-              onClick: () => setLibTab('library'),
-            }, h(IconNote, { size: 14 }), t('goLibrary')))
+            }, h('div', { className: 'dshm-state-actions' },
+                likedSync ? h('button', {
+                  type: 'button', className: 'dshm-chipbtn dshm-chipbtn-primary',
+                  onClick: () => likedSync.open('netease'),
+                }, h(IconImport, { size: 14 }), t('importBtn')) : null,
+                h('button', {
+                  type: 'button', className: cx('dshm-chipbtn', likedSync && 'dshm-chipbtn-plain'),
+                  onClick: () => setLibTab('library'),
+                }, h(IconNote, { size: 14 }), t('goLibrary'))))
           : likedFiltered.length === 0
             ? h(EmptyState, {
                 icon: h(IconSearch, { size: 28 }),
@@ -2945,6 +3429,7 @@ window.__ModuleLoader__.load({
       }
 
       const busy = status === 'loading';
+      const importOpen = useLikedSync ? useLikedSync((s) => s.open) : false;
       return h(React.Fragment, null,
         sync ? h(SyncPanel, { t, sync, useSync }) : null,
         rowError ? h('div', { className: 'dshm-errorline', role: 'alert', style: { margin: '8px 24px 0' } }, rowError) : null,
@@ -2955,7 +3440,12 @@ window.__ModuleLoader__.load({
                 onClick: () => setLibTab('library'),
               }, '← ' + t('favsBack')),
               h('span', { className: 'dshm-favs-title', style: { marginLeft: '4px' } }, t('libTabLikes')),
-              h('span', { className: 'dshm-count' }, likeItems.length + ' ' + t('tracksUnit')))
+              h('span', { className: 'dshm-count' }, likeItems.length + ' ' + t('tracksUnit')),
+              likedSync ? h('button', {
+                type: 'button', className: 'dshm-chipbtn', style: { marginLeft: 'auto' },
+                title: t('importBtnHint'),
+                onClick: () => likedSync.open(),
+              }, h(IconImport, { size: 13 }), t('importBtn')) : null)
           : h('div', { className: 'dshm-favs' },
               h('div', { className: 'dshm-favs-head' },
                 h(IconHeart, { size: 14, style: { color: 'var(--dsw-alias-state-error-primary)' } }),
@@ -3014,6 +3504,12 @@ window.__ModuleLoader__.load({
             'aria-label': mode.label, title: mode.hint + ' · ' + t('modeCycleHint'),
             onClick: () => player.cycleMode(),
           }, h(mode.icon, { size: 14 })),
+          likedSync ? h('button', {
+            type: 'button', className: 'dshm-chipbtn',
+            title: t('importBtnHint'),
+            disabled: busy,
+            onClick: () => likedSync.open(),
+          }, h(IconImport, { size: 13 }), t('importBtn')) : null,
           sync ? h('button', {
             type: 'button', className: cx('dshm-chipbtn', !syncUsable && 'dshm-chipbtn-off'),
             disabled: syncState === 'running' || busy || !syncUsable,
@@ -3027,7 +3523,8 @@ window.__ModuleLoader__.load({
         playNotice
           ? h('div', { className: 'dshm-mode-hint', style: { margin: '0 20px 6px', textAlign: 'right' }, role: 'status' }, playNotice)
           : null,
-        content);
+        content,
+        likedSync && importOpen ? h(LikedImportDialog, { t, likedSync, useLikedSync }) : null);
     }
 
     /* ================================================================
@@ -3665,6 +4162,172 @@ window.__ModuleLoader__.load({
     }
 
     /* ================================================================
+     * 11b-2. 喜欢列表导入对话框：网易云扫码 / QQ 音乐 Cookie → 只读导入「我喜欢」
+     *      二维码由本地 qrEncode 生成，以 SVG 渲染（静区 4 模块，crispEdges）。
+     * ================================================================ */
+    /* 上次同步时间：本地区域短格式，跨年才带年份（zh → 2025/12/31 23:59） */
+    function formatSyncTime(ts) {
+      const d = new Date(ts);
+      if (!(d instanceof Date) || Number.isNaN(d.getTime())) return '';
+      const sameYear = d.getFullYear() === new Date().getFullYear();
+      return d.toLocaleString(undefined, Object.assign(
+        sameYear ? {} : { year: 'numeric' },
+        { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' },
+      ));
+    }
+
+    function QrSvg({ matrix, size = 196, label }) {
+      if (!matrix) return null;
+      const n = matrix.size;
+      const quiet = 4;
+      const cells = [];
+      for (let y = 0; y < n; y++) {
+        for (let x = 0; x < n; x++) {
+          if (matrix.modules[y * n + x]) cells.push(h('rect', { key: y + ':' + x, x: quiet + x, y: quiet + y, width: 1, height: 1 }));
+        }
+      }
+      return h('svg', {
+        className: 'dshm-qr', viewBox: '-' + quiet + ' -' + quiet + ' ' + (n + 2 * quiet) + ' ' + (n + 2 * quiet),
+        width: size, height: size, shapeRendering: 'crispEdges', role: 'img', 'aria-label': label,
+      },
+        h('rect', { x: -quiet, y: -quiet, width: n + 2 * quiet, height: n + 2 * quiet, fill: '#fff' }),
+        h('g', { fill: '#000' }, cells));
+    }
+
+    function LikedImportDialog({ t, likedSync, useLikedSync }) {
+      const s = useLikedSync((st) => st);
+      const tab = s.tab || 'netease';
+      const isNetease = tab === 'netease';
+      const prov = (s.providers && s.providers[tab]) || null;
+      const connected = !!(prov && prov.connected);
+      const syncing = s.syncing === tab;
+      const result = s.result && s.result.provider === tab ? s.result : null;
+      const last = prov && prov.lastResult && !syncing ? prov.lastResult : null;
+      const shown = result || last;
+      useEffect(() => {
+        function onDocKey(e) {
+          if (e.key === 'Escape') { e.preventDefault(); likedSync.close(); }
+        }
+        document.addEventListener('keydown', onDocKey, true);
+        return () => document.removeEventListener('keydown', onDocKey, true);
+      }, [likedSync]);
+
+      const chips = [
+        ['importResTotal', shown && shown.total],
+        ['importResAdded', shown && shown.added],
+        ['importResExisted', shown && shown.existed],
+        ['importResDisliked', shown && shown.skippedDisliked],
+        ['importResUnavailable', shown && shown.unavailable],
+        ['importResRemoved', shown && shown.removed],
+      ];
+      const phaseText = {
+        loading: t('importQrLoading'), waiting: t('importQrWaiting'), confirmed: t('importQrConfirmed'),
+        done: t('importQrDone'), expired: t('importQrExpired'), error: s.qrMessage || t('importQrExpired'),
+      }[s.qrPhase] || '';
+      const qrAlive = !!s.qr && (s.qrPhase === 'waiting' || s.qrPhase === 'confirmed');
+
+      const tabs = [['netease', t('importTabNetease'), s.providers && s.providers.netease], ['qq', t('importTabQq'), s.providers && s.providers.qq]]
+        .map(([id, label, p]) => h('button', {
+          key: id, type: 'button', role: 'tab', 'aria-selected': tab === id,
+          className: cx('dshm-imp-tab', tab === id && 'dshm-imp-tab-on'),
+          onClick: () => likedSync.selectTab(id),
+        },
+          label,
+          h('span', { className: cx('dshm-imp-dot', !(p && p.connected) && 'dshm-imp-dot-off'), title: p && p.connected ? t('importConnected') : t('importNotConnected') })));
+
+      const accountCard = connected && prov.account
+        ? h('div', { className: 'dshm-imp-account' },
+            h(IconCheck, { size: 14, style: { color: 'var(--dsw-alias-state-success-primary)' } }),
+            h('span', { className: 'dshm-imp-nick' }, prov.account.nickname || String(prov.account.uid || '')),
+            prov.knownCount != null ? h('span', { className: 'dshm-count' }, t('importKnown') + ' ' + prov.knownCount) : null,
+            prov.lastSyncAt
+              ? h('span', { className: 'dshm-imp-time' }, t('importLastSync') + ' ' + formatSyncTime(prov.lastSyncAt))
+              : h('span', { className: 'dshm-imp-time' }, t('importNever')))
+        : null;
+      const actions = h('div', { className: 'dshm-imp-actions' },
+        h('button', {
+          type: 'button', className: 'dshm-chipbtn dshm-chipbtn-primary',
+          disabled: !!s.syncing || !!(prov && prov.busy),
+          onClick: () => likedSync.sync(tab),
+        }, syncing ? h(IconRefresh, { size: 13, className: 'dshm-spin' }) : h(IconHeart, { size: 13 }),
+            syncing ? t('importSyncing') : t('importSyncNow')),
+        isNetease
+          ? h('button', { type: 'button', className: 'dshm-chipbtn', onClick: () => likedSync.startQr() }, t('importReQr'))
+          : null,
+        h('button', { type: 'button', className: 'dshm-chipbtn', onClick: () => likedSync.disconnect(tab) }, t('importDisconnect')));
+
+      let body;
+      if (s.loaded && !s.enabled) {
+        body = h(EmptyState, { icon: h(IconAlert, { size: 28 }), tone: 'error', title: t('importEnabledOff') });
+      } else if (isNetease) {
+        body = connected
+          ? h(React.Fragment, null, accountCard, actions)
+          : h('div', { className: 'dshm-imp-qr' },
+              h('div', { className: 'dshm-imp-qr-box' },
+                s.qrPhase === 'loading' || (s.qrPhase === 'idle' && !s.loaded)
+                  ? h(IconRefresh, { size: 24, className: 'dshm-spin' })
+                  : qrAlive
+                    ? h(QrSvg, { matrix: s.qr.matrix, label: t('importQrWaiting') })
+                    : h('div', { className: 'dshm-imp-qr-fallback' }, h(IconAlert, { size: 22 }), h('div', null, phaseText))),
+              h('div', { className: 'dshm-imp-qr-side' },
+                h('div', { className: 'dshm-imp-step', role: 'status' }, phaseText),
+                h('div', { className: 'dshm-imp-hint' }, t('importQrHint')),
+                h('div', { className: 'dshm-imp-actions' },
+                  h('button', { type: 'button', className: 'dshm-chipbtn', disabled: s.qrPhase === 'loading', onClick: () => likedSync.startQr() },
+                    h(IconRefresh, { size: 13 }), t('importQrRegenerate')))));
+      } else {
+        body = connected
+          ? h(React.Fragment, null, accountCard, actions)
+          : h('div', { className: 'dshm-imp-qq' },
+              h('label', { className: 'dshm-imp-label' }, t('importQqCookieLabel')),
+              h('textarea', {
+                className: 'dshm-imp-cookie', rows: 5, spellCheck: false,
+                placeholder: 'qm_keyst=…; uin=…; …',
+                value: s.qqCookie, 'aria-label': t('importQqCookieLabel'),
+                onChange: (e) => likedSync.setQqCookie(e.target.value),
+              }),
+              h('div', { className: 'dshm-imp-hint' }, t('importQqCookieHint')),
+              h('div', { className: 'dshm-imp-actions' },
+                h('button', {
+                  type: 'button', className: 'dshm-chipbtn dshm-chipbtn-primary',
+                  disabled: s.connecting || !s.qqCookie.trim(),
+                  onClick: () => likedSync.connectQq(),
+                }, s.connecting ? h(IconRefresh, { size: 13, className: 'dshm-spin' }) : h(IconImport, { size: 13 }),
+                    s.connecting ? t('importConnecting') : t('importQqConnect'))));
+      }
+
+      const resultBlock = shown && shown.total != null
+        ? h('div', { className: 'dshm-imp-result' },
+            h('div', { className: 'dshm-sync-chips' },
+              chips.filter(([, v]) => v != null).map(([key, value]) => h('span', {
+                key, className: cx('dshm-sync-chip', key === 'importResAdded' && value > 0 && 'dshm-sync-chip-ok', key === 'importResRemoved' && value > 0 && 'dshm-sync-chip-warn'),
+                title: key === 'importResRemoved' ? t('importResRemovedHint') : undefined,
+              }, t(key) + ' ' + value))),
+            shown.removedItems && shown.removedItems.length
+              ? h('div', { className: 'dshm-sync-detail' },
+                  shown.removedItems.slice(0, 8).map((it, i) => h('div', { key: i }, '· ' + (it.artist || '') + ' - ' + (it.title || ''))),
+                  shown.removedItems.length > 8 ? h('div', null, '… +' + (shown.removedItems.length - 8)) : null)
+              : null)
+        : null;
+
+      return h('div', { className: 'dshm-modal-mask', onClick: (e) => { if (e.target === e.currentTarget) likedSync.close(); } },
+        h('div', { className: 'dshm-modal', role: 'dialog', 'aria-modal': true, 'aria-label': t('importTitle') },
+          h('div', { className: 'dshm-modal-head' },
+            h(IconImport, { size: 16 }),
+            h('span', { className: 'dshm-modal-title' }, t('importTitle')),
+            h(IconButton, { label: t('importClose'), onClick: () => likedSync.close() }, h(IconClose, { size: 14 }))),
+          h('div', { className: 'dshm-imp-tabs', role: 'tablist' }, tabs),
+          h('div', { className: 'dshm-modal-body' },
+            body,
+            s.notice && (!result) ? h('div', { className: 'dshm-mode-hint', role: 'status' },
+              t('importConnected') + (s.notice.nickname ? '：' + s.notice.nickname : '')) : null,
+            resultBlock,
+            s.error ? h('div', { className: 'dshm-errorline', role: 'alert' }, h(IconAlert, { size: 14 }),
+              s.error === 'importCookieEmpty' ? t('importCookieEmpty') : s.error) : null),
+          h('div', { className: 'dshm-modal-foot' }, t('importFootNote'))));
+    }
+
+    /* ================================================================
      * 11c. History view (S3): plays, completion, skips
      * ================================================================ */
     function fmtDuration(sec) {
@@ -3939,7 +4602,7 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 12. Music panel (main slot): header + tabs + per-view body
      * ================================================================ */
-    function MusicPanel({ t, player, library, lyrics, reco, download, sync, history, likes, preview, warm, openView, openArtistPage, setMiniHidden, ui, artistImages, artistPage, onboarding, useUi, useLibrary, usePlayer, useLyrics, useReco, useDownload, useSync, useHistory, useLikes, usePreview, useWarm, useArtistImages, useArtistPage, useOnboarding }) {
+    function MusicPanel({ t, player, library, lyrics, reco, download, sync, history, likes, preview, warm, openView, openArtistPage, setMiniHidden, ui, artistImages, artistPage, onboarding, likedSync, useUi, useLibrary, usePlayer, useLyrics, useReco, useDownload, useSync, useHistory, useLikes, usePreview, useWarm, useArtistImages, useArtistPage, useOnboarding, useLikedSync }) {
       const view = useUi((s) => s.view);
       const welcomePreview = useUi((s) => s.welcomePreview);
       const onboardingSnap = useOnboarding((st) => st);
@@ -3992,7 +4655,7 @@ window.__ModuleLoader__.load({
       ];
 
       const body = view === 'library'
-        ? h(LibraryView, { t, player, library, sync, download, preview, likes, openArtistPage, artistImages, useLikes, useSync, useDownload, useLibrary, usePlayer, useArtistImages })
+        ? h(LibraryView, { t, player, library, sync, download, preview, likes, openArtistPage, artistImages, likedSync, useLikes, useSync, useDownload, useLibrary, usePlayer, useArtistImages, useLikedSync })
         : view === 'reco'
           ? h(RecoView, { t, reco, download, player, library, likes, preview, history, openArtistPage, warm, useReco, useDownload, useLibrary, useLikes, usePlayer, useHistory, useWarm })
           : view === 'artist'
@@ -4307,11 +4970,15 @@ window.__ModuleLoader__.load({
       const previewService = createPreviewService(api);
       const warmService = createWarmService(previewService, player);
       const likesService = createLikesService(api, () => downloadService.warm());
+      /* 喜欢列表导入（网易云 / QQ 音乐）：导入完成后刷新 ♥ 列表 */
+      const likedSyncService = createLikedSyncService(api, () => likesService.load());
       ctx.effect(() => () => {
         downloadService.dispose();
         syncService.dispose();
         previewService.dispose();
+        likedSyncService.dispose();
       }, 'dsh-music: s3 poll timers');
+      likedSyncService.load();
       downloadService.warm();
       syncService.warm();
       /* First run: open the welcome flow only when the host explicitly says the
@@ -4373,7 +5040,7 @@ window.__ModuleLoader__.load({
         inject: () => ({
           player, library, lyrics: lyricsService, artist: artistService, artistImages: artistImageService, onboarding: onboardingService,
           reco: recoService, download: downloadService, sync: syncService, history: historyService,
-          likes: likesService, preview: previewService, warm: warmService,
+          likes: likesService, preview: previewService, warm: warmService, likedSync: likedSyncService,
           openView, openArtistPage, setMiniHidden, ui, artistPage: artistPageService,
           hooks: {
             player: player.source, library: library.source, ui,
@@ -4381,7 +5048,7 @@ window.__ModuleLoader__.load({
             reco: recoService.source, download: downloadService.source,
             sync: syncService.source, history: historyService.source,
             likes: likesService.source, preview: previewService.source,
-            warm: warmService.source,
+            warm: warmService.source, likedSync: likedSyncService.source,
           },
         }),
       }, MusicPanel)), 'dsh-music: main panel');

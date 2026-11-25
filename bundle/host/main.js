@@ -16,6 +16,10 @@ import { createPreview, registerPreviewRoutes } from './preview.js'
 import { createReco, registerRecoRoutes } from './reco/index.js'
 import { createStarter } from './starter.js'
 import { createOnboarding, registerOnboardingRoutes } from './onboarding.js'
+import { createAccounts } from './accounts.js'
+import { createLikedSync, registerLikedSyncRoutes } from './liked-sync.js'
+import { createNetease } from './providers/netease.js'
+import { createQQMusic } from './providers/qqmusic.js'
 
 export const inject = ['webServer']
 
@@ -37,6 +41,13 @@ export function apply(ctx, config = {}) {
   const reco = createReco({ history, library, storage, config, logger })
   const starter = createStarter({ storage, library, config, logger })
   const onboarding = createOnboarding({ storage, library, starter, config, logger })
+  // QQ 音乐 / 网易云喜欢列表只读导入：默认开启但完全被动（不登录、不同步就不发任何请求）；config.likedSync=false 关闭。
+  const accounts = createAccounts({ storage, logger })
+  const likedSync = config.likedSync === false ? null : createLikedSync({
+    likes, accounts, storage, logger,
+    netease: createNetease({}),
+    qqmusic: createQQMusic({}),
+  })
 
   ctx.effect(() => {
     const disposers = [
@@ -51,9 +62,11 @@ export function apply(ctx, config = {}) {
       ...registerPreviewRoutes(ctx.webServer, { preview, logger }),
       ...registerRecoRoutes(ctx.webServer, { reco, logger }),
       ...registerOnboardingRoutes(ctx.webServer, { onboarding, logger }),
+      ...registerLikedSyncRoutes(ctx.webServer, { likedSync, logger }),
     ]
     return () => {
       for (const dispose of disposers) dispose()
+      if (likedSync) likedSync.dispose()
       reco.dispose()
       starter.dispose()
       preview.dispose()
