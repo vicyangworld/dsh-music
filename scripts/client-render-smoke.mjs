@@ -94,6 +94,10 @@ const fetchMock = async (url, init) => {
         } }
         : url.includes('/liked-sync/netease/qr/poll')
           ? { code: 801, message: '等待扫码' }
+          : url.includes('/liked-sync/qq/qr/poll')
+            ? { code: 801, message: '二维码未失效' }
+          : url.includes('/liked-sync/qq/qr')
+            ? { key: 'qk1', matrix: { size: 21, modules: Array(441).fill(0) }, png: 'data:image/png;base64,AAAA' }
           : url.includes('/liked-sync/netease/qr')
             ? { key: 'k1', url: 'https://music.163.com/login?codekey=8126df9b-smoke' }
             : url.includes('/liked-sync/qq/connect')
@@ -656,19 +660,41 @@ check('step 1 shows the waiting status + regenerate button', has(setTree, (n) =>
   && has(setTree, (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('importQrRegenerate')));
 check('read-only contract is stated under the section title', has(setTree, (n) => cls(n) === 'dshm-wstep-sub' && (n.children || []).includes('setLikedSub')));
 
-/* QQ：未连接 → 三步引导（登录 → 复制命令 → 粘贴即连接并自动导入） */
+/* QQ：未连接 → 默认「手机 QQ 扫码」两步；微信账号可切到 Cookie 三步（登录 → 复制命令 → 粘贴即连接并自动导入） */
 qqConnected = false;
 await svcLiked.load();
 headOf(expand(music(setProps)), 'qq').props.onClick();
+await tick();
 let tree = expand(music(setProps));
-check('QQ row expands into a 3-step guide', isOpen(rowOf(tree, 'qq')) && !isOpen(rowOf(tree, 'netease')) && stepsOf(tree, 'qq').length === 3
-  && has(tree, (n) => cls(n) === 'dshm-step-title' && (n.children || []).includes('importQqStep3')));
+check('QQ row expands into the 2-step scan guide (QR matrix from the host drawn as SVG)', isOpen(rowOf(tree, 'qq')) && !isOpen(rowOf(tree, 'netease'))
+  && stepsOf(tree, 'qq').join('|') === 'dshm-step dshm-step-active|dshm-step dshm-step-todo'
+  && has(tree, (n) => cls(n) === 'dshm-step-title' && (n.children || []).includes('importQqQrStep1'))
+  && !!walk(rowOf(tree, 'qq')).find((n) => cls(n) === 'dshm-qr' && (n.props || {}).viewBox === '-4 -4 29 29'),
+  'steps=' + stepsOf(tree, 'qq').join('|') + ' qr=' + svcLiked.source.getSnapshot().qrPhase);
+check('QQ header says “waiting for scan” while its QR is alive', says(headOf(tree, 'qq'), 'importQrWaiting')
+  && cls(walk(headOf(tree, 'qq')).find((n) => cls(n).startsWith('dshm-prv-state'))).includes('dshm-prv-state-busy'));
+check('scan guide offers the cookie fallback for WeChat accounts', has(tree, (n) => cls(n) === 'dshm-linkbtn' && (n.children || []).includes('importQqUseCookie')));
+walk(tree).find((n) => cls(n) === 'dshm-linkbtn' && (n.children || []).includes('importQqUseCookie')).props.onClick();
+await tick();
+tree = expand(music(setProps));
+check('cookie mode: QQ row shows the 3-step guide', stepsOf(tree, 'qq').length === 3 && svcLiked.source.getSnapshot().qqMode === 'cookie'
+  && has(tree, (n) => cls(n) === 'dshm-step-title' && (n.children || []).includes('importQqStep3'))
+  && has(tree, (n) => cls(n) === 'dshm-linkbtn' && (n.children || []).includes('importQqUseQr'))
+  && !has(tree, (n) => cls(n) === 'dshm-qr'));
 check('QQ guide offers open-page + copy-command buttons and a single-line paste field',
   ['importQqOpen', 'importQqCopy'].every((k) => has(tree, (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes(k)))
   && !!walk(tree).find((n) => cls(n) === 'dshm-imp-cookie' && (n.props || {}).type === 'text'));
 walk(tree).find((n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('importQqCopy')).props.onClick();
 walk(tree).find((n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('importQqOpen')).props.onClick();
 await tick();
+/* 切回扫码 → 重新取码；主机解不出矩阵时退回 PNG */
+svcLiked.setQqMode('qr');
+await tick();
+svcLiked.source.set({ qr: { provider: 'qq', key: 'k', matrix: null, png: 'data:image/png;base64,BBBB' }, qrPhase: 'waiting' });
+const pngTree = expand(music(setProps));
+check('back to scan mode; a host PNG fallback renders as an image', svcLiked.source.getSnapshot().qqMode === 'qr'
+  && !!walk(pngTree).find((n) => cls(n) === 'dshm-qr dshm-qr-img' && n.props.src === 'data:image/png;base64,BBBB'));
+svcLiked.setQqMode('cookie');
 qqConnected = true;
 const beforeConnect = fetchCalls.length;
 walk(tree).find((n) => cls(n) === 'dshm-imp-cookie').props.onChange({ target: { value: 'qm_keyst=Q_H_SMOKE; uin=o1001' } });
@@ -745,6 +771,32 @@ if (addBtn) {
   check('add-to-library resolves a verified search hit and POSTs it to the download route',
     fetchBodies.slice(b).some((x) => x.url.includes('/dsh-music/api/download') && x.body.includes('"verification"')),
     JSON.stringify(fetchBodies.slice(b).map((x) => x.url)));
+}
+/* 点一首还没入库的导入歌 = 先入库（而不是只报「无法播放」） */
+{
+  libTabDefault = 'likes';
+  const clickTree = expand(music({ ...realProps, useUi: (sel) => sel({ ...uiStore.getSnapshot(), view: 'library' }), useLikes: withSources }));
+  libTabDefault = 'library';
+  const mutedRow = walk(clickTree).find((n) => cls(n) === 'dshm-row dshm-row-off');
+  check('a muted imported row is rendered (likes tab)', !!mutedRow && typeof mutedRow.props.onClick === 'function');
+  const b = fetchCalls.length;
+  if (mutedRow) mutedRow.props.onClick({ stopPropagation: noop });
+  await tick();
+  const slice1 = fetchCalls.slice(b).filter((u) => u.includes('/library/search') || u.includes('/dsh-music/api/download') && !u.includes('/status'));
+  check('clicking an imported row without audio searches + queues a verified download (not just “unplayable”)',
+    slice1.some((u) => u.includes('/library/search')) && slice1.some((u) => u.includes('/dsh-music/api/download')),
+    JSON.stringify(slice1));
+  const batchBtn = walk(clickTree).find((n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('addMissingBatch'));
+  check('likes header offers a batch add-to-library button', !!batchBtn);
+  if (batchBtn) {
+    const c = fetchCalls.length;
+    batchBtn.props.onClick();
+    await tick(); await tick();
+    const slice2 = fetchCalls.slice(c).filter((u) => u.includes('/library/search') || (u.includes('/dsh-music/api/download') && !u.includes('/status')));
+    check('batch add-to-library searches each missing song and POSTs one download batch',
+      slice2.some((u) => u.includes('/library/search')) && slice2.some((u) => u.includes('/dsh-music/api/download')),
+      JSON.stringify(slice2));
+  }
 }
 /* 文案必须走真实字典键（曾出现 t('src' + p) 拼出 srcqq 这种不存在的键 → 界面裸露键名） */
 const chipText = (name) => { const n = walk(srcTree2).find((x) => cls(x) === 'dshm-src-chip dshm-src-' + name); return n ? String(n.children[0]) : ''; };

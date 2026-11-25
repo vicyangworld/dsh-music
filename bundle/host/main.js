@@ -20,6 +20,7 @@ import { createAccounts } from './accounts.js'
 import { createLikedSync, registerLikedSyncRoutes } from './liked-sync.js'
 import { createNetease } from './providers/netease.js'
 import { createQQMusic } from './providers/qqmusic.js'
+import { createQQLogin } from './providers/qqlogin.js'
 
 export const inject = ['webServer']
 
@@ -47,6 +48,7 @@ export function apply(ctx, config = {}) {
     likes, accounts, storage, logger,
     netease: createNetease({}),
     qqmusic: createQQMusic({}),
+    qqlogin: createQQLogin({}),
   })
 
   ctx.effect(() => {

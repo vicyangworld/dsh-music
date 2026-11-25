@@ -1,10 +1,11 @@
 /** 国内平台喜欢列表只读导入（QQ音乐 / 网易云）：编排 + 路由（三期扩展，十一期）。
- * - 账号：网易云扫码登录（拿 MUSIC_U cookie）、QQ 音乐粘贴 Cookie；凭据由 accounts.js 以 0600 存本机，
- *   cookie 不进日志、不进任何响应。
+ * - 账号：网易云扫码登录（拿 MUSIC_U cookie）、QQ 音乐扫码登录（qqlogin.js，走 QQ 音乐网页版同款链路）或粘贴 Cookie；
+ *   凭据由 accounts.js 以 0600 存本机，cookie 不进日志、不进任何响应。
  * - 同步：拉取平台「喜欢」→ likes.importItems 只打 ♥（不下载、不写平台账号）→ 记录平台 id 做增量：
  *   云端移除只报数，本地标记与文件一律保留。状态文件 ~/.dsh/dsh-music/liked-sync.json。
  * - 红线：绝不调用任何写接口；绝不经这两个平台拉取音源（音源仍只走既有验证下载管线）。
  * - 可选开关：config.likedSync === false 时整个模块关闭，仅 status 返回 enabled:false（前端据此隐藏入口）。 */
+import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { cleanText } from './providers/common.js'
 import { likeKey } from './likes.js'
@@ -30,11 +31,12 @@ function normalizeState(saved) {
   }
 }
 
-export function createLikedSync({ likes, accounts, storage, logger, netease, qqmusic }) {
+export function createLikedSync({ likes, accounts, storage, logger, netease, qqmusic, qqlogin }) {
   const warn = (msg) => logger?.warn?.(msg)
   const stateFile = () => join(storage.dataDir, 'liked-sync.json')
   const busy = { netease: false, qq: false }
-  const qrSessions = new Map() // key -> createdAt
+  const qrSessions = new Map() // 网易云 key -> createdAt
+  const qqSessions = new Map() // QQ 扫码 key -> { createdAt, qrsig, cookies }（只在内存）
   let state = null
   let stateChain = Promise.resolve()
 
@@ -107,6 +109,40 @@ export function createLikedSync({ likes, accounts, storage, logger, netease, qqm
     if (!previous || previous.uid !== account.uid) resetProviderState('netease')
     qrSessions.delete(k)
     return { code: 803, message: polled.message, account: { uid: account.uid, nickname: account.nickname } }
+  }
+
+  // ---------- QQ 音乐扫码（手机 QQ 扫；微信登录的账号仍走 Cookie） ----------
+  async function qqQrCreate() {
+    if (!qqlogin) fail('QQ 扫码登录未启用', 503)
+    const created = await qqlogin.qrCreate()
+    const key = randomUUID()
+    const now = Date.now()
+    for (const [k, sess] of qqSessions) if (now - sess.createdAt > QR_SESSION_TTL_MS) qqSessions.delete(k)
+    while (qqSessions.size >= QR_SESSION_MAX) qqSessions.delete(qqSessions.keys().next().value)
+    qqSessions.set(key, { createdAt: now, qrsig: created.qrsig, cookies: created.cookies })
+    // 二维码内容（模块矩阵 / PNG data URL）随 key 一起下发；qrsig 等不出内存
+    return { key, matrix: created.matrix, png: created.png }
+  }
+
+  async function qqQrPoll(key) {
+    if (!qqlogin) fail('QQ 扫码登录未启用', 503)
+    const k = typeof key === 'string' ? key.trim() : ''
+    const session = qqSessions.get(k)
+    if (!k || k.length > 64 || !session) fail('二维码会话已过期，请重新生成', 404)
+    if (Date.now() - session.createdAt > QR_SESSION_TTL_MS) {
+      qqSessions.delete(k)
+      fail('二维码会话已过期，请重新生成', 404)
+    }
+    const polled = await qqlogin.qrPoll(session)
+    if (polled.code === 800 || polled.code === 804) qqSessions.delete(k)
+    if (polled.code !== 803) return { code: polled.code, message: polled.message }
+    const probed = await qqmusic.probe(polled.cookie) // 401：换到的登录态读不到账号 → 让用户重扫
+    const previous = await accounts.get('qq')
+    await accounts.set('qq', { uid: probed.uin, nickname: probed.nickname, cookie: probed.cookie })
+    await loadState()
+    if (!previous || previous.uid !== probed.uin) resetProviderState('qq')
+    qqSessions.delete(k)
+    return { code: 803, message: polled.message, account: { uid: probed.uin, nickname: probed.nickname } }
   }
 
   // ---------- QQ 音乐 Cookie ----------
@@ -195,9 +231,10 @@ export function createLikedSync({ likes, accounts, storage, logger, netease, qqm
 
   function dispose() {
     qrSessions.clear()
+    qqSessions.clear()
   }
 
-  return { status, neteaseQrCreate, neteaseQrPoll, qqConnect, refresh, disconnect, sync, dispose, stateFile }
+  return { status, neteaseQrCreate, neteaseQrPoll, qqQrCreate, qqQrPoll, qqConnect, refresh, disconnect, sync, dispose, stateFile }
 }
 
 export function registerLikedSyncRoutes(webServer, { likedSync, logger }) {
@@ -261,6 +298,8 @@ export function registerLikedSyncRoutes(webServer, { likedSync, logger }) {
 
   route('POST', '/dsh-music/api/liked-sync/netease/qr', () => likedSync.neteaseQrCreate(), '网易云二维码')
   route('GET', '/dsh-music/api/liked-sync/netease/qr/poll', (req) => likedSync.neteaseQrPoll(query(req).get('key')), '网易云扫码状态')
+  route('POST', '/dsh-music/api/liked-sync/qq/qr', () => likedSync.qqQrCreate(), 'QQ 扫码二维码')
+  route('GET', '/dsh-music/api/liked-sync/qq/qr/poll', (req) => likedSync.qqQrPoll(query(req).get('key')), 'QQ 扫码状态')
   disposers.push(webServer.register({
     kind: 'exact',
     path: '/dsh-music/api/liked-sync/qq/connect',

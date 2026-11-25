@@ -191,12 +191,74 @@ await test('close() 停止轮询并关闭', async () => {
   assert.equal(snap().open, false);
 });
 
+await test('QQ 扫码：open("qq") 取主机矩阵 → 801 等待 → 803 登录 → 自动导入；切到 Cookie 模式不再取码，切回扫码重新取码', async () => {
+  replies = {
+    '/liked-sync/status': statusBody(off, off),
+    '/liked-sync/qq/qr': { key: 'qk1', matrix: { size: 21, modules: Array(441).fill(0) }, png: 'data:image/png;base64,AAAA' },
+    '/liked-sync/qq/sync': { provider: 'qq', at: 1, durationMs: 3, total: 10, unavailable: 0, playlistName: '我喜欢', added: 3, existed: 7, skippedDisliked: 0, removed: 0, removedItems: [] },
+  };
+  const gates = [Promise.withResolvers(), Promise.withResolvers()];
+  const origFetch = sandbox.fetch;
+  const realSetTimeout = sandbox.setTimeout;
+  sandbox.setTimeout = (fn) => { realSetTimeout(fn, 0); return 1; };
+  sandbox.fetch = async (url, init) => {
+    if (url.includes('/qq/qr/poll')) {
+      const i = gates.indexOf(gates.find((g) => !g.done));
+      const gate = gates.find((g) => !g.done);
+      gate.done = true;
+      await gate.promise;
+      if (gate.code === 803) replies['/liked-sync/status'] = statusBody(off, { ...off, connected: true, account: { uid: '123', nickname: '小Q', loginAt: 9 }, knownCount: 3 });
+      return { ok: true, json: async () => (gate.code === 803 ? { code: 803, message: '登录成功', account: { uid: '123', nickname: '小Q' } } : { code: gate.code, message: '二维码未失效' }) };
+    }
+    return origFetch(url, init);
+  };
+  const qrCalls = () => calls.filter((c) => c.url.includes('/liked-sync/qq/qr') && c.method === 'POST').length;
+  const before = qrCalls();
+  svc.open('qq');
+  await tick(20);
+  assert.equal(snap().tab, 'qq');
+  assert.equal(snap().qqMode, 'qr');
+  assert.equal(qrCalls(), before + 1, 'QQ 页签默认扫码 → POST /qq/qr');
+  assert.equal(snap().qr.provider, 'qq');
+  assert.equal(snap().qr.matrix.size, 21);
+  assert.equal(snap().qr.matrix.modules.length, 441);
+  assert.equal(snap().qr.png, 'data:image/png;base64,AAAA');
+  assert.equal(snap().qrPhase, 'waiting');
+  gates[0].code = 801; gates[0].resolve();
+  await tick(20);
+  assert.equal(snap().qrPhase, 'waiting', '801 继续等');
+  gates[1].code = 803; gates[1].resolve();
+  await tick(40);
+  assert.equal(snap().qrPhase, 'done');
+  assert.ok(calls.some((c) => c.url.includes('/liked-sync/qq/sync') && c.method === 'POST'), '803 → 自动导入');
+  assert.equal(snap().result.provider, 'qq');
+  assert.equal(snap().result.added, 3);
+  assert.equal(snap().providers.qq.connected, true);
+  const taken = qrCalls();
+  svc.setQqMode('cookie');
+  assert.equal(snap().qqMode, 'cookie');
+  assert.equal(snap().qr, null);
+  assert.equal(snap().qrPhase, 'idle');
+  svc.selectTab('qq');
+  await tick(10);
+  assert.equal(qrCalls(), taken, 'Cookie 模式不取码');
+  svc.setQqMode('qr');
+  await tick(20);
+  assert.equal(qrCalls(), taken + 1, '切回扫码 → 重新取码');
+  assert.equal(snap().qr.provider, 'qq');
+  svc.close();
+  sandbox.fetch = origFetch;
+  sandbox.setTimeout = realSetTimeout;
+});
+
 await test('QQ：空 Cookie → importCookieEmpty；连接成功 → notice + 状态刷新 + 清空输入', async () => {
-  replies = { '/liked-sync/status': statusBody(off, off), '/liked-sync/qq/connect': { __http: { status: 401, error: 'QQ 音乐 Cookie 已失效或未登录，请重新登录 y.qq.com 后复制 Cookie' } } };
+  replies = { '/liked-sync/status': statusBody(off, { ...off, connected: false }), '/liked-sync/qq/connect': { __http: { status: 401, error: 'QQ 音乐 Cookie 已失效或未登录，请重新登录 y.qq.com 后复制 Cookie' } } };
+  svc.setQqMode('cookie');
   svc.open('qq');
   await tick(10);
   assert.equal(snap().tab, 'qq');
-  assert.equal(snap().qrPhase, 'idle', 'QQ 页签不应生成二维码');
+  assert.equal(snap().qqMode, 'cookie');
+  assert.equal(snap().qrPhase, 'idle', 'Cookie 模式下 QQ 页签不生成二维码');
   await svc.connectQq();
   assert.equal(snap().error, 'importCookieEmpty');
   svc.setQqCookie('  qm_keyst=abc; uin=123  ');
@@ -288,6 +350,6 @@ await test('QQ 新手工具：无剪贴板环境 copyCookieCommand 返回 false 
 
 /* 轮询定时器会让进程挂着：显式 dispose 再退出 */
 svc.dispose();
-const total = 19;
+const total = 20;
 console.log(passed === total ? '\n全部通过（' + passed + ' 项）' : '\n通过 ' + passed + '/' + total + ' 项');
 setTimeout(() => process.exit(process.exitCode || 0), 50).unref();

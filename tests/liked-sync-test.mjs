@@ -17,6 +17,7 @@ import { Readable } from 'node:stream'
 
 import { createNetease, weapiEncrypt, rsaRaw } from '../bundle/host/providers/netease.js'
 import { createQQMusic, parseQQCookie, gtk, QQ_UA } from '../bundle/host/providers/qqmusic.js'
+import { createQQLogin, hash33, parsePtuiCb, pngToMatrix } from '../bundle/host/providers/qqlogin.js'
 import { parseCookie } from '../bundle/host/providers/common.js'
 import { createStorage } from '../bundle/host/storage.js'
 import { createLikes } from '../bundle/host/likes.js'
@@ -363,6 +364,102 @@ await test('QQ：musicu 失败 → 旧接口 cdlist 兜底；musicu 1000 → 401
 })
 
 /* ================= 5. likes.importItems ================= */
+/* 真实的 QQ 二维码图（ptqrshow 下发，111×111 = 37 模块 × 3px，1-bit 灰度，无静区） */
+const QQ_QR_PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAG8AAABvAQAAAADKvqPNAAAACXBIWXMAAAsTAAALEwEAmpwYAAABbklEQVQ4jbXVu63rMAwG4N9QoU5eQIDWUKeV7AX8WMBZSZ3WEKAF7M6FYB7aySluI6a4JzCMfAUdijQZ0D8f/EdWwFGC8XkAZokzOTrRJ3dQFTlo25958nWM9huOp7vCt+yprEkdX3Amji2U7PhJskXAjum+fo/fIJePwzFHvr8L22Ad4HbtiNzOJZXYUx0C7SjreR+hSdq9NV4diTulSGA1yNDl4oc8xWmSjqi2UBbtLp8l1i6VBeiiWgkijbYInBK9UiGBtOg8wc7RTt6J3Lztnpdw09zQNqsJtGm3+7J4K5J/Aj73/MI8lWyS1lReJx2noqeSTdb55OTVi7JBFQmU43Tc0BfJvLPSPAt2jIUk8iBsUBe4oUrkTIqewcE7yRbvWRj5FPw9WYn3ztk99whjciSR57cjDHfse0G1+OwcIPBDnpGUaEK5tNvwiW2zS+ijW/wntkHek0e8N6qBE8k7Zwp8ijzpIvHP/iZ+AHMLa6ev3zhsAAAAAElFTkSuQmCC', 'base64')
+await test('QQ 扫码：hash33 / parsePtuiCb / 1-bit PNG → 模块矩阵（37×37，定位图案）', async () => {
+  assert.equal(hash33(''), 0)
+  assert.equal(hash33('abc'), 108966)
+  assert.deepEqual(parsePtuiCb("ptuiCB('66','0','','0','二维码未失效。', '')"), ['66', '0', '', '0', '二维码未失效。', ''])
+  assert.equal(parsePtuiCb("window.x = 1"), null)
+  const m = pngToMatrix(QQ_QR_PNG)
+  assert.equal(m.size, 33, '37 块去掉四周 2 模块白边 → 33×33（版本 4）')
+  assert.equal(m.modules.filter(Boolean).length, 563)
+  const row = (y) => m.modules.slice(y * 33, y * 33 + 7).join('')
+  assert.equal(row(0), '1111111', '左上定位图案顶边')
+  assert.equal(row(3), '1011101', '定位图案 3×3 实心中心')
+  assert.equal(row(6), '1111111')
+  assert.equal(row(32).length, 7)
+  assert.equal(pngToMatrix(Buffer.from('not a png')), null)
+  assert.equal(pngToMatrix(await readFile(new URL('../bundle/icon.png', import.meta.url))), null, '彩色 PNG 不在支持范围 → null')
+})
+
+await test('QQ 扫码：xlogin → ptqrshow（qrsig）→ 轮询 66/67/0 → check_sig 跳转链拿 code → musicu QQLogin 换登录态', async () => {
+  let polls = 0
+  const fn = mockFetch(async (call) => {
+    const u = String(call.url.href || call.url)
+    if (u.startsWith('https://xui.ptlogin2.qq.com/cgi-bin/xlogin?')) {
+      return new Response('<html></html>', { headers: [['set-cookie', 'pt_login_sig=LS1; Path=/; Domain=ptlogin2.qq.com'], ['content-type', 'text/html']] })
+    }
+    if (u.startsWith('https://xui.ptlogin2.qq.com/ssl/ptqrshow?')) {
+      return new Response(QQ_QR_PNG, { headers: [['set-cookie', 'qrsig=QRSIG1; Path=/; Domain=ptlogin2.qq.com; HttpOnly'], ['content-type', 'image/png']] })
+    }
+    if (u.startsWith('https://xui.ptlogin2.qq.com/ssl/ptqrlogin?')) {
+      polls++
+      assert.match(call.headers.Cookie, /qrsig=QRSIG1/)
+      assert.match(call.headers.Cookie, /pt_login_sig=LS1/)
+      assert.match(u, /ptqrtoken=\d+/)
+      assert.match(u, /pt_3rd_aid=100497308/)
+      if (polls === 1) return new Response("ptuiCB('66','0','','0','二维码未失效。', '')", { headers: { 'content-type': 'application/javascript' } })
+      if (polls === 2) return new Response("ptuiCB('67','0','','0','手机QQ扫码成功。', '')")
+      return new Response("ptuiCB('0','0','https://ssl.ptlogin2.qq.com/check_sig?pttype=1&uin=123456&service=ptqrlogin&ptsigx=abc&s_url=https%3A%2F%2Fgraph.qq.com%2Foauth2.0%2Flogin_jump','0','登录成功！', '阿强')", { headers: { 'content-type': 'application/javascript' } })
+    }
+    if (u.startsWith('https://ssl.ptlogin2.qq.com/check_sig?')) {
+      assert.match(call.headers.Cookie, /pt_login_sig=LS1/)
+      return new Response(null, { status: 302, headers: [['location', 'https://graph.qq.com/oauth2.0/login_jump?ptclient=1&pt_aid=100497308'], ['set-cookie', 'p_skey=PS1; Domain=qq.com; Path=/; HttpOnly']] })
+    }
+    if (u.startsWith('https://graph.qq.com/oauth2.0/login_jump?')) {
+      assert.match(call.headers.Cookie, /p_skey=PS1/, '跳转链带上 check_sig 下发的 cookie')
+      return new Response(null, { status: 302, headers: { location: 'https://graph.qq.com/oauth2.0/authorize?which=Login&display=pc&response_type=code&client_id=100497308&state=state' } })
+    }
+    if (u.startsWith('https://graph.qq.com/oauth2.0/authorize?')) {
+      return new Response(null, { status: 302, headers: { location: 'https://y.qq.com/portal/wx_redirect.html?login_type=1&surl=https%3A%2F%2Fy.qq.com%2F&use_customer_cb=0&code=CODE123&state=state' } })
+    }
+    if (u === 'https://u.y.qq.com/cgi-bin/musicu.fcg' && call.method === 'POST') {
+      const body = JSON.parse(call.body)
+      assert.equal(body.req.module, 'QQConnectLogin.LoginServer')
+      assert.equal(body.req.method, 'QQLogin')
+      assert.deepEqual(body.req.param, { code: 'CODE123' })
+      assert.equal(body.comm.platform, 'yqq')
+      assert.equal(call.headers.Referer, 'https://y.qq.com/portal/wx_redirect.html?login_type=1&surl=https%3A%2F%2Fy.qq.com%2F')
+      return new Response(JSON.stringify({ code: 0, req: { code: 0, data: {} } }), {
+        headers: [['set-cookie', 'qm_keyst=QK1; Domain=y.qq.com; Path=/; Max-Age=2592000; HttpOnly'], ['set-cookie', 'uin=o0123456; Domain=.qq.com; Path=/'], ['content-type', 'application/json']],
+      })
+    }
+    return undefined
+  })
+  const login = createQQLogin({ fetchImpl: fn })
+  const created = await login.qrCreate()
+  assert.equal(created.qrsig, 'QRSIG1')
+  assert.match(created.cookies, /pt_login_sig=LS1/)
+  assert.match(created.cookies, /qrsig=QRSIG1/)
+  assert.equal(created.matrix.size, 33)
+  assert.ok(created.png.startsWith('data:image/png;base64,'))
+  assert.equal((await login.qrPoll(created)).code, 801)
+  assert.equal((await login.qrPoll(created)).code, 802)
+  const done = await login.qrPoll(created)
+  assert.equal(done.code, 803)
+  assert.equal(done.cookie, 'qqmusic_key=QK1; qm_keyst=QK1; uin=o0123456; qqmusic_uin=o0123456')
+  assert.doesNotMatch(done.cookie, /p_skey|pt_login_sig|qrsig/, 'QQ 登录中间 cookie 不进入音乐登录态')
+
+  // 换票失败 → 502；风控返回码 → 804
+  const fn2 = mockFetch(async (call) => {
+    if (String(call.url.href || call.url).startsWith('https://xui.ptlogin2.qq.com/ssl/ptqrshow?')) return new Response(QQ_QR_PNG, { headers: [['set-cookie', 'qrsig=Q2; Path=/']] })
+    if (String(call.url.href || call.url).startsWith('https://xui.ptlogin2.qq.com/ssl/ptqrlogin?')) {
+      fn2.round = (fn2.round || 0) + 1
+      return fn2.round === 1
+        ? new Response("ptuiCB('317','0','','0','请用手机QQ扫码登录', '')")
+        : new Response("ptuiCB('0','0','https://ssl.ptlogin2.qq.com/check_sig?pttype=1&uin=1','0','登录成功！', '')")
+    }
+    if (String(call.url.href || call.url).startsWith('https://ssl.ptlogin2.qq.com/check_sig?')) return new Response(null, { status: 302, headers: { location: 'https://y.qq.com/portal/wx_redirect.html?login_type=1&code=C2&state=state' } })
+    if (String(call.url.href || call.url) === 'https://u.y.qq.com/cgi-bin/musicu.fcg') return jsonRes({ code: 0, req: { code: 1001, msg: '登录态无效' } })
+    return new Response('<html></html>')
+  })
+  const login2 = createQQLogin({ fetchImpl: fn2 })
+  const created2 = await login2.qrCreate()
+  assert.equal((await login2.qrPoll(created2)).code, 804)
+  await assert.rejects(login2.qrPoll(created2), (err) => err.status === 502 && /换票失败（code 0\/1001/.test(err.message))
+})
+
 const tmp = await mkdtemp(join(tmpdir(), 'dshm-likedsync-'))
 try {
   const dataDir = join(tmp, 'data')
@@ -441,7 +538,16 @@ try {
       return { dir: { tid: '777', name: '我喜欢', songCount: 1 }, tracks: [T('q1', '周杰伦', '晴天')] }
     },
   }
-  const likedSync = createLikedSync({ likes, accounts, storage, logger: null, netease: fakeNetease, qqmusic: fakeQQ })
+  let qqQrPolls = 0
+  const fakeQQLogin = {
+    qrCreate: async () => ({ qrsig: 'QRSIG_X', cookies: 'pt_login_sig=LS9; qrsig=QRSIG_X', matrix: { size: 21, modules: new Array(441).fill(0) }, png: 'data:image/png;base64,AAAA' }),
+    qrPoll: async (session) => {
+      assert.equal(session.qrsig, 'QRSIG_X')
+      qqQrPolls++
+      return qqQrPolls === 1 ? { code: 801, message: '二维码未失效' } : { code: 803, message: '登录成功', cookie: 'qm_keyst=SECRET_QR; uin=o123456' }
+    },
+  }
+  const likedSync = createLikedSync({ likes, accounts, storage, logger: null, netease: fakeNetease, qqmusic: fakeQQ, qqlogin: fakeQQLogin })
 
   await test('liked-sync：未登录同步 → 401；扫码 → 登录；状态脱敏', async () => {
     let st = await likedSync.status()
@@ -539,13 +645,35 @@ try {
     assert.equal(JSON.parse(await readFile(join(dataDir, 'accounts.json'), 'utf8')).qq, undefined)
   })
 
+  await test('liked-sync：QQ 扫码（未知 key → 404）→ 801 等待 → 803 登录落盘；qrsig 不出内存；未启用 → 503', async () => {
+    const qr = await likedSync.qqQrCreate()
+    assert.equal(typeof qr.key, 'string')
+    assert.equal(qr.matrix.size, 21)
+    assert.ok(qr.png.startsWith('data:image/png;base64,'))
+    assert.doesNotMatch(JSON.stringify(qr), /QRSIG|pt_login_sig/)
+    await expectStatus(likedSync.qqQrPoll('nope'), 404)
+    const waiting = await likedSync.qqQrPoll(qr.key)
+    assert.equal(waiting.code, 801)
+    const done = await likedSync.qqQrPoll(qr.key)
+    assert.equal(done.code, 803)
+    assert.deepEqual(done.account, { uid: '123456', nickname: '阿强' })
+    const saved = JSON.parse(await readFile(join(dataDir, 'accounts.json'), 'utf8'))
+    assert.equal(saved.qq.uid, '123456')
+    assert.equal(saved.qq.cookie, 'uin=o123456; qm_keyst=SECRET_Q', '以 probe 归一化后的 cookie 落盘')
+    assert.equal((await likedSync.status()).providers.qq.connected, true)
+    await expectStatus(likedSync.qqQrPoll(qr.key), 404, '803 后会话即销毁')
+    const noLogin = createLikedSync({ likes, accounts, storage, logger: null, netease: fakeNetease, qqmusic: fakeQQ, qqlogin: null })
+    await expectStatus(noLogin.qqQrCreate(), 503)
+    noLogin.dispose()
+  })
+
   /* ================= 7. 路由 ================= */
   await test('路由：status / 405 / 404 / 400 / 正常 200；likedSync=null 仅保留 status', async () => {
     const routes = []
     const webServer = { register: (r) => { routes.push(r); return () => {} } }
     registerLikedSyncRoutes(webServer, { likedSync, logger: null })
     const byPath = Object.fromEntries(routes.map((r) => [r.path, r]))
-    assert.equal(routes.length, 1 + 3 + 6)
+    assert.equal(routes.length, 1 + 5 + 6)
     let res = fakeRes()
     await byPath['/dsh-music/api/liked-sync/status'].handler(fakeReq('GET', '/dsh-music/api/liked-sync/status'), res)
     assert.equal(res.status, 200)
@@ -587,6 +715,15 @@ try {
     res = fakeRes()
     await byPath['/dsh-music/api/liked-sync/netease/qr'].handler(fakeReq('POST', '/x'), res)
     assert.equal(parse(res).key, 'K9')
+    res = fakeRes()
+    await byPath['/dsh-music/api/liked-sync/qq/qr/poll'].handler(fakeReq('GET', '/x?key=nope'), res)
+    assert.equal(res.status, 404)
+    res = fakeRes()
+    await byPath['/dsh-music/api/liked-sync/qq/qr'].handler(fakeReq('POST', '/x'), res)
+    assert.equal(res.status, 200)
+    assert.equal(parse(res).matrix.size, 21)
+    assert.match(parse(res).png, /^data:image\/png;base64,/)
+    assert.doesNotMatch(res.body, /QRSIG/)
     // 内部错误 → 500（不泄漏细节）
     const broken = createLikedSync({ likes, accounts, storage, logger: null, netease: { ...fakeNetease, account: async () => { throw new Error('boom') } }, qqmusic: fakeQQ })
     const routes2 = []

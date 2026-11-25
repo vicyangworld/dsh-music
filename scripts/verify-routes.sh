@@ -60,6 +60,25 @@ check "library DELETE → 405" 405 "$(code -X DELETE "$B/dsh-music/api/library")
 check "playback GET → 200" 200 "$(code "$B/dsh-music/api/playback")"
 check "playback 非法 volume → 400" 400 "$(code -X POST -d '{"volume":5}' "$B/dsh-music/api/playback")"
 
+# 喜欢列表导入（只读）：状态 / 两个平台的二维码 / 未知二维码会话 / 未登录同步。响应体只看字段名，不落盘凭据。
+check "liked-sync 状态 GET → 200" 200 "$(code "$B/dsh-music/api/liked-sync/status")"
+LSS=$(curl -s "$B/dsh-music/api/liked-sync/status")
+check "liked-sync 状态不含 cookie 字样" ok "$(printf '%s' "$LSS" | grep -qi cookie && echo leak || echo ok)"
+check "网易云二维码 GET → 405（只接受 POST）" 405 "$(code "$B/dsh-music/api/liked-sync/netease/qr")"
+check "网易云二维码 POST → 200" 200 "$(code -X POST "$B/dsh-music/api/liked-sync/netease/qr")"
+NQ=$(curl -s -X POST "$B/dsh-music/api/liked-sync/netease/qr")
+case "$NQ" in *'"key"'*'"url":"https://music.163.com/login?codekey='*) check "网易云二维码返回 key + 登录 URL" ok ok;; *) check "网易云二维码返回 key + 登录 URL" "key+url" "$(printf '%s' "$NQ" | head -c 80)";; esac
+check "网易云未知二维码会话 → 404" 404 "$(code "$B/dsh-music/api/liked-sync/netease/qr/poll?key=nope")"
+check "QQ 扫码二维码 GET → 405（只接受 POST）" 405 "$(code "$B/dsh-music/api/liked-sync/qq/qr")"
+check "QQ 扫码二维码 POST → 200" 200 "$(code -X POST "$B/dsh-music/api/liked-sync/qq/qr")"
+QQ=$(curl -s -X POST "$B/dsh-music/api/liked-sync/qq/qr")
+case "$QQ" in *'"key"'*"data:image/png;base64,"*) check "QQ 扫码二维码返回 key + PNG（有矩阵则带 matrix）" ok ok;; *) check "QQ 扫码二维码返回 key + PNG" "key+png" "$(printf '%s' "$QQ" | head -c 80)";; esac
+case "$QQ" in *'"matrix"'*) check "QQ 扫码二维码含模块矩阵（可直接画 SVG）" ok ok;; *) check "QQ 扫码二维码含模块矩阵" "matrix" "无（退回 PNG 也可用）";; esac
+case "$QQ" in *qrsig*|*pt_login_sig*) check "QQ 扫码响应不带 ptlogin 会话 cookie" "脱敏" "leak";; *) check "QQ 扫码响应不带 ptlogin 会话 cookie" ok ok;; esac
+check "QQ 未知二维码会话 → 404" 404 "$(code "$B/dsh-music/api/liked-sync/qq/qr/poll?key=nope")"
+case "$(code -X POST "$B/dsh-music/api/liked-sync/qq/sync")" in 200|401) check "QQ 同步 POST → 200（已登录）或 401（未登录）" ok ok;; *) check "QQ 同步 POST → 200/401" "200|401" "$(code -X POST "$B/dsh-music/api/liked-sync/qq/sync")";; esac
+case "$(code -X POST "$B/dsh-music/api/liked-sync/kugou/sync")" in 404|405) check "liked-sync 未知平台 → 404/405（无此路由）" ok ok;; *) check "liked-sync 未知平台 → 404/405" "404|405" "$(code -X POST "$B/dsh-music/api/liked-sync/kugou/sync")";; esac
+
 echo "----"
 echo "结果: PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]
