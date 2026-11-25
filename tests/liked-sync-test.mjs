@@ -398,6 +398,8 @@ await test('QQ 扫码：xlogin → ptqrshow（qrsig）→ 轮询 66/67/0 → che
       assert.match(call.headers.Cookie, /qrsig=QRSIG1/)
       assert.match(call.headers.Cookie, /pt_login_sig=LS1/)
       assert.match(u, /ptqrtoken=\d+/)
+      /* 官方页轮询带 login_sig=pt_login_sig：缺了它手机确认后服务端会判「二维码已失效」 */
+      assert.match(u, /login_sig=LS1(&|$)/)
       assert.match(u, /pt_3rd_aid=100497308/)
       if (polls === 1) return new Response("ptuiCB('66','0','','0','二维码未失效。', '')", { headers: { 'content-type': 'application/javascript' } })
       if (polls === 2) return new Response("ptuiCB('67','0','','0','手机QQ扫码成功。', '')")
@@ -431,6 +433,7 @@ await test('QQ 扫码：xlogin → ptqrshow（qrsig）→ 轮询 66/67/0 → che
   const created = await login.qrCreate()
   assert.equal(created.qrsig, 'QRSIG1')
   assert.match(created.cookies, /pt_login_sig=LS1/)
+  assert.equal(created.loginSig, 'LS1')
   assert.match(created.cookies, /qrsig=QRSIG1/)
   assert.equal(created.matrix.size, 33)
   assert.ok(created.png.startsWith('data:image/png;base64,'))

@@ -203,6 +203,8 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
     const matrix = pngToMatrix(bytes)
     return {
       qrsig: jar.get('qrsig'),
+      /* 官方登录页轮询时带 login_sig = xlogin 下发的 pt_login_sig（缺了它，手机确认后服务端会判成二维码已失效） */
+      loginSig: jar.get('pt_login_sig') || '',
       cookies: jar.header(),
       matrix: matrix ? { size: matrix.size, modules: matrix.modules } : null,
       png: `data:image/png;base64,${bytes.toString('base64')}`,
@@ -211,7 +213,7 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
 
   /** 轮询一次。返回 `{ code, message }`：801 未扫 / 802 已扫待确认 / 800 已失效 / 803 成功（附 cookie）/ 804 其它（风控等，需重开） */
   async function qrPoll(session) {
-    const poll = `${PT_HOST}/ssl/ptqrlogin?u1=${encodeURIComponent(S_URL)}&ptqrtoken=${hash33(session.qrsig)}&ptredirect=0&h=1&t=1&g=1&from_ui=1&ptlang=2052&action=0-0-${Date.now()}&js_ver=${PTUI_VERSION}&js_type=1&pt_uistyle=40&aid=${PT_APPID}&daid=${PT_DAID}&pt_3rd_aid=${QQ_CLIENT_ID}`
+    const poll = `${PT_HOST}/ssl/ptqrlogin?u1=${encodeURIComponent(S_URL)}&ptqrtoken=${hash33(session.qrsig)}&ptredirect=0&h=1&t=1&g=1&from_ui=1&ptlang=2052&action=0-0-${Date.now()}&js_ver=${PTUI_VERSION}&js_type=1&login_sig=${encodeURIComponent(session.loginSig || '')}&pt_uistyle=40&aid=${PT_APPID}&daid=${PT_DAID}&pt_3rd_aid=${QQ_CLIENT_ID}`
     const res = await request(poll, { headers: { 'User-Agent': QQ_UA, Referer: XLOGIN, Accept: '*/*', Cookie: session.cookies } })
     const text = await res.text()
     const args = parsePtuiCb(text)

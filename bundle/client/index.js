@@ -2432,7 +2432,8 @@ window.__ModuleLoader__.load({
             return;
           }
           if (code === 800 || code === 804) {
-            store.set({ qrPhase: 'expired', qrMessage: (r && r.message) || '' });
+            /* 800 = 服务端说过期（文案通用即可）；804 = 风控等，把服务端原话带给用户 */
+            store.set({ qrPhase: 'expired', qrMessage: code === 804 ? ((r && r.message) || '') : '' });
             return;
           }
           store.set({ qrPhase: code === 802 ? 'confirmed' : 'waiting', qrMessage: (r && r.message) || '' });
@@ -4576,7 +4577,8 @@ window.__ModuleLoader__.load({
       const loading = s.qrPhase === 'loading' || (s.qrPhase === 'idle' && !s.loaded);
       const text = {
         loading: t('importQrLoading'), waiting: t('importQrWaiting'), confirmed: t('importQrConfirmed'),
-        done: t('importQrDone'), expired: t('importQrExpired'), error: s.qrMessage || t('importQrExpired'),
+        done: t('importQrDone'), expired: s.qrMessage ? `${t('importQrExpired')}（${s.qrMessage}）` : t('importQrExpired'),
+        error: s.qrMessage || t('importQrExpired'),
       }[s.qrPhase] || '';
       return h('div', { className: 'dshm-imp-qr' },
         h('div', { className: 'dshm-imp-qr-box' },
