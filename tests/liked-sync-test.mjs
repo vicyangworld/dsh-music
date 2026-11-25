@@ -403,17 +403,22 @@ await test('QQ 扫码：xlogin → ptqrshow（qrsig）→ 轮询 66/67/0 → che
       assert.match(u, /pt_3rd_aid=100497308/)
       if (polls === 1) return new Response("ptuiCB('66','0','','0','二维码未失效。', '')", { headers: { 'content-type': 'application/javascript' } })
       if (polls === 2) return new Response("ptuiCB('67','0','','0','手机QQ扫码成功。', '')")
-      return new Response("ptuiCB('0','0','https://ssl.ptlogin2.qq.com/check_sig?pttype=1&uin=123456&service=ptqrlogin&ptsigx=abc&s_url=https%3A%2F%2Fgraph.qq.com%2Foauth2.0%2Flogin_jump','0','登录成功！', '阿强')", { headers: { 'content-type': 'application/javascript' } })
+      /* 真实抓包：扫码成功这一跳服务端下发 ETK / superkey / RK / ptcz 等，后续 check_sig → authorize 必须带上 */
+      return new Response("ptuiCB('0','0','https://ssl.ptlogin2.qq.com/check_sig?pttype=1&uin=123456&service=ptqrlogin&ptsigx=abc&s_url=https%3A%2F%2Fgraph.qq.com%2Foauth2.0%2Flogin_jump','0','登录成功！', '阿强')", { headers: [['set-cookie', 'ETK=ETK1; Domain=ptlogin2.qq.com; Path=/'], ['set-cookie', 'superkey=SK1; Domain=.qq.com; Path=/; HttpOnly'], ['content-type', 'application/javascript']] })
     }
     if (u.startsWith('https://ssl.ptlogin2.qq.com/check_sig?')) {
       assert.match(call.headers.Cookie, /pt_login_sig=LS1/)
+      assert.match(call.headers.Cookie, /superkey=SK1/, 'check_sig 带上扫码成功那一跳下发的 cookie')
+      assert.match(call.headers.Cookie, /ETK=ETK1/)
       return new Response(null, { status: 302, headers: [['location', 'https://graph.qq.com/oauth2.0/login_jump?ptclient=1&pt_aid=100497308'], ['set-cookie', 'p_skey=PS1; Domain=qq.com; Path=/; HttpOnly']] })
     }
     if (u.startsWith('https://graph.qq.com/oauth2.0/login_jump?')) {
       assert.match(call.headers.Cookie, /p_skey=PS1/, '跳转链带上 check_sig 下发的 cookie')
+      assert.match(call.headers.Cookie, /superkey=SK1/, '跳转链也带上扫码成功那一跳的 cookie')
       return new Response(null, { status: 302, headers: { location: 'https://graph.qq.com/oauth2.0/authorize?which=Login&display=pc&response_type=code&client_id=100497308&state=state' } })
     }
     if (u.startsWith('https://graph.qq.com/oauth2.0/authorize?')) {
+      if (call.method === 'POST') assert.match(String(call.headers.Cookie), /superkey=SK1|p_skey=PS1/, 'authorize 带完整登录态 cookie')
       return new Response(null, { status: 302, headers: { location: 'https://y.qq.com/portal/wx_redirect.html?login_type=1&surl=https%3A%2F%2Fy.qq.com%2F&use_customer_cb=0&code=CODE123&state=state' } })
     }
     if (u === 'https://u.y.qq.com/cgi-bin/musicu.fcg' && call.method === 'POST') {

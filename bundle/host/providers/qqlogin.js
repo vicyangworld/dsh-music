@@ -162,6 +162,7 @@ function createJar() {
     },
     get: (name) => map.get(name) || '',
     names: () => [...map.keys()],
+    set: (name, value) => { if (name && value) map.set(name, String(value)) },
     seed(header) {
       for (const pair of String(header || '').split(';')) {
         const i = pair.indexOf('=')
@@ -209,6 +210,9 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
       /* 官方登录页轮询时带 login_sig = xlogin 下发的 pt_login_sig（缺了它，手机确认后服务端会判成二维码已失效） */
       loginSig: jar.get('pt_login_sig') || '',
       cookies: jar.header(),
+      /* 会话 cookie 罐（内存对象）：轮询/换票沿用同一个罐，服务端在扫码成功那一跳下发的
+         ETK / superkey / RK / ptcz 等必须带到 check_sig → authorize，否则授权会被踢回登录页 */
+      jar,
       matrix: matrix ? { size: matrix.size, modules: matrix.modules } : null,
       png: `data:image/png;base64,${bytes.toString('base64')}`,
     }
@@ -217,7 +221,8 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
   /** 轮询一次。返回 `{ code, message }`：801 未扫 / 802 已扫待确认 / 800 已失效 / 803 成功（附 cookie）/ 804 其它（风控等，需重开） */
   async function qrPoll(session) {
     const poll = `${PT_HOST}/ssl/ptqrlogin?u1=${encodeURIComponent(S_URL)}&ptqrtoken=${hash33(session.qrsig)}&ptredirect=0&h=1&t=1&g=1&from_ui=1&ptlang=2052&action=0-0-${Date.now()}&js_ver=${PTUI_VERSION}&js_type=1&login_sig=${encodeURIComponent(session.loginSig || '')}&pt_uistyle=40&aid=${PT_APPID}&daid=${PT_DAID}&pt_3rd_aid=${QQ_CLIENT_ID}`
-    const res = await request(poll, { headers: { 'User-Agent': QQ_UA, Referer: XLOGIN, Accept: '*/*', Cookie: session.cookies } })
+    const res = await request(poll, { headers: { 'User-Agent': QQ_UA, Referer: XLOGIN, Accept: '*/*', Cookie: session.jar ? session.jar.header() : session.cookies } })
+    if (session.jar) session.jar.absorb(res)
     const text = await res.text()
     const args = parsePtuiCb(text)
     if (!args) throw httpError(`QQ 扫码状态返回异常（HTTP ${res.status}）`, 502)
@@ -352,7 +357,7 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
     }
     // ptlogin2 的会话 cookie（qrsig / pt_login_sig 等）只在内存里跟着这条跳转链走
     const jar = createJar()
-    jar.seed(session.cookies)
+    if (session.jar) { for (const name of session.jar.names()) jar.set(name, session.jar.get(name)) } else jar.seed(session.cookies)
     let url = parsed.href
     let referer = XLOGIN
     let code = ''

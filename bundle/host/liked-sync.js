@@ -119,7 +119,7 @@ export function createLikedSync({ likes, accounts, storage, logger, netease, qqm
     const now = Date.now()
     for (const [k, sess] of qqSessions) if (now - sess.createdAt > QR_SESSION_TTL_MS) qqSessions.delete(k)
     while (qqSessions.size >= QR_SESSION_MAX) qqSessions.delete(qqSessions.keys().next().value)
-    qqSessions.set(key, { createdAt: now, qrsig: created.qrsig, loginSig: created.loginSig || '', cookies: created.cookies })
+    qqSessions.set(key, { createdAt: now, qrsig: created.qrsig, loginSig: created.loginSig || '', cookies: created.cookies, jar: created.jar || null })
     // 二维码内容（模块矩阵 / PNG data URL）随 key 一起下发；qrsig 等不出内存
     return { key, matrix: created.matrix, png: created.png }
   }
