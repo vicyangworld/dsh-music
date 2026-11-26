@@ -13,10 +13,10 @@ DeepSeek Harness Desktop 的音乐插件：播放本地曲库、同步歌词与�
 | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/library-shelf.webp" width="280" alt="曲库卡片架"> | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/reco-columns.webp" width="280" alt="推荐三栏"> | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/artist-page.webp" width="280" alt="歌手页"> |
 | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/liked-full.webp" width="280" alt="我喜欢完整列表"> | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/shelf-synced.webp" width="280" alt="跨页喜欢同步"> | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/library-toolbar.webp" width="280" alt="曲库工具栏"> |
 
-- npm 包名：`@vicyangorg/dsh-music`（v0.7.0）；品牌名与 GitHub 仓库仍为 `dsh-music`（原名 `dsh-music` 在 npm 被占位包占用，故用 scoped 名，见 `docs/publishing.md`）
+- npm 包名：`@vicyangorg/dsh-music`（v0.8.0）；品牌名与 GitHub 仓库仍为 `dsh-music`（原名 `dsh-music` 在 npm 被占位包占用，故用 scoped 名，见 `docs/publishing.md`）
 - 形态：DSH bundle（Host 服务 + Web 客户端面板）
-- 验证状态：一期 S1–S4、二期四批、三期、四期、五期、六期、七期、八期、九期、十期均已验收通过（验收证据为内部文档，含本机数据，不随公开仓库发布）；十一期～十三期（设置页 / 喜欢列表导入 / 下载队列）单测 + 冒烟全绿，实机走查见 `docs/publishing.md` §11
-- 分发状态：`@vicyangorg/dsh-music@0.7.0` 已发布 GitHub Release + npm（MIT/engines.dsh/8 语 meta/DETAIL+截图/README，打包守门+冷装冒烟通过）；插件目录 PR #15213 已合并（v0.6.0），v0.7.0 条目更新见 §11
+- 验证状态：一期～十四期均已验收通过（验收证据为内部文档，含本机数据，不随公开仓库发布）；十四期视觉与交互整套焕新通过全套自动化测试与真实 React 18 渲染验收，详见 `docs/publishing.md` §12
+- 分发状态：`@vicyangorg/dsh-music@0.8.0` 已发布 GitHub Release + npm（MIT/engines.dsh/8 语 meta/DETAIL+截图/README，打包守门+冷装冒烟通过）
 
 ## 功能
 | 模块 | 说明 |
@@ -144,10 +144,20 @@ DeepSeek Harness Desktop 的音乐插件：播放本地曲库、同步歌词与�
 | 点播修复 | 播放器处于「随机」模式时，点曲库 / 喜欢 / 队列 / 歌手页里的某一首会被随机起播成另一首——现在点哪首就从哪首开始，随机只作用于它后面的队列；「播放全部」仍按模式随机起播 |
 | 后台找音源 → 「可入库」 | 导入完成后主机在**后台**逐首用 MusicBrainz 找已核实的音源（跟随全局限速，串行，不打扰前台），命中写回 `likes.json` 的 `source`；「我喜欢」里这些行的「入库」按钮换成实心**「可入库」**药丸——点它、或直接点这首歌，不再当场搜索、直接置顶进下载队列；没找到的显示淡色虚线按钮（点了会再找一次，7 天内不重复扫）。页头有「查找音源 已处理/总数 · 已找到」进度 chip，列表每 5 s 自动刷新，按钮陆续亮起 |
 
+## 十四期新增（视觉与体验整套焕新）
+| 模块 | 说明 |
+|---|---|
+| 纵轴与字阶统一 | 全端 6 个页面统一共享纵轴（`1160px`）与三档清晰字阶（13–14 正文 / 12 辅助 / 11 徽标），消除重复曲库总数与空下拉框；「我喜欢」采用独立玫瑰色 `--dshm-love`，不再与报错红混用 |
+| 正在播放页升级 | 宽屏双栏 + 封面低饱和环境漫反射微光；右栏升级为「歌词 / 接下来播放」全高切换（无歌词自动切队列），释放同步歌词阅读空间 |
+| 迷你播放条减负 | 常驻控件精简为「上一首 / 播放 / 下一首 / ♥」+ `···` 溢出菜单（播放模式、收起、隐藏），标题区宽度翻倍；菜单智能向上弹出零裁切，悬浮标补全曲目提示 |
+| 听歌历史页重构 | 重构为「浅底总览带（左主角数字 + 右 7 天趋势柱图）→ 等高双卡排行（补专辑封面 + 占比条）→ 账本式垂直列对齐时间线」三幕结构，修正计数单位为「次」 |
+| 导航与快捷键 | 新增导航返回栈（歌手页/设置页动态显示「返回曲库/推荐/历史」）；补齐 `⌘/Ctrl+K` 搜歌、`Space` 播放/暂停、`←/→` ±5 秒快进、`Esc` 返回/清搜索；修复 `:focus-visible`、`prefers-reduced-motion` 与嵌套按钮无障碍问题 |
+| 设置页与确认弹窗 | 首启页改左对齐杂志式报头；老用户进入设置默认收起三家平台卡片（按需展开扫码）；用自研 `ConfirmDialog` 取代原生 `window.confirm` |
+
 ## 安装
 插件以 bundle 形式安装在 desktop profile，**只用 `plugin_manager install_bundle`**（不手写 profile 配置）：
 ```
-plugin_manager install_bundle  target=@vicyangorg/dsh-music@0.7.0
+plugin_manager install_bundle  target=@vicyangorg/dsh-music@0.8.0
 # 或本地源码：target=<项目>/bundle
 ```
 以返回 `application: applied` 为准。安装后刷新现有 GUI 页面，左侧栏出现「音乐」面板。
