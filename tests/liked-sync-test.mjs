@@ -580,16 +580,22 @@ try {
       assert.match(String(call.headers.Referer), /^https:\/\/graph\.qq\.com\/oauth2\.0\/show\?which=Login&display=pc&response_type=code&redirect_uri=/)
       assert.equal(call.headers.Origin, 'https://graph.qq.com')
       assert.match(String(call.headers.Cookie), /p_skey=PS2/)
+      /* 表单是浏览器顶层导航提交的：导航请求头也在 */
+      assert.equal(call.headers['Sec-Fetch-Dest'], 'document')
+      assert.equal(call.headers['Sec-Fetch-Mode'], 'navigate')
       const f = new URLSearchParams(call.body)
       assert.equal(f.get('response_type'), 'code')
       assert.equal(f.get('client_id'), '100497308')
-      assert.equal(f.get('redirect_uri'), 'https://y.qq.com/portal/wx_redirect.html?login_type=1&surl=https%3A%2F%2Fy.qq.com%2F')
+      /* 抓包：redirect_uri 是页面参数完全解码后的值（surl 不再编码） */
+      assert.equal(f.get('redirect_uri'), 'https://y.qq.com/portal/wx_redirect.html?login_type=1&surl=https://y.qq.com/')
       assert.equal(f.get('state'), 'state')
       assert.equal(f.get('from_ptlogin'), '1')
       assert.equal(f.get('update_auth'), '1')
       assert.equal(f.get('openapi'), '1010')
       assert.equal(f.get('g_tk'), String((() => { let h = 5381; for (const ch of 'PS2') h += (h << 5) + ch.charCodeAt(0); return h & 0x7fffffff })()))
       assert.match(f.get('ui'), /^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/)
+      /* 官方 getUuid()：ui 参数与 ui cookie 一致 */
+      assert.match(String(call.headers.Cookie), new RegExp('(^|; )ui=' + f.get('ui') + '(;|$)'))
       assert.ok(Math.abs(Number(f.get('auth_time')) - Date.now()) < 60000)
       return new Response('', { status: 302, headers: [['location', 'https://y.qq.com/portal/wx_redirect.html?login_type=1&surl=https%3A%2F%2Fy.qq.com%2F&code=CODE9&state=state']] })
     }

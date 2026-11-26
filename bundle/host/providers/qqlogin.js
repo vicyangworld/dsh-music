@@ -19,6 +19,14 @@ const WX_REDIRECT = 'https://y.qq.com/portal/wx_redirect.html?login_type=1&surl=
 const AUTHORIZE_URL = 'https://graph.qq.com/oauth2.0/authorize'
 /* QQ 音乐登录页（y.qq.com）用的授权页参数：authorize?which=Login&display=pc&response_type=code&redirect_uri=…&client_id=…&state=state（无 scope） */
 const AUTHORIZE_PAGE = `https://graph.qq.com/oauth2.0/show?which=Login&display=pc&response_type=code&redirect_uri=${encodeURIComponent(WX_REDIRECT)}&client_id=${QQ_CLIENT_ID}&state=state`
+/* 授权页表单里的 redirect_uri = 页面参数 decodeURIComponent 后的值（抓包：surl 是完全解码的 https://y.qq.com/），不能多编一层 */
+const REDIRECT_URI_PLAIN = 'https://y.qq.com/portal/wx_redirect.html?login_type=1&surl=https://y.qq.com/'
+/* 授权表单是浏览器顶层导航提交的：带上导航类请求头，和真实流量一致 */
+const NAV_HEADERS = {
+  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Sec-Fetch-Site': 'same-origin', 'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Dest': 'document', 'Sec-Fetch-User': '?1',
+  'Upgrade-Insecure-Requests': '1',
+}
 const XLOGIN = `${PT_HOST}/cgi-bin/xlogin?appid=${PT_APPID}&daid=${PT_DAID}&style=33&login_text=%E7%99%BB%E5%BD%95&hide_title_bar=1&hide_border=1&target=self&s_url=${encodeURIComponent(S_URL)}&pt_3rd_aid=${QQ_CLIENT_ID}&theme=2&hide_close_icon=1&hide_title_bar=1`
 const COOKIE_FIELDS = ['uin', 'qqmusic_uin', 'wxuin', 'wxrefresh_token', 'psrf_qqaccess_token', 'psrf_qqunionid', 'psrf_musickey_createtime', 'psrf_qqopenid', 'qqmusic_nick']
 
@@ -319,7 +327,7 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
     const f = new URLSearchParams()
     f.set('response_type', 'code')
     f.set('client_id', QQ_CLIENT_ID)
-    f.set('redirect_uri', WX_REDIRECT)
+    f.set('redirect_uri', REDIRECT_URI_PLAIN)
     f.set('scope', '')
     f.set('state', 'state')
     f.set('switch', '')
@@ -329,8 +337,11 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
     f.set('openapi', '1010')
     f.set('g_tk', String(gtkOf(jar)))
     f.set('auth_time', String(Date.now()))
-    f.set('ui', jar.get('ui') || uuid())
-    return { url: AUTHORIZE_URL, method: 'POST', body: f.toString(), headers: { Referer: AUTHORIZE_PAGE, Origin: 'https://graph.qq.com' } }
+    /* 官方页 getUuid()：有 ui cookie 用它，否则生成一个并写回 cookie —— 表单里的 ui 和 cookie 必须一致 */
+    const ui = jar.get('ui') || uuid()
+    jar.set('ui', ui)
+    f.set('ui', ui)
+    return { url: AUTHORIZE_URL, method: 'POST', body: f.toString(), headers: { ...NAV_HEADERS, Referer: AUTHORIZE_PAGE, Origin: 'https://graph.qq.com' } }
   }
 
   /** 诊断信息（给用户看的错误文案用）：去掉标签、遮住长 token，只留前 200 字 */
@@ -386,6 +397,13 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
       const text = await res.text().catch(() => '')
       const u = new URL(url)
       hops.push(`${u.hostname}${u.pathname}→${res.status}`)
+      /* 授权表单这一跳最关键：被踢回 show = 服务端没认登录态。记下它带了哪些 cookie（只记名字）和跳去了哪 */
+      if (/\/oauth2\.0\/authorize/.test(u.pathname)) {
+        const to = res.headers.get('location')
+        let toShown = '无跳转'
+        if (to) { try { const t = new URL(to, url); toShown = t.hostname + t.pathname } catch { toShown = '？' } }
+        hops[hops.length - 1] += `→${toShown}（cookie 名：${jar.names().join(',') || '无'}）`
+      }
       /* 到达落点（wx_redirect.html?…code=…）：授权码就在 URL 里，页面本身不用再解析 */
       if (url.includes('/portal/wx_redirect.html')) {
         code = u.searchParams.get('code') || ''
@@ -417,7 +435,7 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
     if (!code) {
       const d = describeBody(lastText)
       const detail = `跳转链 ${hops.join(' › ') || '（空）'}；末页 ${d.len} 字节${d.plain ? `「${d.plain}」` : ''}${d.urls.length ? `；页面链接 ${d.urls.join(' | ')}` : ''}`
-      throw httpError(`QQ 登录成功但没拿到授权码（${detail.slice(0, 600)}）`, 502)
+      throw httpError(`QQ 登录成功但没拿到授权码（${detail.slice(0, 800)}）`, 502)
     }
     const body = JSON.stringify({
       comm: { g_tk: 5381, platform: 'yqq', ct: 24, cv: 0 },
