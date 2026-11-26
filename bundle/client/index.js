@@ -1692,7 +1692,7 @@ window.__ModuleLoader__.load({
 .dshm-set-foot-hint{font-size:12px;color:var(--dsw-alias-label-tertiary);margin-left:auto;}
 .dshm-set-saved{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--dsw-alias-state-success-primary);}
 @media (max-width:520px){.dshm-imp-qr{flex-direction:column;align-items:center;}.dshm-settings-inner{padding:20px 16px 88px;}.dshm-set-foot{margin:4px -16px -88px;padding:10px 16px 18px;}}
-.dshm-hrow{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:10px;}
+.dshm-hrow{display:flex;align-items:center;gap:12px;padding:7px 10px;border-radius:10px;}
 .dshm-hrow-play{appearance:none;border:0;background:transparent;padding:0;margin:0;cursor:pointer;flex:none;border-radius:8px;display:inline-flex;}
 .dshm-hrow-play:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}
 .dshm-hrow-click{cursor:pointer;outline:none;}
@@ -1702,11 +1702,14 @@ window.__ModuleLoader__.load({
 .dshm-row-sub-btn:hover{color:var(--dsw-alias-brand-text);text-decoration:underline;text-underline-offset:3px;}
 .dshm-row-sub-btn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}
 .dshm-hrow:hover{background:var(--dsw-alias-interactive-bg-hover);}
+.dshm-hrow-meta{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex:none;}
 .dshm-hbar{height:3px;border-radius:2px;background:var(--dsw-alias-bg-layer-3);overflow:hidden;}
 .dshm-hbar>div{height:100%;background:var(--dsw-alias-label-tertiary);}
-.dshm-hskip{font-size:11px;color:var(--dsw-alias-label-tertiary);border:1px solid var(--dsw-alias-border-l2);border-radius:99px;padding:1px 8px;flex:none;}
-.dshm-htime{font-size:12px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums;flex:none;}
-.dshm-hlist{padding:4px 0 20px;}
+.dshm-hskip{font-size:11px;color:var(--dsw-alias-label-tertiary);border:1px solid var(--dsw-alias-border-l2);border-radius:99px;padding:1px 7px;line-height:1.4;flex:none;}
+.dshm-htime{font-size:12px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums;width:44px;text-align:right;flex:none;}
+.dshm-hlist{margin-top:22px;padding:0 0 24px;}
+.dshm-hlist .dshm-queue-head{padding:0 10px 10px;margin-bottom:4px;}
+.dshm-hlist .dshm-queue-head .dshm-col-play{margin-left:auto;}
 .dshm-explore-chip{flex:none;font-size:12px;font-weight:600;padding:1px 6px;border-radius:99px;background:var(--dsw-alias-bg-layer-3);color:var(--dsw-alias-label-primary);border:1px solid var(--dsw-alias-border-l1);}
 .dshm-explore-note{display:flex;align-items:flex-start;gap:7px;margin:10px 0 0;padding:8px 11px;border-radius:9px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.5;}
 .dshm-columns{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;}
@@ -1756,9 +1759,11 @@ window.__ModuleLoader__.load({
 .dshm-row-off{opacity:.55;cursor:not-allowed;}
 .dshm-row-off:hover{background:transparent;}
 .dshm-dislike-btn-on{color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-interactive-bg-hover);}
-.dshm-dislikes{margin-top:14px;}
+.dshm-dislikes{margin-top:16px;padding:14px 12px 10px;border-radius:14px;background:var(--dsw-alias-bg-base);border:1px solid var(--dsw-alias-border-l1);}
 .dshm-dislike-row{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:9px;font-size:12.5px;color:var(--dsw-alias-label-secondary);}
 .dshm-dislike-row:hover{background:var(--dsw-alias-interactive-bg-hover);}
+.dshm-dislike-name{flex:1;min-width:0;color:var(--dsw-alias-label-primary);}
+.dshm-dislike-date{flex:none;font-variant-numeric:tabular-nums;}
 .dshm-dislike-undo{flex:none;}
 .dshm-playround{appearance:none;border:0;width:30px;height:30px;border-radius:50%;background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex:none;transition:background .13s,transform .1s;}
 .dshm-playround:hover{background:var(--dsw-alias-button-primary-hover);transform:scale(1.06);}
@@ -1808,26 +1813,38 @@ window.__ModuleLoader__.load({
   .dshm-now{padding:0 12px;}
   .dshm-column{border-right:0;border-bottom:1px solid var(--dsw-alias-border-l1);max-height:46vh;}
 }
-.dshm-history-page{width:100%;max-width:var(--dshm-axis);margin:0 auto;padding:12px 0 24px;}
-.dshm-hist-hero{padding:8px 8px 4px;}
-.dshm-hist-main{display:flex;align-items:baseline;gap:28px;flex-wrap:wrap;}
-.dshm-hist-big-item{display:inline-flex;align-items:baseline;gap:6px;}
-.dshm-hist-big{font-size:34px;font-weight:700;letter-spacing:-.6px;color:var(--dsw-alias-label-primary);font-variant-numeric:tabular-nums;line-height:1.1;}
-.dshm-hist-big-unit{font-size:15px;font-weight:600;letter-spacing:0;margin-left:3px;color:var(--dsw-alias-label-secondary);}
-.dshm-hist-big-label{font-size:12px;font-weight:400;letter-spacing:0;color:var(--dsw-alias-label-tertiary);margin-left:4px;}
-.dshm-hist-foot{font-size:12.5px;color:var(--dsw-alias-label-secondary);margin:6px 0 0;}
+.dshm-history-page{width:100%;max-width:var(--dshm-axis);margin:0 auto;padding:16px 0 28px;}
+.dshm-hist-hero{display:grid;grid-template-columns:minmax(260px,1fr) minmax(300px,420px);gap:20px 32px;align-items:stretch;padding:20px 24px;border-radius:14px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);}
+.dshm-hist-hero-solo{grid-template-columns:1fr;}
+.dshm-hist-overview{display:flex;flex-direction:column;justify-content:space-between;min-width:0;}
+.dshm-hist-main{display:flex;align-items:flex-end;gap:36px;flex-wrap:wrap;}
+.dshm-hist-big-item{display:flex;flex-direction:column;gap:5px;}
+.dshm-hist-big-label{font-size:12px;font-weight:500;letter-spacing:0;color:var(--dsw-alias-label-tertiary);}
+.dshm-hist-big{font-size:32px;font-weight:700;letter-spacing:-.6px;color:var(--dsw-alias-label-primary);font-variant-numeric:tabular-nums;line-height:1.05;display:inline-flex;align-items:baseline;}
+.dshm-hist-big-unit{font-size:13.5px;font-weight:500;letter-spacing:0;color:var(--dsw-alias-label-secondary);margin:0 6px 0 3px;}
+.dshm-hist-big-unit:last-child{margin-right:0;}
+.dshm-hist-foot{font-size:12.5px;color:var(--dsw-alias-label-secondary);margin:14px 0 0;line-height:1.5;}
 .dshm-hist-foot b{font-weight:600;color:var(--dsw-alias-label-primary);}
-.dshm-trend{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:18px 8px 6px;max-width:560px;}
-.dshm-bar-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:96px;min-width:0;}
-.dshm-bar-val{font-size:12px;color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums;line-height:1;}
-.dshm-bar{width:100%;max-width:36px;border-radius:5px 5px 2px 2px;background:var(--dsw-alias-label-tertiary);opacity:.55;min-height:3px;}
-.dshm-bar-today{background:var(--dsw-alias-brand-primary);opacity:1;}
+.dshm-trend-wrap{display:flex;flex-direction:column;min-width:0;}
+.dshm-trend-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px;}
+.dshm-trend-title{font-size:12px;font-weight:500;color:var(--dsw-alias-label-tertiary);}
+.dshm-trend-sum{font-size:12px;color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums;}
+.dshm-trend-bars{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;height:78px;align-items:end;border-bottom:1px solid var(--dsw-alias-border-l2);}
+.dshm-bar-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%;min-width:0;}
+.dshm-bar-val{font-size:11px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums;line-height:1;}
+.dshm-bar-col-today .dshm-bar-val{color:var(--dsw-alias-brand-primary);font-weight:600;}
+.dshm-bar{width:24px;max-width:100%;border-radius:5px 5px 0 0;background:var(--dsw-alias-label-tertiary);opacity:.42;min-height:3px;transition:opacity .15s;}
+.dshm-bar-col:hover .dshm-bar{opacity:.72;}
+.dshm-bar-today,.dshm-bar-col:hover .dshm-bar-today{background:var(--dsw-alias-brand-primary);opacity:1;}
 .dshm-bar-zero{background:var(--dsw-alias-border-l2);opacity:1;min-height:2px;height:2px!important;}
-.dshm-bar-label{font-size:11px;color:var(--dsw-alias-label-tertiary);}
-.dshm-tops{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:14px;padding:0 8px;}
-.dshm-top-col{display:flex;flex-direction:column;gap:2px;min-width:0;}
-.dshm-top-title{font-size:12px;font-weight:600;color:var(--dsw-alias-label-secondary);padding:0 6px 6px;display:flex;align-items:center;gap:6px;}
-.dshm-top-row{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;font-size:12.5px;min-width:0;outline:none;}
+.dshm-trend-axis{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:6px;}
+.dshm-bar-label{font-size:11px;color:var(--dsw-alias-label-tertiary);text-align:center;font-variant-numeric:tabular-nums;}
+.dshm-bar-label-today{color:var(--dsw-alias-brand-primary);font-weight:600;}
+.dshm-tops{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;}
+.dshm-top-col{display:flex;flex-direction:column;gap:2px;min-width:0;padding:14px 12px 10px;border-radius:14px;background:var(--dsw-alias-bg-base);border:1px solid var(--dsw-alias-border-l1);}
+.dshm-top-title{height:28px;font-size:13px;font-weight:600;color:var(--dsw-alias-label-primary);padding:0 6px;margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+.dshm-top-title .dshm-col-play{margin-left:auto;}
+.dshm-top-row{display:flex;align-items:center;gap:10px;height:44px;padding:0 8px;border-radius:9px;font-size:13px;min-width:0;outline:none;}
 .dshm-top-row-click{cursor:pointer;}
 .dshm-top-row-click:hover{background:var(--dsw-alias-interactive-bg-hover);}
 .dshm-top-row-click:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px;}
@@ -1838,16 +1855,26 @@ window.__ModuleLoader__.load({
 .dshm-top-row-off:hover{background:transparent;}
 .dshm-top-row:hover{background:var(--dsw-alias-interactive-bg-hover);}
 .dshm-top-rank{width:18px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums;font-size:12px;flex:none;text-align:right;}
-.dshm-top-name{flex:1;min-width:0;color:var(--dsw-alias-label-primary);font-weight:500;}
-.dshm-top-sub{color:var(--dsw-alias-label-tertiary);font-size:12px;max-width:36%;flex-shrink:1;}
-.dshm-top-row .dshm-count{margin-left:auto;flex:none;font-variant-numeric:tabular-nums;}
-.dshm-hgroup{margin-top:10px;}
-.dshm-hgroup-label{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--dsw-alias-bg-base);font-size:12px;font-weight:600;color:var(--dsw-alias-label-secondary);}
-.dshm-hbadge{font-size:12px;border-radius:99px;padding:1px 8px;border:1px solid var(--dsw-alias-border-l2);flex:none;font-variant-numeric:tabular-nums;}
-.dshm-hbadge-good{color:var(--dsw-alias-label-tertiary);border-color:transparent;padding:0;}
-.dshm-hbadge-mid{color:var(--dsw-alias-state-warn-primary);border-color:currentColor;}
+.dshm-top-rank-hi{color:var(--dsw-alias-label-secondary);font-weight:600;}
+.dshm-top-info{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:1px;}
+.dshm-top-name{color:var(--dsw-alias-label-primary);font-weight:500;line-height:1.25;}
+.dshm-top-row-artist .dshm-top-name{flex:1;min-width:0;}
+.dshm-top-sub{color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:1.25;}
+.dshm-top-meter{width:44px;height:4px;border-radius:99px;background:var(--dsw-alias-bg-layer-3);overflow:hidden;flex:none;}
+.dshm-top-meter>span{display:block;height:100%;border-radius:99px;background:var(--dsw-alias-label-tertiary);opacity:.55;}
+.dshm-top-row .dshm-count{margin-left:auto;min-width:44px;text-align:right;flex:none;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary);}
+.dshm-top-meter+.dshm-count{margin-left:0;}
+.dshm-hgroup{margin-top:12px;}
+.dshm-hgroup-label{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--dsw-alias-bg-base);border-bottom:1px solid var(--dsw-alias-border-l1);margin-bottom:4px;font-size:12px;font-weight:600;color:var(--dsw-alias-label-secondary);}
+.dshm-hbadge{font-size:12px;min-width:40px;text-align:right;flex:none;font-variant-numeric:tabular-nums;}
+.dshm-hbadge-good{color:var(--dsw-alias-label-secondary);}
+.dshm-hbadge-mid{color:var(--dsw-alias-state-warn-primary);font-weight:500;}
 .dshm-hbadge-low{color:var(--dsw-alias-label-tertiary);}
 .dshm-hrow-info{flex:1;min-width:0;}
+@media (max-width:860px){
+  .dshm-hist-hero{grid-template-columns:1fr;padding:16px 18px;}
+  .dshm-top-meter{display:none;}
+}
 @media (max-width:680px){
   .dshm-tops{grid-template-columns:1fr;}
   .dshm-hrow .dshm-hskip,.dshm-hrow .dshm-htime{display:none;}
@@ -5302,6 +5329,7 @@ window.__ModuleLoader__.load({
       };
       const daily = (stats && stats.daily) || [];
       const maxDaily = Math.max(1, ...daily.map((d) => d.plays || 0));
+      const dailySum = daily.reduce((acc, d) => acc + (d.plays || 0), 0);
       /* 宿主 /history/stats 的真实字段 */
       const plays = (stats && stats.totalPlays) || 0;
       const totalSeconds = (stats && stats.totalSeconds) || 0;
@@ -5310,82 +5338,108 @@ window.__ModuleLoader__.load({
       const skipped = (stats && stats.skippedCount) || 0;
       const completion = Math.round(((stats && stats.avgCompletion) || 0) * 100);
       const dislikes = (stats && stats.dislikes && stats.dislikes.songs) || [];
+      const maxTopSong = Math.max(1, ...((stats && stats.topSongs) || []).map((x) => x.plays || 0));
+      const maxTopArtist = Math.max(1, ...((stats && stats.topArtists) || []).map((x) => x.plays || 0));
+      const showPlaysUnit = t('playsUnit') && t('playsUnit').toLowerCase() !== String(t('statPlays') || '').toLowerCase();
+      const renderDuration = (sec) => fmtDuration(sec, t).split(/(\d+)/).map((part, idx) => {
+        if (!part) return null;
+        if (/^\d+$/.test(part)) return part;
+        const unit = part.trim();
+        return unit ? h('span', { key: idx, className: 'dshm-hist-big-unit' }, unit) : null;
+      });
+      const todayKey = fmtDay(Date.now());
 
-      /* 摘要只留「两个主角数字 + 一行安静的脚注」。
-       * 旧版 7 张等权 KPI 卡像运维监控面板；正常听完的歌也不再涂绿。 */
-      const statsBlock = stats ? h('div', { className: 'dshm-hist-hero' },
-        h('div', { className: 'dshm-hist-main' },
-          h('span', { className: 'dshm-hist-big-item' },
-            h('span', { className: 'dshm-hist-big' }, String(plays), h('span', { className: 'dshm-hist-big-unit' }, t('playsUnit'))),
-            h('span', { className: 'dshm-hist-big-label' }, t('statPlays'))),
-          h('span', { className: 'dshm-hist-big-item' },
-            h('span', { className: 'dshm-hist-big' }, fmtDuration(totalSeconds, t)),
-            h('span', { className: 'dshm-hist-big-label' }, t('statSeconds')))),
-        h('p', { className: 'dshm-hist-foot' },
-          fmt(t('histSummaryFoot'), { songs, artists, pct: completion }),
-          skipped ? ' · ' + fmt(t('histSummarySkip'), { n: skipped }) : '',
-          dislikes.length ? ' · ' + fmt(t('histSummaryDislike'), { n: dislikes.length }) : ''),
-        daily.length ? h('div', { className: 'dshm-trend', role: 'img', 'aria-label': t('statDaily') || '7 days' },
-          daily.map((d) => {
-            const n = d.plays || 0;
-            const pct = Math.round((n / maxDaily) * 100);
-            const isToday = d.date === fmtDay(Date.now());
-            return h('div', { key: d.date, className: 'dshm-bar-col' + (isToday ? ' dshm-bar-col-today' : ''), title: d.date + ' · ' + n },
-              h('span', { className: 'dshm-bar-val' }, n ? String(n) : '–'),
-              h('div', { className: 'dshm-bar' + (isToday ? ' dshm-bar-today' : '') + (n ? '' : ' dshm-bar-zero'), style: n ? { height: Math.max(8, Math.round((n / maxDaily) * 100)) + '%' } : undefined }),
-              h('span', { className: 'dshm-bar-label' }, d.date.slice(5)));
-          })) : null,
+      /* 三幕结构：顶部浅底总览带（左主角数字 + 右 7 天趋势）→ 等高双卡排行 → 账本式对齐时间线 */
+      const statsBlock = stats ? h(React.Fragment, null,
+        h('section', { className: cx('dshm-hist-hero', !daily.length && 'dshm-hist-hero-solo') },
+          h('div', { className: 'dshm-hist-overview' },
+            h('div', { className: 'dshm-hist-main' },
+              h('div', { className: 'dshm-hist-big-item' },
+                h('span', { className: 'dshm-hist-big-label' }, t('statPlays')),
+                h('span', { className: 'dshm-hist-big' }, String(plays), showPlaysUnit ? h('span', { className: 'dshm-hist-big-unit' }, t('playsUnit')) : null)),
+              h('div', { className: 'dshm-hist-big-item' },
+                h('span', { className: 'dshm-hist-big-label' }, t('statSeconds')),
+                h('span', { className: 'dshm-hist-big' }, renderDuration(totalSeconds)))),
+            h('p', { className: 'dshm-hist-foot' },
+              fmt(t('histSummaryFoot'), { songs, artists, pct: completion }),
+              skipped ? ' · ' + fmt(t('histSummarySkip'), { n: skipped }) : '',
+              dislikes.length ? ' · ' + fmt(t('histSummaryDislike'), { n: dislikes.length }) : '')),
+          daily.length ? h('div', { className: 'dshm-trend-wrap', role: 'img', 'aria-label': t('statDaily') || '7 days' },
+            h('div', { className: 'dshm-trend-head' },
+              h('span', { className: 'dshm-trend-title' }, t('statDaily')),
+              h('span', { className: 'dshm-trend-sum' }, dailySum + ' ' + t('playsUnit'))),
+            h('div', { className: 'dshm-trend-bars' },
+              daily.map((d) => {
+                const n = d.plays || 0;
+                const isToday = d.date === todayKey;
+                return h('div', { key: d.date, className: cx('dshm-bar-col', isToday && 'dshm-bar-col-today'), title: d.date + ' · ' + n },
+                  h('span', { className: 'dshm-bar-val' }, n ? String(n) : '–'),
+                  h('div', { className: cx('dshm-bar', isToday && 'dshm-bar-today', !n && 'dshm-bar-zero'), style: n ? { height: Math.max(4, Math.round((n / maxDaily) * 58)) + 'px' } : undefined }));
+              })),
+            h('div', { className: 'dshm-trend-axis' },
+              daily.map((d) => {
+                const isToday = d.date === todayKey;
+                return h('span', { key: d.date, className: cx('dshm-bar-label', isToday && 'dshm-bar-label-today') }, d.date.slice(5));
+              }))) : null),
         h('div', { className: 'dshm-tops' },
-        h('div', { className: 'dshm-top-col' },
-              h('div', { className: 'dshm-top-title' }, t('topSongs'),
-                h('button', {
-                  type: 'button', className: 'dshm-chipbtn dshm-col-play',
-                  disabled: topTracks.length === 0, title: t('playList'), 'aria-label': t('playList'),
-                  onClick: () => player.playTracks(topTracks, 0),
-                }, h(IconPlay, { size: 13 }))),
-              ((stats.topSongs || []).length
-                ? stats.topSongs.map((it, i) => {
-                    const tr = trackForTop(it);
-                    const play = () => { setNotice(''); playTopSong(it); };
-                    const explain = () => setNotice(t('topUnplayable'));
-                    return h('div', {
-                      className: cx('dshm-top-row', tr ? 'dshm-top-row-click' : 'dshm-top-row-off'), key: i,
-                      role: 'button', tabIndex: 0,
-                      'aria-disabled': tr ? undefined : true,
-                      title: tr ? t('playTrack') : t('topUnplayable'),
-                      onClick: tr ? play : explain,
-                      onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (tr) play(); else explain(); } },
-                    },
-                      h('span', { className: 'dshm-top-rank' }, String(i + 1)),
+          h('div', { className: 'dshm-top-col' },
+            h('div', { className: 'dshm-top-title' }, t('topSongs'),
+              h('button', {
+                type: 'button', className: 'dshm-chipbtn dshm-col-play',
+                disabled: topTracks.length === 0, title: t('playList'), 'aria-label': t('playList'),
+                onClick: () => player.playTracks(topTracks, 0),
+              }, h(IconPlay, { size: 13 }))),
+            ((stats.topSongs || []).length
+              ? stats.topSongs.map((it, i) => {
+                  const tr = trackForTop(it);
+                  const play = () => { setNotice(''); playTopSong(it); };
+                  const explain = () => setNotice(t('topUnplayable'));
+                  const ratio = Math.max(6, Math.round(((it.plays || 0) / maxTopSong) * 100));
+                  return h('div', {
+                    className: cx('dshm-top-row', tr ? 'dshm-top-row-click' : 'dshm-top-row-off'), key: i,
+                    role: 'button', tabIndex: 0,
+                    'aria-disabled': tr ? undefined : true,
+                    title: tr ? t('playTrack') : t('topUnplayable'),
+                    onClick: tr ? play : explain,
+                    onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (tr) play(); else explain(); } },
+                  },
+                    h('span', { className: cx('dshm-top-rank', i < 3 && 'dshm-top-rank-hi') }, String(i + 1)),
+                    h(Thumb, { src: tr && tr.coverUrl ? tr.coverUrl : null, size: 28 }),
+                    h('div', { className: 'dshm-top-info' },
                       h('span', { className: 'dshm-top-name dshm-ellipsis' }, it.title || t('untitled')),
-                      h('span', { className: 'dshm-top-sub dshm-ellipsis' }, it.artist || ''),
-                      h('span', { className: 'dshm-count' }, (it.plays || 0) + ' ' + t('playsUnit')));
-                  })
-                : h('div', { className: 'dshm-lyrics-hint' }, t('noSection')))),
-            h('div', { className: 'dshm-top-col' },
-              h('div', { className: 'dshm-top-title' }, t('topArtists')),
-              ((stats.topArtists || []).length
-                ? stats.topArtists.map((it, i) => h('button', {
+                      it.artist ? h('span', { className: 'dshm-top-sub dshm-ellipsis' }, it.artist) : null),
+                    h('span', { className: 'dshm-top-meter', 'aria-hidden': true }, h('span', { style: { width: ratio + '%' } })),
+                    h('span', { className: 'dshm-count' }, (it.plays || 0) + ' ' + t('playsUnit')));
+                })
+              : h('div', { className: 'dshm-lyrics-hint' }, t('noSection')))),
+          h('div', { className: 'dshm-top-col' },
+            h('div', { className: 'dshm-top-title' }, t('topArtists')),
+            ((stats.topArtists || []).length
+              ? stats.topArtists.map((it, i) => {
+                  const ratio = Math.max(6, Math.round(((it.plays || 0) / maxTopArtist) * 100));
+                  return h('button', {
                     key: i, type: 'button', className: 'dshm-top-row dshm-top-row-artist',
                     title: t('artistOpen'), onClick: () => openArtistPage(it.name || ''),
                   },
-                    h('span', { className: 'dshm-top-rank' }, String(i + 1)),
-                    h(ArtistAvatar, { name: it.name || '', size: 24, service: artistImages, useArtistImages }),
+                    h('span', { className: cx('dshm-top-rank', i < 3 && 'dshm-top-rank-hi') }, String(i + 1)),
+                    h(ArtistAvatar, { name: it.name || '', size: 28, service: artistImages, useArtistImages }),
                     h('span', { className: 'dshm-top-name dshm-ellipsis' }, it.name || ''),
-                    h('span', { className: 'dshm-count' }, (it.plays || 0) + ' ' + t('playsUnit'))))
-                : h('div', { className: 'dshm-lyrics-hint' }, t('noSection')))),
-            dislikes.length ? h('div', { className: 'dshm-dislikes' },
-              h('div', { className: 'dshm-top-title' }, t('dislikesTitle')),
-              dislikes.map((it, i) => h('div', { className: 'dshm-dislike-row', key: i },
-                h('span', { className: 'dshm-ellipsis dshm-dislike-name' },
-                  (it.title || '') + (it.artist ? ' · ' + it.artist : '')),
-                h('span', { className: 'dshm-count dshm-dislike-date' }, it.dislikedAt ? fmtDay(it.dislikedAt) : ''),
-                likes ? h('button', {
-                  type: 'button', className: 'dshm-chipbtn dshm-dislike-undo',
-                  title: t('undislikeBtn'),
-                  onClick: () => likes.setDislike({ artist: it.artist, title: it.title }, false),
-                }, t('undislikeBtn')) : null))) : null))
-            : null;
+                    h('span', { className: 'dshm-top-meter', 'aria-hidden': true }, h('span', { style: { width: ratio + '%' } })),
+                    h('span', { className: 'dshm-count' }, (it.plays || 0) + ' ' + t('playsUnit')));
+                })
+              : h('div', { className: 'dshm-lyrics-hint' }, t('noSection'))))),
+        dislikes.length ? h('div', { className: 'dshm-dislikes' },
+          h('div', { className: 'dshm-top-title' }, t('dislikesTitle')),
+          dislikes.map((it, i) => h('div', { className: 'dshm-dislike-row', key: i },
+            h('span', { className: 'dshm-ellipsis dshm-dislike-name' },
+              (it.title || '') + (it.artist ? ' · ' + it.artist : '')),
+            h('span', { className: 'dshm-count dshm-dislike-date' }, it.dislikedAt ? fmtDay(it.dislikedAt) : ''),
+            likes ? h('button', {
+              type: 'button', className: 'dshm-chipbtn dshm-dislike-undo',
+              title: t('undislikeBtn'),
+              onClick: () => likes.setDislike({ artist: it.artist, title: it.title }, false),
+            }, t('undislikeBtn')) : null))) : null)
+        : null;
 
       let list;
       const events = s.events || [];
@@ -5423,7 +5477,7 @@ window.__ModuleLoader__.load({
         list = h('div', { className: 'dshm-hlist' },
           h('div', { className: 'dshm-queue-head' },
             h('span', { className: 'dshm-queue-title' }, t('historyTitle')),
-            h('span', { className: 'dshm-count' }, s.total + ' ' + t('tracksUnit')),
+            h('span', { className: 'dshm-count' }, s.total + ' ' + t('playsUnit')),
             h('button', {
               type: 'button', className: 'dshm-chipbtn dshm-col-play',
               disabled: queue.length === 0,
@@ -5461,10 +5515,11 @@ window.__ModuleLoader__.load({
                         h(ArtistAvatar, { name: ev.artist, size: 16, service: artistImages, useArtistImages }),
                         h('span', { className: 'dshm-ellipsis' }, ev.artist))
                     : h('div', { className: 'dshm-row-sub dshm-ellipsis' }, '')),
-                h('span', { className: 'dshm-hbadge dshm-hbadge-' + tone, title: t('historyComplete') }, pct + '%'),
-                ev.skipped ? h('span', { className: 'dshm-hskip' }, t('historySkipped')) : h('span', null),
-                h('span', { className: 'dshm-htime' },
-                  ev.timestamp ? new Date(ev.timestamp).toLocaleString(undefined, { hour: '2-digit', minute: '2-digit' }) : ''));
+                h('div', { className: 'dshm-hrow-meta' },
+                  ev.skipped ? h('span', { className: 'dshm-hskip' }, t('historySkipped')) : null,
+                  h('span', { className: 'dshm-hbadge dshm-hbadge-' + tone, title: t('historyComplete') }, pct + '%'),
+                  h('span', { className: 'dshm-htime' },
+                    ev.timestamp ? new Date(ev.timestamp).toLocaleString(undefined, { hour: '2-digit', minute: '2-digit' }) : '')));
             }))));
       }
 
