@@ -433,7 +433,7 @@ window.__ModuleLoader__.load({
       tabNowQueue: '接下来播放',
       searchMatchedCount: '匹配 {shown} / {total} 首',
       histSummaryFoot: '{songs} 首歌 · {artists} 位歌手 · 平均完整度 {pct}%',
-      histSummarySkip: '{skipped} 次跳过',
+      histSummarySkip: '{n} 次跳过',
       histSummaryDislike: '{dislikes} 首不喜欢',
     };
     const en = {
@@ -825,7 +825,7 @@ window.__ModuleLoader__.load({
       tabNowQueue: 'Up next',
       searchMatchedCount: '{shown} / {total} matched',
       histSummaryFoot: '{songs} songs · {artists} artists · {pct}% avg completion',
-      histSummarySkip: '{skipped} skipped',
+      histSummarySkip: '{n} skipped',
       histSummaryDislike: '{dislikes} disliked',
     };
 
@@ -1305,7 +1305,7 @@ window.__ModuleLoader__.load({
 .dshm-wcard:hover{background:var(--dsw-alias-interactive-bg-hover);}
 .dshm-wcard-on{border-color:var(--dsw-alias-brand-primary);box-shadow:0 0 0 1px var(--dsw-alias-brand-primary) inset;}
 .dshm-wcard-icon{flex:none;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-layer-2);}
-.dshm-wcard-text{display:flex;flex-direction:column;gap:3px;}
+.dshm-wcard-text{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
 .dshm-wcard-title{font-size:13px;font-weight:600;}
 .dshm-wcard-body{font-size:12px;color:var(--dsw-alias-label-secondary);line-height:1.5;}
 .dshm-whint{font-size:12px;color:var(--dsw-alias-label-secondary);margin:12px 0 0;line-height:1.55;}
@@ -1661,7 +1661,7 @@ window.__ModuleLoader__.load({
 .dshm-missing-chip.dshm-scan-chip{display:inline-flex;align-items:center;gap:4px;color:var(--dsw-alias-brand-primary);border-color:color-mix(in srgb,var(--dsw-alias-brand-primary) 35%,transparent);}
 .dshm-missing-chip{font-size:12px;color:var(--dsw-alias-state-warn-primary);border:1px solid currentColor;border-radius:99px;padding:2px 9px;white-space:nowrap;}
 .dshm-settings{position:relative;height:100%;overflow:auto;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;animation:dshm-fade-in .28s ease-out;}
-.dshm-settings-inner{max-width:760px;margin:0 auto;padding:28px 24px 96px;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:20px;}
+.dshm-settings-inner{max-width:760px;margin:0 auto;padding:28px 24px 150px;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:20px;}
 .dshm-settings-narrow{max-width:540px;}
 .dshm-set-hero{margin:4px 0 4px;text-align:left;}
 .dshm-logo{display:block;width:56px;height:56px;object-fit:contain;filter:drop-shadow(0 4px 10px var(--dsw-alias-bg-mask-2));user-select:none;margin:0;}
@@ -1678,7 +1678,7 @@ window.__ModuleLoader__.load({
 .dshm-set-head .dshm-wstep-sub{flex-basis:100%;margin:0;max-width:none;padding-left:34px;line-height:1.55;}
 .dshm-imp-logged{display:flex;flex-direction:column;gap:10px;min-width:0;}
 .dshm-imp-account{max-width:100%;}
-.dshm-set-foot{position:sticky;bottom:0;z-index:2;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px -24px -96px;padding:12px 24px 20px;background:var(--dsw-alias-bg-base);border-top:1px solid var(--dsw-alias-border-l1);}
+.dshm-set-foot{position:sticky;bottom:0;z-index:2;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px -24px -150px;padding:14px 24px 28px;background:var(--dsw-alias-bg-base);border-top:1px solid var(--dsw-alias-border-l1);}
 .dshm-set-foot-hint{font-size:12px;color:var(--dsw-alias-label-tertiary);margin-left:auto;}
 .dshm-set-saved{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--dsw-alias-state-success-primary);}
 @media (max-width:520px){.dshm-imp-qr{flex-direction:column;align-items:center;}.dshm-settings-inner{padding:20px 16px 88px;}.dshm-set-foot{margin:4px -16px -88px;padding:10px 16px 18px;}}
@@ -4344,7 +4344,7 @@ window.__ModuleLoader__.load({
                   h(IconButton, { label: muted ? t('unmute') : t('mute'), onClick: () => player.toggleMute() },
                     h(muted || volume === 0 ? IconMute : IconVolume, { size: 17 })),
                   h(Slider, { value: muted ? 0 : volume, label: t('volume'), onChange: (f) => player.setVolume(f) }),
-                  h('span', { className: 'dshm-volume-pct' }, Math.round((muted ? 0 : volume) * 100) + '%')))),
+                  h('span', { className: 'dshm-volume-pct' }, Math.round((muted ? 0 : volume) * 100) + '%'))))),
           /* 右栏：歌词全高呼吸；没有歌词时让「接下来播放」顶上来，不留一片死白 */
           h('div', { className: 'dshm-now-main' },
             h(LyricsPanel, { t, lyrics, player, useLyrics, usePlayer }),
@@ -4359,7 +4359,7 @@ window.__ModuleLoader__.load({
                       key: (tr.id || '') + ':' + i, track: tr, index: i,
                       isCurrent: i === queueIndex, playing: playing && i === queueIndex,
                       onPlay: (_tr, idx) => player.jumpTo(idx), onOpenArtist: openArtistPage, t,
-                    }))))))));
+                    })))))));
     }
 
     /* ================================================================
@@ -5254,12 +5254,13 @@ window.__ModuleLoader__.load({
       };
       const daily = (stats && stats.daily) || [];
       const maxDaily = Math.max(1, ...daily.map((d) => d.plays || 0));
-      const plays = (stats && stats.plays) || 0;
-      const totalSeconds = (stats && stats.seconds) || 0;
-      const songs = (stats && stats.songs) || 0;
-      const artists = (stats && stats.artists) || 0;
-      const skipped = (stats && stats.skipped) || 0;
-      const completion = (stats && stats.completion) || 0;
+      /* 宿主 /history/stats 的真实字段 */
+      const plays = (stats && stats.totalPlays) || 0;
+      const totalSeconds = (stats && stats.totalSeconds) || 0;
+      const songs = (stats && stats.uniqueSongs) || 0;
+      const artists = (stats && stats.uniqueArtists) || 0;
+      const skipped = (stats && stats.skippedCount) || 0;
+      const completion = Math.round(((stats && stats.avgCompletion) || 0) * 100);
       const dislikes = (stats && stats.dislikes && stats.dislikes.songs) || [];
 
       /* 摘要只留「两个主角数字 + 一行安静的脚注」。
@@ -5286,11 +5287,11 @@ window.__ModuleLoader__.load({
           daily.map((d) => {
             const n = d.plays || 0;
             const pct = Math.round((n / maxDaily) * 100);
-            const isToday = d.day === fmtDay(Date.now());
-            return h('div', { key: d.day, className: 'dshm-bar-col' + (isToday ? ' dshm-bar-col-today' : ''), title: (d.label || d.day) + ' · ' + n },
+            const isToday = d.date === fmtDay(Date.now());
+            return h('div', { key: d.date, className: 'dshm-bar-col' + (isToday ? ' dshm-bar-col-today' : ''), title: d.date + ' · ' + n },
               h('span', { className: 'dshm-bar-val' }, n ? String(n) : '–'),
-              h('div', { className: 'dshm-bar' + (isToday ? ' dshm-bar-today' : '') + (n ? '' : ' dshm-bar-zero') }),
-              h('span', { className: 'dshm-bar-label' }, (d.label || d.day || '').slice(5)));
+              h('div', { className: 'dshm-bar' + (isToday ? ' dshm-bar-today' : '') + (n ? '' : ' dshm-bar-zero'), style: n ? { height: Math.max(8, Math.round((n / maxDaily) * 100)) + '%' } : undefined }),
+              h('span', { className: 'dshm-bar-label' }, d.date.slice(5)));
           })) : null,
         h('div', { className: 'dshm-tops' },
         h('div', { className: 'dshm-top-col' },
