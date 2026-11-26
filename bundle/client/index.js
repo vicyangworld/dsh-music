@@ -351,6 +351,7 @@ window.__ModuleLoader__.load({
       importQqPrivacy: '登录凭据只保存在本机（~/.dsh/dsh-music/accounts.json，权限 0600），不上传；可随时断开连接。',
       importQqQrStep1: '用手机 QQ 扫一扫登录',
       importQqQrHint: '打开手机 QQ → 右上角「+」→「扫一扫」，对准二维码，在手机上确认登录。',
+      importQqBusyHint: '手机提示「登录频繁」？今天扫码次数太多，等 30 分钟～2 小时再试，期间别反复扫。',
       importQqQrNote: '登录后自动导入到「我喜欢」。用微信登录 QQ 音乐的账号扫不了，请改用 Cookie。',
       importQqUseCookie: '用 Cookie 连接（微信登录的账号）',
       importQqUseQr: '改用手机 QQ 扫码',
@@ -716,6 +717,7 @@ window.__ModuleLoader__.load({
       importQqPrivacy: 'Your login stays on this machine (~/.dsh/dsh-music/accounts.json, mode 0600) and is never uploaded; disconnect any time.',
       importQqQrStep1: 'Scan with the QQ app on your phone',
       importQqQrHint: 'Open the QQ app → “+” at the top right → “Scan”, point it at the QR code and confirm on your phone.',
+      importQqBusyHint: 'Phone says “logging in too frequently”? Too many scans today — wait 30 minutes to 2 hours and don’t retry repeatedly.',
       importQqQrNote: 'Once you confirm, the first import starts right away. Accounts that sign in to QQ Music with WeChat cannot scan here — use the cookie instead.',
       importQqUseCookie: 'Connect with a cookie (WeChat accounts)',
       importQqUseQr: 'Scan with the QQ app instead',
@@ -4777,7 +4779,8 @@ window.__ModuleLoader__.load({
         const qqBusy = s.syncing === 'qq';
         qqBody = h(Steps, null,
           h(Step, { n: 1, state: qqRes ? 'done' : 'active', title: t('importQqQrStep1') },
-            h(QrBox, { t, s, provider: 'qq', likedSync, hint: t('importQqQrHint') })),
+            h(QrBox, { t, s, provider: 'qq', likedSync, hint: t('importQqQrHint') }),
+            h('p', { className: 'dshm-imp-hint dshm-imp-hint-more' }, t('importQqBusyHint'))),
           h(Step, { n: 2, state: qqRes ? 'done' : qqBusy ? 'active' : 'todo', title: t('importQrStep2') },
             h('p', { className: 'dshm-imp-hint' }, t('importQqQrNote')),
             h('div', { className: 'dshm-imp-actions' }, h('button', {
