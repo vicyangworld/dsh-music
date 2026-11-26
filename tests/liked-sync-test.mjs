@@ -383,12 +383,12 @@ await test('QQ 扫码：hash33 / parsePtuiCb / 1-bit PNG → 模块矩阵（37×
   assert.equal(pngToMatrix(await readFile(new URL('../bundle/icon.png', import.meta.url))), null, '彩色 PNG 不在支持范围 → null')
 })
 
-await test('QQ 扫码：xlogin → ptqrshow（qrsig）→ 轮询 66/67/0 → check_sig 跳转链拿 code → musicu QQLogin 换登录态', async () => {
+await test('QQ 扫码：xlogin → ptqrshow（qrsig）→ 轮询 66/67/0 → check_sig 跳转链拿 code → musicu QQLogin 换登录态；cookie 按域匹配、删除语义、不带 p_skey_forbid', async () => {
   let polls = 0
   const fn = mockFetch(async (call) => {
     const u = String(call.url.href || call.url)
     if (u.startsWith('https://xui.ptlogin2.qq.com/cgi-bin/xlogin?')) {
-      return new Response('<html></html>', { headers: [['set-cookie', 'pt_login_sig=LS1; Path=/; Domain=ptlogin2.qq.com'], ['content-type', 'text/html']] })
+      return new Response('<html><script>var jsPath = \'https://qq-web.cdn-go.cn/monorepo/526f1ebd/ptlogin/js/c_login_2.js\'</script></html>', { headers: [['set-cookie', 'pt_login_sig=LS1; Path=/; Domain=ptlogin2.qq.com'], ['set-cookie', 'pt_clientip=1.2.3.4; Path=/'], ['content-type', 'text/html']] })
     }
     if (u.startsWith('https://xui.ptlogin2.qq.com/ssl/ptqrshow?')) {
       return new Response(QQ_QR_PNG, { headers: [['set-cookie', 'qrsig=QRSIG1; Path=/; Domain=ptlogin2.qq.com; HttpOnly'], ['content-type', 'image/png']] })
@@ -401,6 +401,9 @@ await test('QQ 扫码：xlogin → ptqrshow（qrsig）→ 轮询 66/67/0 → che
       /* 官方页轮询带 login_sig=pt_login_sig：缺了它手机确认后服务端会判「二维码已失效」 */
       assert.match(u, /login_sig=LS1(&|$)/)
       assert.match(u, /pt_3rd_aid=100497308/)
+      /* 官方页轮询还带 pt_js_version（登录页 monorepo 版本号） */
+      assert.match(u, /pt_js_version=526f1ebd(&|$)/)
+      assert.match(call.headers.Cookie, /pt_clientip=1\.2\.3\.4/, 'host-only cookie 带给同一主机')
       if (polls === 1) return new Response("ptuiCB('66','0','','0','二维码未失效。', '')", { headers: { 'content-type': 'application/javascript' } })
       if (polls === 2) return new Response("ptuiCB('67','0','','0','手机QQ扫码成功。', '')")
       /* 真实抓包：扫码成功这一跳服务端下发 ETK / superkey / RK / ptcz 等，后续 check_sig → authorize 必须带上 */
@@ -410,15 +413,22 @@ await test('QQ 扫码：xlogin → ptqrshow（qrsig）→ 轮询 66/67/0 → che
       assert.match(call.headers.Cookie, /pt_login_sig=LS1/)
       assert.match(call.headers.Cookie, /superkey=SK1/, 'check_sig 带上扫码成功那一跳下发的 cookie')
       assert.match(call.headers.Cookie, /ETK=ETK1/)
-      return new Response(null, { status: 302, headers: [['location', 'https://graph.qq.com/oauth2.0/login_jump?ptclient=1&pt_aid=100497308'], ['set-cookie', 'p_skey=PS1; Domain=qq.com; Path=/; HttpOnly']] })
+      /* 真实抓包：check_sig 用删除语义清掉 p_skey_forbid（浏览器之后没有这个 cookie） */
+      return new Response(null, { status: 302, headers: [['location', 'https://graph.qq.com/oauth2.0/login_jump?ptclient=1&pt_aid=100497308'], ['set-cookie', 'p_skey=PS1; Domain=qq.com; Path=/; HttpOnly'], ['set-cookie', 'p_skey_forbid=deleted; Domain=.qq.com; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT'], ['set-cookie', 'airkey=; Domain=.qq.com; Path=/; Max-Age=0']] })
     }
     if (u.startsWith('https://graph.qq.com/oauth2.0/login_jump?')) {
       assert.match(call.headers.Cookie, /p_skey=PS1/, '跳转链带上 check_sig 下发的 cookie')
       assert.match(call.headers.Cookie, /superkey=SK1/, '跳转链也带上扫码成功那一跳的 cookie')
+      assert.doesNotMatch(call.headers.Cookie, /p_skey_forbid|airkey/, '删除语义的 cookie 不带')
+      assert.doesNotMatch(call.headers.Cookie, /ETK=|pt_login_sig=|qrsig=|pt_clientip=/, '按域匹配：ptlogin2 域 / host-only 的 cookie 不带给 graph.qq.com')
       return new Response(null, { status: 302, headers: { location: 'https://graph.qq.com/oauth2.0/authorize?which=Login&display=pc&response_type=code&client_id=100497308&state=state' } })
     }
     if (u.startsWith('https://graph.qq.com/oauth2.0/authorize?')) {
-      if (call.method === 'POST') assert.match(String(call.headers.Cookie), /superkey=SK1|p_skey=PS1/, 'authorize 带完整登录态 cookie')
+      if (call.method === 'POST') {
+        assert.match(String(call.headers.Cookie), /p_skey=PS1/, 'authorize 带 check_sig 下发的登录态 cookie')
+        assert.doesNotMatch(String(call.headers.Cookie), /p_skey_forbid/, 'authorize 绝不带 p_skey_forbid（带了会被判未登录）')
+        assert.doesNotMatch(String(call.headers.Cookie), /ETK=|pt_login_sig=|qrsig=/)
+      }
       return new Response(null, { status: 302, headers: { location: 'https://y.qq.com/portal/wx_redirect.html?login_type=1&surl=https%3A%2F%2Fy.qq.com%2F&use_customer_cb=0&code=CODE123&state=state' } })
     }
     if (u === 'https://u.y.qq.com/cgi-bin/musicu.fcg' && call.method === 'POST') {
@@ -439,6 +449,7 @@ await test('QQ 扫码：xlogin → ptqrshow（qrsig）→ 轮询 66/67/0 → che
   assert.equal(created.qrsig, 'QRSIG1')
   assert.match(created.cookies, /pt_login_sig=LS1/)
   assert.equal(created.loginSig, 'LS1')
+  assert.equal(created.jsVer, '526f1ebd')
   assert.match(created.cookies, /qrsig=QRSIG1/)
   assert.equal(created.matrix.size, 33)
   assert.ok(created.png.startsWith('data:image/png;base64,'))

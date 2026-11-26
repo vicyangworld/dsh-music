@@ -154,29 +154,68 @@ function trimLightBorder(size, modules) {
 }
 
 /** 简易 cookie 罐：按名字记值（域名/路径属性按 qq.com 全量回传，仅用于这条固定跳转链） */
+/** 会话 cookie 罐（内存）。按浏览器的规则做事：带 Domain 属性的按域匹配，没带的是 host-only；
+ *  Max-Age=0 / Expires 已过期 / 空值带过期属性 = 删除。真实抓包对照：check_sig 会用删除语义清掉
+ *  p_skey_forbid，如果把它当成普通 cookie 带到 authorize，服务端直接判成未登录（踢回 show 页）。 */
 function createJar() {
-  const map = new Map()
+  const map = new Map() /* name → { value, domain, hostOnly }；domain '' = 来路不明（seed 进来的），所有主机都带 */
+  const hostnameOf = (url) => { try { return new URL(String(url)).hostname } catch { return '' } }
+  const matches = (c, host) => {
+    if (!c.domain) return true /* seed 进来的（来路不明）cookie：所有主机都带 */
+    if (!host) return false
+    return c.hostOnly ? host === c.domain : host === c.domain || host.endsWith('.' + c.domain)
+  }
   return {
-    absorb(res) {
+    absorb(res, requestUrl) {
+      const host = hostnameOf(requestUrl || (res && res.url) || '')
       const list = typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : []
       for (const line of list) {
-        const pair = String(line).split(';')[0]
+        const parts = String(line).split(';')
+        const pair = parts[0]
         const i = pair.indexOf('=')
-        if (i > 0) map.set(pair.slice(0, i).trim(), pair.slice(i + 1).trim())
+        if (i <= 0) continue
+        const name = pair.slice(0, i).trim()
+        const value = pair.slice(i + 1).trim()
+        const attrs = {}
+        for (const a of parts.slice(1)) {
+          const j = a.indexOf('=')
+          if (j > 0) attrs[a.slice(0, j).trim().toLowerCase()] = a.slice(j + 1).trim()
+        }
+        let expired = attrs['max-age'] != null && Number(attrs['max-age']) <= 0
+        if (attrs.expires) {
+          const t = Date.parse(attrs.expires)
+          if (Number.isFinite(t) && t <= Date.now()) expired = true
+        }
+        if (value === '' && (attrs.expires != null || attrs['max-age'] != null)) expired = true
+        if (expired) { map.delete(name); continue }
+        const domain = String(attrs.domain || '').replace(/^\./, '').toLowerCase() || host
+        if (!domain) continue
+        map.set(name, { value, domain, hostOnly: !attrs.domain })
       }
     },
-    header() {
-      return [...map.entries()].map(([k, v]) => `${k}=${v}`).join('; ')
+    /** 某个 URL（或主机名）会带上的 cookie；不传 = 全部 */
+    header(url) {
+      const host = url ? (hostnameOf(url) || String(url)) : ''
+      return [...map.entries()]
+        .filter(([, c]) => !host || matches(c, host))
+        .map(([k, c]) => `${k}=${c.value}`).join('; ')
     },
-    get: (name) => map.get(name) || '',
+    /** 某个 URL 会带上的 cookie 名（诊断用） */
+    namesFor: (url) => [...map.entries()].filter(([, c]) => matches(c, hostnameOf(url) || String(url || ''))).map(([k]) => k),
+    get: (name) => (map.get(name) || {}).value || '',
     names: () => [...map.keys()],
-    set: (name, value) => { if (name && value) map.set(name, String(value)) },
-    seed(header) {
+    set(name, value, domain = '') { if (name && value != null && value !== '') map.set(name, { value: String(value), domain, hostOnly: false }) },
+    drop: (name) => { map.delete(name) },
+    seed(header, domain = '') {
       for (const pair of String(header || '').split(';')) {
         const i = pair.indexOf('=')
-        if (i > 0) map.set(pair.slice(0, i).trim(), pair.slice(i + 1).trim())
+        if (i > 0) map.set(pair.slice(0, i).trim(), { value: pair.slice(i + 1).trim(), domain, hostOnly: false })
       }
     },
+    copyFrom(other) {
+      for (const [name, c] of other.entries()) map.set(name, { ...c })
+    },
+    entries: () => [...map.entries()],
   }
 }
 
@@ -202,12 +241,14 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
   async function qrCreate() {
     const jar = createJar()
     const page = await request(XLOGIN, { headers: { 'User-Agent': QQ_UA, Accept: 'text/html,*/*' } })
-    jar.absorb(page)
-    await page.arrayBuffer().catch(() => {})
+    jar.absorb(page, XLOGIN)
+    const pageText = await page.text().catch(() => '')
+    /* 官方轮询 URL 末尾的 pt_js_version = 登录页里 monorepo 版本号（c_login_2.js 的 CDN 路径） */
+    const jsVer = (pageText.match(/monorepo\/([0-9a-f]+)\/ptlogin\/js/) || [])[1] || ''
     const t = Math.random()
     const show = `${PT_HOST}/ssl/ptqrshow?appid=${PT_APPID}&e=2&l=M&s=3&d=72&v=4&t=${t}&daid=${PT_DAID}&pt_3rd_aid=${QQ_CLIENT_ID}&u1=${encodeURIComponent(S_URL)}`
     const res = await request(show, { headers: { 'User-Agent': QQ_UA, Referer: XLOGIN, Accept: 'image/*,**' } })
-    jar.absorb(res)
+    jar.absorb(res, show)
     const bytes = Buffer.from(await res.arrayBuffer())
     if (res.status !== 200 || bytes.length < 100 || !jar.get('qrsig')) {
       throw httpError(`获取 QQ 登录二维码失败（HTTP ${res.status}，${bytes.length} 字节）`, 502)
@@ -217,6 +258,7 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
       qrsig: jar.get('qrsig'),
       /* 官方登录页轮询时带 login_sig = xlogin 下发的 pt_login_sig（缺了它，手机确认后服务端会判成二维码已失效） */
       loginSig: jar.get('pt_login_sig') || '',
+      jsVer,
       cookies: jar.header(),
       /* 会话 cookie 罐（内存对象）：轮询/换票沿用同一个罐，服务端在扫码成功那一跳下发的
          ETK / superkey / RK / ptcz 等必须带到 check_sig → authorize，否则授权会被踢回登录页 */
@@ -228,9 +270,9 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
 
   /** 轮询一次。返回 `{ code, message }`：801 未扫 / 802 已扫待确认 / 800 已失效 / 803 成功（附 cookie）/ 804 其它（风控等，需重开） */
   async function qrPoll(session) {
-    const poll = `${PT_HOST}/ssl/ptqrlogin?u1=${encodeURIComponent(S_URL)}&ptqrtoken=${hash33(session.qrsig)}&ptredirect=0&h=1&t=1&g=1&from_ui=1&ptlang=2052&action=0-0-${Date.now()}&js_ver=${PTUI_VERSION}&js_type=1&login_sig=${encodeURIComponent(session.loginSig || '')}&pt_uistyle=40&aid=${PT_APPID}&daid=${PT_DAID}&pt_3rd_aid=${QQ_CLIENT_ID}`
-    const res = await request(poll, { headers: { 'User-Agent': QQ_UA, Referer: XLOGIN, Accept: '*/*', Cookie: session.jar ? session.jar.header() : session.cookies } })
-    if (session.jar) session.jar.absorb(res)
+    const poll = `${PT_HOST}/ssl/ptqrlogin?u1=${encodeURIComponent(S_URL)}&ptqrtoken=${hash33(session.qrsig)}&ptredirect=0&h=1&t=1&g=1&from_ui=1&ptlang=2052&action=0-0-${Date.now()}&js_ver=${PTUI_VERSION}&js_type=1&login_sig=${encodeURIComponent(session.loginSig || '')}&pt_uistyle=40&aid=${PT_APPID}&daid=${PT_DAID}&pt_3rd_aid=${QQ_CLIENT_ID}${session.jsVer ? `&pt_js_version=${session.jsVer}` : ''}`
+    const res = await request(poll, { headers: { 'User-Agent': QQ_UA, Referer: XLOGIN, Accept: '*/*', Cookie: session.jar ? session.jar.header(poll) : session.cookies } })
+    if (session.jar) session.jar.absorb(res, poll)
     const text = await res.text()
     const args = parsePtuiCb(text)
     if (!args) throw httpError(`QQ 扫码状态返回异常（HTTP ${res.status}）`, 502)
@@ -339,7 +381,7 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
     f.set('auth_time', String(Date.now()))
     /* 官方页 getUuid()：有 ui cookie 用它，否则生成一个并写回 cookie —— 表单里的 ui 和 cookie 必须一致 */
     const ui = jar.get('ui') || uuid()
-    jar.set('ui', ui)
+    jar.set('ui', ui, 'graph.qq.com')
     f.set('ui', ui)
     return { url: AUTHORIZE_URL, method: 'POST', body: f.toString(), headers: { ...NAV_HEADERS, Referer: AUTHORIZE_PAGE, Origin: 'https://graph.qq.com' } }
   }
@@ -368,7 +410,8 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
     }
     // ptlogin2 的会话 cookie（qrsig / pt_login_sig 等）只在内存里跟着这条跳转链走
     const jar = createJar()
-    if (session.jar) { for (const name of session.jar.names()) jar.set(name, session.jar.get(name)) } else jar.seed(session.cookies)
+    if (session.jar) jar.copyFrom(session.jar)
+    else jar.seed(session.cookies)
     let url = parsed.href
     let referer = XLOGIN
     let code = ''
@@ -383,7 +426,7 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
         break
       }
       seen.push(url)
-      const init = { headers: { 'User-Agent': QQ_UA, Accept: 'text/html,application/json,*/*', Referer: referer, Cookie: jar.header() } }
+      const init = { headers: { 'User-Agent': QQ_UA, Accept: 'text/html,application/json,*/*', Referer: referer, Cookie: jar.header(url) } }
       if (post) {
         init.method = 'POST'
         init.headers['Content-Type'] = 'application/x-www-form-urlencoded'
@@ -392,7 +435,7 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
       }
       post = null
       const res = await request(url, init)
-      jar.absorb(res)
+      jar.absorb(res, url)
       lastStatus = res.status
       const text = await res.text().catch(() => '')
       const u = new URL(url)
@@ -402,7 +445,7 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
         const to = res.headers.get('location')
         let toShown = '无跳转'
         if (to) { try { const t = new URL(to, url); toShown = t.hostname + t.pathname } catch { toShown = '？' } }
-        hops[hops.length - 1] += `→${toShown}（cookie 名：${jar.names().join(',') || '无'}）`
+        hops[hops.length - 1] += `→${toShown}（cookie 名：${jar.namesFor(url).join(',') || '无'}）`
       }
       /* 到达落点（wx_redirect.html?…code=…）：授权码就在 URL 里，页面本身不用再解析 */
       if (url.includes('/portal/wx_redirect.html')) {
@@ -414,7 +457,11 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
       const location = res.headers.get('location')
       if (location) step = { url: safeUrl(location, url) }
       /* login_jump 的 200 页只是 iframe 里的 postMessage（qclogin_success）→ 按官方授权页的逻辑提交 authorize 表单 */
-      if (!step && /\/oauth2\.0\/login_jump/.test(u.pathname) && /qclogin_success/.test(text)) step = authorizeStep(jar)
+      if (!step && /\/oauth2\.0\/login_jump/.test(u.pathname) && /qclogin_success/.test(text)) {
+        /* 浏览器在 check_sig 之后就没有 p_skey_forbid 这个 cookie（服务端用删除语义清掉的）；保险起见授权前再丢一次 */
+        jar.drop('p_skey_forbid')
+        step = authorizeStep(jar)
+      }
       if (!step) {
         const cb = text.match(/"callback"\s*:\s*"(https?:\/\/[^"\s]+)"/)
         if (cb) step = { url: safeUrl(cb[1].replace(/\\\//g, '/'), url) }
@@ -443,10 +490,10 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
     })
     const res = await request('https://u.y.qq.com/cgi-bin/musicu.fcg', {
       method: 'POST',
-      headers: { 'User-Agent': QQ_UA, Referer: WX_REDIRECT, Origin: 'https://y.qq.com', Accept: 'application/json, text/plain, */*', Cookie: jar.header() },
+      headers: { 'User-Agent': QQ_UA, Referer: WX_REDIRECT, Origin: 'https://y.qq.com', Accept: 'application/json, text/plain, */*', Cookie: jar.header('https://u.y.qq.com/') },
       body,
     })
-    jar.absorb(res)
+    jar.absorb(res, 'https://u.y.qq.com/cgi-bin/musicu.fcg')
     let json = null
     try { json = JSON.parse(await res.text()) } catch { json = null }
     const ok = json && Number(json.code) === 0 && json.req && Number(json.req.code) === 0
