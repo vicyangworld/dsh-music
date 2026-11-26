@@ -199,3 +199,15 @@ Release 说明至少写：七期变更（悬浮标/应用内顶层与跨应用�
 | npm | ✅ | `npm publish` → `+ @vicyangorg/dsh-music@0.6.0`；packument dist-tags.latest=0.6.0，tarball https://registry.npmjs.org/@vicyangorg/dsh-music/-/dsh-music-0.6.0.tgz，shasum 1f296baa46e1eac1470b052e954d0c7cce92998b 与发布 tgz 一致（CDN 复制约 4 分钟） |
 | GitHub Release | ✅ | https://github.com/vicyangworld/dsh-music/releases/tag/v0.6.0 资产 vicyangorg-dsh-music-0.6.0.tgz 活体 200（419733B，created 2026-11-15T02:41:32Z） |
 | 目录 PR #15213 | ✅ 已钉 | commit 70e407d tarball → v0.6.0；checks 全绿（Submission gate pass + check pass 17m58s）；MERGEABLE，余候维护者审核 |
+
+## 11. 十一期～十三期 v0.7.0 发布（2026-11-26）
+
+| 环节 | 结果 | 证据 |
+|---|---|---|
+| git | ✅ | `feat/cn-liked-sync` 快进合并到 main（20 个提交：设置页 / 网易云 + QQ 音乐扫码导入 / 后台找音源 / 下载队列 + 状态面板 / 迷你条 ♥ 👎 / 点播修复）→ `e248a47 feat(v0.7.0)`；tag `v0.7.0` 已推送 |
+| 测试 | ✅ 全绿 | packaging 14/14、import-smoke 34 模块、cold-install 20/20（对真实 tgz 解包目录）、render-smoke 179/179、liked-sync 30、liked-sync-client 21、source-scan 7、download-queue、icon-route 4、v6b4、v3b1、v8-taste；活体 `verify-routes.sh` 38/38（热重载后的真实主机）。实机走查：设置页 / 扫码导入 / 队列 / 面板由用户在真实 DSH 中逐项验证（截图为 mock 预览，不是真机截图）；QQ 扫码链路的插件内闭环仍待用户解除「登录频繁」后复验 |
+| npm | ✅ | `npm publish --access public` → PUT 202（异步处理，约 3 分钟后可见）→ `+ @vicyangorg/dsh-music@0.7.0`；packument dist-tags.latest=0.7.0，tarball https://registry.npmjs.org/@vicyangorg/dsh-music/-/dsh-music-0.7.0.tgz（507974B，活体 200），shasum `0e271cc747c78ed67ea98478241f6dac8cd20bd4`（与本地 tgz 一致） |
+| GitHub Release | ✅ | https://github.com/vicyangworld/dsh-music/releases/tag/v0.7.0 资产 vicyangorg-dsh-music-0.7.0.tgz（507974B，published 2026-11-26T02:54:15Z，活体 200）；说明含新功能 / 修复 / 安装命令 / 数据位置 / 已知限制 |
+| 目录 PR | ✅ 已提 | PR #15213（v0.6.0）已合并；本次从 fork 新开 https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/18923 「Update dsh-music to 0.7.0」（tarball → v0.7.0，中英描述补导入 / 后台找音源 / 队列），OPEN / MERGEABLE，候维护者审核 |
+
+注意：npm 发布现在返回 202 异步处理，`npm view` 可能要等几分钟才看到新版本，不要重复 publish。
