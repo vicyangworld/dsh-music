@@ -206,7 +206,7 @@ window.__ModuleLoader__.load({
       lyricsSourceLrclib: 'LRCLIB',
       lyricsSourceWeb: '联网补齐',
       lyricsSource: '歌词来源',
-      artistOpen: '查看歌手卡片',
+      artistOpen: '查看歌手',
       artistIntro: '简介',
       artistNews: '近期动态',
       artistTrivia: '逸闻趣事',
@@ -239,9 +239,8 @@ window.__ModuleLoader__.load({
       recoSectionEmpty: '这一栏还没有内容，点「换一批」生成。',
       deleteTrack: '删除',
       revealTrack: '在 Finder 显示',
-      deleteConfirm: '从曲库删除这首歌？本地文件会被移除。',
-      deleteLikedConfirm: '这是 Spotify 收藏里的歌。删除只会去掉本地文件，不会取消云端收藏。确定继续？',
-      deleteLikedConfirm2: '再次确认：本地文件删除后无法从插件恢复。',
+      deleteConfirm: '从曲库移除「{title}」？本地文件会被删除，无法撤销。',
+      deleteLikedConfirm: '这是 Spotify 收藏里的歌。删除只会移除本地文件（无法从插件恢复），不会取消云端收藏。',
       deleteFailed: '删除失败',
       searchTypeSong: '歌曲',
       searchTypeArtist: '歌手',
@@ -415,6 +414,27 @@ window.__ModuleLoader__.load({
       historySkipped: '跳过',
       historyComplete: '完整度',
       verified: '已核实',
+      statDaily: '最近 7 天播放',
+      playsUnitN: '{n} 次',
+      miniToggle: '迷你条',
+      miniMore: '更多操作',
+      miniFabPlaying: '正在播放：{title} — {artist}（点击展开）',
+      miniFabPaused: '已暂停：{title} — {artist}（点击展开）',
+      backTo: '返回{target}',
+      artistPageTitle: '歌手',
+      confirmDeleteTitle: '删除本地音频',
+      confirmDeleteBtn: '永久删除',
+      cancelBtn: '取消',
+      durationHours: '{h} 小时 {m} 分',
+      durationMins: '{m} 分',
+      dayToday: '今天',
+      dayYesterday: '昨天',
+      lyricsClickHint: '点击歌词跳转',
+      tabNowQueue: '接下来播放',
+      searchMatchedCount: '匹配 {shown} / {total} 首',
+      histSummaryFoot: '{songs} 首歌 · {artists} 位歌手 · 平均完整度 {pct}%',
+      histSummarySkip: '{skipped} 次跳过',
+      histSummaryDislike: '{dislikes} 首不喜欢',
     };
     const en = {
       panel: 'Music',
@@ -578,7 +598,7 @@ window.__ModuleLoader__.load({
       lyricsSourceLrclib: 'LRCLIB',
       lyricsSourceWeb: 'Web lookup',
       lyricsSource: 'Lyrics source',
-      artistOpen: 'Open artist card',
+      artistOpen: 'View artist',
       artistIntro: 'Intro',
       artistNews: 'Recent news',
       artistTrivia: 'Trivia',
@@ -611,9 +631,8 @@ window.__ModuleLoader__.load({
       recoSectionEmpty: 'Nothing in this section yet. Generate a new batch.',
       deleteTrack: 'Delete',
       revealTrack: 'Show in Finder',
-      deleteConfirm: 'Remove this track from the library? The local file will be deleted.',
-      deleteLikedConfirm: 'This is a Spotify liked track. Deleting removes only the local file, not the cloud like. Continue?',
-      deleteLikedConfirm2: 'Confirm again: the local file cannot be restored from the plugin.',
+      deleteConfirm: 'Remove "{title}" from the library? The local file will be deleted. This cannot be undone.',
+      deleteLikedConfirm: 'This is a Spotify liked track. Deleting removes only the local file (it cannot be restored from the plugin), not your cloud like.',
       deleteFailed: 'Delete failed',
       searchTypeSong: 'Songs',
       searchTypeArtist: 'Artists',
@@ -787,6 +806,27 @@ window.__ModuleLoader__.load({
       historySkipped: 'Skipped',
       historyComplete: 'Completion',
       verified: 'Verified',
+      statDaily: 'Plays in the last 7 days',
+      playsUnitN: '{n} plays',
+      miniToggle: 'Mini bar',
+      miniMore: 'More actions',
+      miniFabPlaying: 'Playing: {title} — {artist} (click to expand)',
+      miniFabPaused: 'Paused: {title} — {artist} (click to expand)',
+      backTo: 'Back to {target}',
+      artistPageTitle: 'Artist',
+      confirmDeleteTitle: 'Delete local file',
+      confirmDeleteBtn: 'Delete',
+      cancelBtn: 'Cancel',
+      durationHours: '{h}h {m}m',
+      durationMins: '{m}m',
+      dayToday: 'Today',
+      dayYesterday: 'Yesterday',
+      lyricsClickHint: 'Click a line to seek',
+      tabNowQueue: 'Up next',
+      searchMatchedCount: '{shown} / {total} matched',
+      histSummaryFoot: '{songs} songs · {artists} artists · {pct}% avg completion',
+      histSummarySkip: '{skipped} skipped',
+      histSummaryDislike: '{dislikes} disliked',
     };
 
     /* ================================================================
@@ -1195,9 +1235,20 @@ window.__ModuleLoader__.load({
     const IconExternal = makeIcon([['path', { d: 'M14 4h6v6' }], ['path', { d: 'M20 4l-9 9' }], ['path', { d: 'M19 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-12A1.5 1.5 0 0 1 4 18.5v-12A1.5 1.5 0 0 1 5.5 5H10' }]]);
     const IconSpotify = makeIcon([['path', { d: 'M6 9.5a12 12 0 0 1 12 0' }], ['path', { d: 'M7.5 12.8a9 9 0 0 1 9 0' }], ['path', { d: 'M9 16a5.5 5.5 0 0 1 6 0' }]]);
     const IconImport = makeIcon([
-      ['path', { d: 'M10 5H6.5A1.5 1.5 0 0 0 5 6.5v11A1.5 1.5 0 0 0 6.5 19h11a1.5 1.5 0 0 0 1.5-1.5V14' }],
-      ['path', { d: 'M14 4h6v6' }],
-      ['path', { d: 'M20 4l-9 9' }],
+      ['path', { d: 'M19 13v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 17.5v-11A1.5 1.5 0 0 1 6.5 5H11' }],
+      ['path', { d: 'M20 4l-8.5 8.5' }],
+      ['path', { d: 'M11.5 7.5v5h5' }],
+    ]);
+    const IconTrash = makeIcon([
+      ['path', { d: 'M4 7h16' }],
+      ['path', { d: 'M9.5 7V4.8a.8.8 0 0 1 .8-.8h3.4a.8.8 0 0 1 .8.8V7' }],
+      ['path', { d: 'M6.5 7l.8 11.4a1.6 1.6 0 0 0 1.6 1.6h6.2a1.6 1.6 0 0 0 1.6-1.6L17.5 7' }],
+      ['path', { d: 'M10 11v5M14 11v5' }],
+    ]);
+    const IconMore = makeIcon([
+      ['circle', { cx: 5.5, cy: 12, r: 1.4, ...FILLED }],
+      ['circle', { cx: 12, cy: 12, r: 1.4, ...FILLED }],
+      ['circle', { cx: 18.5, cy: 12, r: 1.4, ...FILLED }],
     ]);
     /* 设置：齿轮（喜欢列表同步 / 推荐口味 / 音乐库 都收在这一个入口里）。 */
     const IconGear = makeIcon([
@@ -1218,21 +1269,28 @@ window.__ModuleLoader__.load({
      * 4. Styles — every color is a host theme token (--dsw-alias-*)
      * ================================================================ */
     const CSS = `
-.dshm-panel{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;}
-.dshm-welcome-hero{position:relative;}
-.dshm-welcome-glow{position:absolute;left:50%;top:0;width:330px;height:300px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(circle,var(--dsw-alias-brand-primary),transparent 70%);opacity:.16;filter:blur(18px);pointer-events:none;}
-.dshm-welcome-fish{position:relative;display:flex;justify-content:center;animation:dshm-float 4.5s ease-in-out infinite;}
-.dshm-welcome-title{font-size:26px;font-weight:700;margin:12px 0 6px;letter-spacing:-.2px;}
-.dshm-welcome-sub{color:var(--dsw-alias-label-secondary);font-size:13px;line-height:1.65;max-width:430px;margin:0 auto;}
-.dshm-welcome-actions{display:flex;gap:10px;justify-content:center;margin-top:22px;flex-wrap:wrap;}
+.dshm-panel{--dshm-axis:1160px;--dshm-pad:clamp(16px,2.4vw,32px);--dshm-love:#e5485b;position:relative;display:flex;flex-direction:column;height:100%;min-height:0;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;}
+.dshm-panel :is(button,[role="button"],a,[tabindex]):focus{outline:none;}
+.dshm-panel :is(button,[role="button"],a,[tabindex]):focus-visible,.dshm-mini :is(button,[role="button"]):focus-visible,.dshm-mini-fab:focus-visible,.dshm-modal :is(button,[tabindex]):focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px;}
+.dshm-panel :is(input,select):focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}
+.dshm-welcome-hero{position:relative;display:block;}
+.dshm-welcome-glow{display:none;}
+.dshm-set-masthead{display:flex;align-items:center;gap:14px;}
+.dshm-welcome-fish{position:relative;display:flex;flex:none;}
+.dshm-set-masthead-text{min-width:0;}
+.dshm-welcome-title{font-size:23px;font-weight:700;margin:0 0 4px;letter-spacing:-.2px;text-align:left;line-height:1.2;}
+.dshm-welcome-sub{color:var(--dsw-alias-label-secondary);font-size:13px;line-height:1.65;max-width:480px;margin:0;text-align:left;}
+.dshm-welcome-actions{display:flex;gap:10px;justify-content:flex-start;margin-top:22px;flex-wrap:wrap;}
 .dshm-wbtn{appearance:none;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:13px;padding:9px 18px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:background .15s,border-color .15s,transform .15s;}
 .dshm-wbtn:hover{background:var(--dsw-alias-interactive-bg-hover);}
 .dshm-wbtn:active{transform:translateY(1px);}
 .dshm-wbtn:disabled{opacity:.55;cursor:not-allowed;}
 .dshm-wbtn-primary{background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);border-color:transparent;}
 .dshm-wbtn-primary:hover{background:var(--dsw-alias-button-primary-hover);}
-.dshm-welcome-points{display:flex;flex-direction:column;gap:7px;margin:26px auto 0;width:fit-content;text-align:left;}
-.dshm-wpoint{display:flex;align-items:center;gap:7px;color:var(--dsw-alias-label-secondary);font-size:12px;}
+.dshm-welcome-points{display:flex;flex-wrap:wrap;gap:4px 14px;margin:14px 0 0;text-align:left;max-width:560px;}
+.dshm-wpoint{display:inline-flex;align-items:center;gap:6px;color:var(--dsw-alias-label-secondary);font-size:12.5px;line-height:1.5;}
+.dshm-wpoint-dot{width:4px;height:4px;border-radius:50%;background:var(--dsw-alias-label-tertiary);flex:none;}
+.dshm-wpoint svg{color:var(--dsw-alias-label-tertiary);flex:none;}
 .dshm-welcome-panel{width:100%;}
 .dshm-wstep-title{font-size:18px;font-weight:650;margin:0 0 6px;}
 .dshm-wstep-sub{color:var(--dsw-alias-label-secondary);font-size:12.5px;line-height:1.6;margin:0 auto 18px;max-width:440px;}
@@ -1250,7 +1308,7 @@ window.__ModuleLoader__.load({
 .dshm-wcard-text{display:flex;flex-direction:column;gap:3px;}
 .dshm-wcard-title{font-size:13px;font-weight:600;}
 .dshm-wcard-body{font-size:12px;color:var(--dsw-alias-label-secondary);line-height:1.5;}
-.dshm-whint{font-size:11.5px;color:var(--dsw-alias-label-secondary);margin:12px 0 0;line-height:1.55;}
+.dshm-whint{font-size:12px;color:var(--dsw-alias-label-secondary);margin:12px 0 0;line-height:1.55;}
 .dshm-wpath{text-align:left;margin-top:14px;}
 .dshm-winput{width:100%;box-sizing:border-box;font:inherit;font-size:12.5px;padding:9px 11px;border-radius:9px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);outline:none;transition:border-color .15s;}
 .dshm-winput:focus{border-color:var(--dsw-alias-brand-primary);}
@@ -1263,45 +1321,53 @@ window.__ModuleLoader__.load({
 .dshm-wprogress-track{flex:1;height:6px;border-radius:99px;background:var(--dsw-alias-bg-layer-2);overflow:hidden;}
 .dshm-wprogress-fill{height:100%;border-radius:99px;background:var(--dsw-alias-brand-primary);transition:width .3s;}
 .dshm-wtracks{text-align:left;display:flex;flex-direction:column;gap:5px;margin-bottom:16px;}
-.dshm-wtrack{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--dsw-alias-label-secondary);}
-.dshm-wtrack-lic{margin-left:auto;font-size:10.5px;color:var(--dsw-alias-label-tertiary);flex:none;}
+.dshm-wtrack{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dsw-alias-label-secondary);}
+.dshm-wtrack-lic{margin-left:auto;font-size:11px;color:var(--dsw-alias-label-tertiary);flex:none;}
 @keyframes dshm-float{0%,100%{transform:translateY(0);}50%{transform:translateY(-7px);}}
 @keyframes dshm-fade-in{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+@keyframes dshm-fade{from{opacity:0;}to{opacity:1;}}
+@keyframes dshm-pop{from{opacity:0;transform:translateY(8px) scale(.985);}to{opacity:1;transform:none;}}
 .dshm-panel *{box-sizing:border-box;}
-.dshm-header{flex:none;padding:14px 20px 0;border-bottom:1px solid var(--dsw-alias-border-l1);}
-.dshm-title-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.dshm-header{flex:none;padding:14px var(--dshm-pad) 0;border-bottom:1px solid var(--dsw-alias-border-l1);}
+.dshm-header-inner{max-width:var(--dshm-axis);margin:0 auto;}
+.dshm-header-inner .dshm-title-row{padding-bottom:8px;}
+.dshm-header-inner .dshm-tabs{margin-top:0;}
+.dshm-title-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
 .dshm-title{font-size:17px;font-weight:650;margin:0;letter-spacing:.2px;}
 .dshm-count{color:var(--dsw-alias-label-tertiary);font-size:12px;}
-.dshm-header-actions{margin-left:auto;display:flex;gap:8px;align-items:center;}
+.dshm-header-actions{margin-left:auto;display:flex;gap:4px;align-items:center;}
 .dshm-tabs{display:flex;gap:4px;}
 .dshm-tab{position:relative;appearance:none;border:0;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:13px;padding:8px 12px 10px;cursor:pointer;border-radius:8px 8px 0 0;display:inline-flex;align-items:center;gap:6px;transition:color .15s;}
 .dshm-tab:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover);}
 .dshm-tab[aria-selected="true"]{color:var(--dsw-alias-brand-text);font-weight:600;}
 .dshm-tab[aria-selected="true"]::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;border-radius:2px;background:var(--dsw-alias-brand-primary);}
+.dshm-tab:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px;border-radius:8px;}
 .dshm-tab-dot{width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-brand-primary);animation:dshm-pulse 1.6s ease-in-out infinite;}
 .dshm-body{flex:1;min-height:0;display:flex;flex-direction:column;container-type:inline-size;}
-.dshm-toolbar{flex:none;display:flex;align-items:center;gap:8px;padding:10px 20px;border-bottom:1px solid var(--dsw-alias-border-l1);flex-wrap:wrap;width:100%;max-width:1120px;margin:0 auto;}
-.dshm-libtabs{display:flex;align-items:center;gap:4px;padding:8px 20px 0;width:100%;max-width:1120px;margin:0 auto;flex:none;}
+.dshm-toolbar{flex:none;display:flex;align-items:center;gap:8px;padding:10px var(--dshm-pad);border-bottom:1px solid var(--dsw-alias-border-l1);flex-wrap:wrap;width:100%;max-width:var(--dshm-axis);margin:0 auto;}
+.dshm-libtabs{display:flex;align-items:center;gap:4px;padding:8px var(--dshm-pad) 0;width:100%;max-width:var(--dshm-axis);margin:0 auto;flex:none;}
 .dshm-libtabs-btn{appearance:none;border:1px solid transparent;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12.5px;padding:5px 12px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .12s,color .12s,border-color .12s;white-space:nowrap;}
 .dshm-libtabs-btn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary);}
+.dshm-libtabs-btn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-1px;}
 .dshm-libtabs-on{background:var(--dsw-alias-interactive-bg-active);color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-border-l2);font-weight:600;}
-.dshm-libtabs-count{font-size:10.5px;color:var(--dsw-alias-label-tertiary);background:var(--dsw-alias-bg-layer-1);border-radius:999px;padding:0 6px;line-height:16px;}
-.dshm-favs{padding:10px 20px 2px;width:100%;max-width:1120px;margin:0 auto;flex:none;box-sizing:border-box;}
+.dshm-libtabs-count{font-size:11px;color:var(--dsw-alias-label-tertiary);background:var(--dsw-alias-bg-layer-1);border-radius:999px;padding:0 6px;line-height:16px;}
+.dshm-favs{padding:12px var(--dshm-pad) 2px;width:100%;max-width:var(--dshm-axis);margin:0 auto;flex:none;box-sizing:border-box;}
 .dshm-favs-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
 .dshm-favs-title{font-size:12.5px;font-weight:600;color:var(--dsw-alias-label-primary);}
 .dshm-favs-all{margin-left:auto;}
 .dshm-favs-empty{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dsw-alias-label-tertiary);padding:10px 12px;border:1px dashed var(--dsw-alias-border-l1);border-radius:10px;}
-.dshm-favs-rail{display:flex;gap:10px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:thin;}
-.dshm-favcard{appearance:none;border:0;background:transparent;padding:0;width:104px;flex:none;display:flex;flex-direction:column;gap:6px;cursor:pointer;text-align:left;color:inherit;font:inherit;}
+.dshm-favs-rail{display:flex;gap:12px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:thin;}
+.dshm-favcard{appearance:none;border:0;background:transparent;padding:0;width:104px;flex:none;display:flex;flex-direction:column;gap:6px;cursor:pointer;text-align:left;color:inherit;font:inherit;border-radius:12px;}
 .dshm-favcard-cover{position:relative;display:block;width:104px;height:104px;border-radius:12px;overflow:hidden;background:var(--dsw-alias-bg-layer-2);}
-.dshm-favcard-heart{position:absolute;top:6px;right:6px;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-state-error-primary);}
+.dshm-favcard-heart{position:absolute;top:6px;right:6px;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--dsw-alias-bg-layer-1);color:var(--dshm-love);}
 .dshm-favcard-title{font-size:12px;font-weight:600;color:var(--dsw-alias-label-primary);}
-.dshm-favcard-sub{font-size:11px;color:var(--dsw-alias-label-tertiary);}
+.dshm-favcard-sub{font-size:12px;color:var(--dsw-alias-label-tertiary);}
 .dshm-favcard:hover .dshm-favcard-cover{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px;}
+.dshm-favcard:focus-visible .dshm-favcard-cover{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px;}
 .dshm-favcard-off{opacity:.5;cursor:not-allowed;}
 .dshm-favcard-more{height:104px;justify-content:center;align-items:center;gap:6px;border-radius:12px;border:1px dashed var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-secondary);}
-.dshm-favcard-more-label{font-size:11.5px;}
-.dshm-toast{position:fixed;right:20px;bottom:96px;z-index:1000;display:flex;align-items:center;gap:8px;padding:8px 10px 8px 12px;border-radius:10px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);box-shadow:0 6px 20px var(--dsw-alias-border-l2);font-size:12.5px;color:var(--dsw-alias-label-primary);animation:dshm-fade-in .18s ease-out;}
+.dshm-favcard-more-label{font-size:12px;}
+.dshm-toast{position:fixed;right:20px;bottom:96px;z-index:1200;display:flex;align-items:center;gap:8px;padding:8px 10px 8px 12px;border-radius:10px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);box-shadow:0 6px 20px var(--dsw-alias-bg-mask-2);font-size:12.5px;color:var(--dsw-alias-label-primary);animation:dshm-fade-in .18s ease-out;}
 .dshm-toast-icon{display:inline-flex;color:var(--dsw-alias-state-success-primary);}
 .dshm-toast-main{appearance:none;border:0;background:transparent;color:var(--dsw-alias-brand-text);font:inherit;cursor:pointer;padding:2px 4px;border-radius:6px;}
 .dshm-toast-main:hover{background:var(--dsw-alias-interactive-bg-hover);}
@@ -1310,32 +1376,44 @@ window.__ModuleLoader__.load({
 .dshm-search:focus-within{border-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-label-secondary);}
 .dshm-search input{flex:1;min-width:0;border:0;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;outline:none;}
 .dshm-search input::placeholder{color:var(--dsw-alias-label-tertiary);}
-.dshm-select{appearance:none;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;border-radius:9px;padding:6px 26px 6px 10px;cursor:pointer;outline:none;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 14px) 55%,calc(100% - 9px) 55%;background-size:5px 5px;background-repeat:no-repeat;}
+.dshm-select{appearance:none;border:1px solid var(--dsw-alias-border-l1);background-color:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;border-radius:9px;padding:6px 26px 6px 10px;cursor:pointer;outline:none;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 14px) 55%,calc(100% - 9px) 55%;background-size:5px 5px;background-repeat:no-repeat;}
 .dshm-select:focus-visible{border-color:var(--dsw-alias-brand-primary);}
 .dshm-chipbtn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;border-radius:9px;padding:6px 12px;cursor:pointer;transition:background .15s,color .15s,border-color .15s,transform .1s;}
 .dshm-chipbtn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary);}
 .dshm-chipbtn:active:not(:disabled){transform:scale(.97);}
 .dshm-chipbtn:disabled{opacity:.5;cursor:default;}
+/* 行内「试听」：无边框幽灵按钮，hover 才浮出来（让位给歌名） */
+.dshm-chipbtn-ghost{border-color:transparent;background:transparent;padding:6px;opacity:0;}
+.dshm-row:hover .dshm-chipbtn-ghost,.dshm-row:focus-within .dshm-chipbtn-ghost{opacity:1;}
+.dshm-chipbtn-ghost:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);}
 .dshm-chipbtn-primary{background:var(--dsw-alias-button-primary-fill);border-color:transparent;color:var(--dsw-alias-label-primary-inverted);}
 .dshm-chipbtn-primary:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover);color:var(--dsw-alias-label-primary-inverted);}
-.dshm-list{flex:1;min-height:0;overflow-y:auto;padding:6px 16px 20px;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2) transparent;width:100%;max-width:1120px;margin:0 auto;}
+.dshm-chipbtn-on{background:var(--dsw-alias-interactive-bg-active);border-color:var(--dsw-alias-border-l2);color:var(--dsw-alias-label-primary);}
+.dshm-chipbtn-icon{width:32px;height:32px;padding:0;justify-content:center;border-color:transparent;background:transparent;color:var(--dsw-alias-label-secondary);}
+.dshm-chipbtn-icon:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary);}
+.dshm-chipbtn-icon[aria-pressed="true"]{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-active);border-color:var(--dsw-alias-border-l1);}
+.dshm-list{flex:1;min-height:0;overflow-y:auto;padding:6px 16px 24px;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2) transparent;width:100%;max-width:var(--dshm-axis);margin:0 auto;}
 .dshm-list::-webkit-scrollbar{width:10px;}
 .dshm-list::-webkit-scrollbar-track{background:transparent;}
 .dshm-list::-webkit-scrollbar-thumb{background:var(--dsw-alias-scrollbar-bg-l2);border-radius:6px;border:2px solid var(--dsw-alias-bg-base);}
 .dshm-list::-webkit-scrollbar-thumb:hover{background:var(--dsw-alias-scrollbar-hover-l2);}
 .dshm-group-head{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:6px;padding:10px 8px 6px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-secondary);font-size:12px;font-weight:600;}
 .dshm-group-head .dshm-group-count{color:var(--dsw-alias-label-tertiary);font-weight:400;}
-.dshm-row{display:grid;grid-template-columns:40px minmax(0,1fr) auto auto auto auto 26px;align-items:center;gap:12px;padding:7px 8px;border-radius:10px;cursor:pointer;transition:background .12s;outline:none;}
-.dshm-row-actions{display:flex;gap:2px;opacity:0;}
+.dshm-row{display:flex;align-items:center;gap:12px;padding:7px 8px;border-radius:10px;cursor:pointer;transition:background .12s;outline:none;}
+.dshm-row-actions{display:flex;gap:2px;opacity:0;transition:opacity .15s;}
 .dshm-row:hover .dshm-row-actions,.dshm-row:focus-within .dshm-row-actions{opacity:1;}
 .dshm-row:hover{background:var(--dsw-alias-interactive-bg-hover);}
 .dshm-row:focus-visible{box-shadow:0 0 0 2px var(--dsw-alias-brand-primary);}
 .dshm-row-current{background:var(--dsw-alias-interactive-bg-active);}
 .dshm-row-current .dshm-row-title{color:var(--dsw-alias-brand-text);}
-.dshm-row-info{min-width:0;}
-.dshm-row-title{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:520;color:var(--dsw-alias-label-primary);}
-.dshm-row-sub{font-size:11.5px;color:var(--dsw-alias-label-tertiary);margin-top:2px;}
-.dshm-row-dur{font-size:11.5px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums;}
+.dshm-row-info{min-width:0;flex:1;}
+.dshm-row-title{display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:520;color:var(--dsw-alias-label-primary);}
+.dshm-row-sub{font-size:12px;color:var(--dsw-alias-label-tertiary);margin-top:2px;}
+.dshm-row-dur{font-size:12px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums;flex:none;}
+.dshm-row-tail{display:flex;align-items:center;gap:2px;margin-left:auto;flex:none;}
+/* 搜索结果里的歌手行：整行可点，右侧一枚安静 › */
+.dshm-row-chev{color:var(--dsw-alias-label-tertiary);opacity:.6;transition:opacity .15s,transform .15s;}
+.dshm-row:hover .dshm-row-chev{opacity:1;transform:translateX(2px);}
 .dshm-row-play{display:flex;align-items:center;justify-content:center;color:var(--dsw-alias-label-secondary);opacity:0;transition:opacity .12s;}
 .dshm-row:hover .dshm-row-play,.dshm-row:focus-visible .dshm-row-play{opacity:1;}
 .dshm-row-current .dshm-row-play{opacity:0;}
@@ -1357,6 +1435,7 @@ window.__ModuleLoader__.load({
 .dshm-iconbtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}
 .dshm-iconbtn-active{color:var(--dsw-alias-brand-text);}
 .dshm-iconbtn-active:hover:not(:disabled){color:var(--dsw-alias-brand-text);}
+.dshm-iconbtn-danger:hover:not(:disabled){color:var(--dsw-alias-state-error-primary);background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 10%,transparent);}
 .dshm-spin{animation:dshm-spin 1s linear infinite;}
 @keyframes dshm-spin{to{transform:rotate(360deg);}}
 .dshm-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:40px 24px;text-align:center;color:var(--dsw-alias-label-secondary);min-height:0;}
@@ -1365,24 +1444,24 @@ window.__ModuleLoader__.load({
 .dshm-empty-ctas{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px;}
 .dshm-empty-dirs{display:flex;flex-direction:column;gap:4px;align-items:flex-start;text-align:left;max-width:440px;margin:14px auto 0;padding:12px 14px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:10px;font-size:12px;color:var(--dsw-alias-label-secondary);}
 .dshm-empty-dirs-head{line-height:1.5;}
-.dshm-empty-dir{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);border-radius:5px;padding:1px 6px;}
+.dshm-empty-dir{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);border-radius:5px;padding:1px 6px;}
 .dshm-chipbtn-off{opacity:.55;}
 .dshm-state-body{font-size:12.5px;line-height:1.7;max-width:420px;color:var(--dsw-alias-label-tertiary);}
 .dshm-state-error{color:var(--dsw-alias-state-error-primary);}
 .dshm-skel{padding:8px 16px;}
 .dshm-skel-row{display:flex;gap:12px;align-items:center;padding:8px;}
 .dshm-skel-box{border-radius:8px;background:var(--dsw-alias-bg-skeleton);animation:dshm-pulse 1.4s ease-in-out infinite;}
-.dshm-now{flex:1;min-height:0;overflow-y:auto;padding:18px 20px;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2) transparent;width:100%;max-width:980px;margin:0 auto;}
-.dshm-now::-webkit-scrollbar{width:10px;}
-.dshm-now::-webkit-scrollbar-thumb{background:var(--dsw-alias-scrollbar-bg-l2);border-radius:6px;border:2px solid var(--dsw-alias-bg-base);}
-.dshm-now-hero{display:grid;grid-template-columns:240px minmax(0,1fr);gap:28px;align-items:center;max-width:860px;margin:0 auto;}
-.dshm-now-cover{width:240px;height:240px;border-radius:16px;box-shadow:0 12px 32px var(--dsw-alias-bg-mask-2);}
+.dshm-now{flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:var(--dshm-axis);margin:0 auto;padding:0 var(--dshm-pad);}
+.dshm-now-stage{flex:1;min-height:0;display:grid;grid-template-columns:minmax(280px,380px) minmax(0,1fr);gap:clamp(20px,3vw,40px);align-items:stretch;padding:18px 0 8px;}
+.dshm-now-side{display:flex;flex-direction:column;gap:14px;min-width:0;align-self:center;position:sticky;top:0;}
+.dshm-now-hero{display:flex;flex-direction:column;gap:16px;min-width:0;}
+.dshm-now-cover{width:100%;max-width:340px;aspect-ratio:1;height:auto;border-radius:14px;box-shadow:0 14px 38px var(--dsw-alias-bg-mask-2);border:1px solid var(--dsw-alias-border-l1);}
 .dshm-now-meta{min-width:0;display:flex;flex-direction:column;gap:10px;}
-.dshm-now-title{font-size:20px;font-weight:680;margin:0;line-height:1.3;}
+.dshm-now-title{font-size:22px;font-weight:680;margin:0;line-height:1.28;letter-spacing:-.2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .dshm-now-sub{font-size:13px;color:var(--dsw-alias-label-secondary);margin:0;}
-.dshm-source-chip{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;font-size:11px;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);padding:3px 9px;border-radius:99px;}
-.dshm-seekrow{display:flex;align-items:center;gap:10px;margin-top:6px;}
-.dshm-time{font-size:11px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums;flex:none;min-width:38px;}
+.dshm-source-chip{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;font-size:12px;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);padding:3px 9px;border-radius:99px;}
+.dshm-seekrow{display:flex;align-items:center;gap:10px;margin-top:2px;}
+.dshm-time{font-size:12px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums;flex:none;min-width:38px;}
 .dshm-time-end{text-align:right;}
 .dshm-slider{position:relative;flex:1;height:20px;display:flex;align-items:center;cursor:pointer;touch-action:none;outline:none;min-width:40px;}
 .dshm-slider-track{position:relative;width:100%;height:4px;border-radius:2px;background:var(--dsw-alias-bg-layer-3);overflow:visible;}
@@ -1391,28 +1470,33 @@ window.__ModuleLoader__.load({
 .dshm-slider:hover .dshm-slider-thumb,.dshm-slider:focus-visible .dshm-slider-thumb,.dshm-slider-drag .dshm-slider-thumb{transform:translate(-50%,-50%) scale(1);}
 .dshm-slider:focus-visible .dshm-slider-track{box-shadow:0 0 0 2px var(--dsw-alias-brand-primary);}
 .dshm-slider-disabled{opacity:.4;cursor:default;}
-.dshm-transport{display:flex;align-items:center;gap:10px;margin-top:4px;}
-.dshm-playbtn{width:48px;height:48px;border-radius:50%;border:0;background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,transform .12s;box-shadow:0 4px 14px var(--dsw-alias-bg-mask-2);flex:none;padding:0;}
+.dshm-transport{display:flex;align-items:center;gap:6px;margin-top:4px;}
+.dshm-transport-gap{width:6px;}
+.dshm-playbtn{width:46px;height:46px;border-radius:50%;border:0;background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,transform .12s;box-shadow:0 4px 14px var(--dsw-alias-bg-mask-2);flex:none;padding:0;}
 .dshm-playbtn:hover{background:var(--dsw-alias-button-primary-hover);transform:scale(1.05);}
 .dshm-playbtn:active{transform:scale(.96);}
 .dshm-playbtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px;}
 .dshm-volumerow{display:flex;align-items:center;gap:8px;max-width:240px;}
 .dshm-volumerow .dshm-slider{flex:1;}
-.dshm-volume-pct{font-size:11px;color:var(--dsw-alias-label-tertiary);min-width:32px;font-variant-numeric:tabular-nums;}
+.dshm-volume-pct{font-size:12px;color:var(--dsw-alias-label-tertiary);min-width:32px;font-variant-numeric:tabular-nums;}
 .dshm-errorline{display:flex;align-items:center;gap:7px;color:var(--dsw-alias-state-error-primary);font-size:12px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:9px;padding:8px 12px;}
-.dshm-queue{max-width:860px;margin:28px auto 0;}
+.dshm-now-main{flex:1;min-height:0;display:flex;flex-direction:column;min-width:0;}
+.dshm-queue{margin-top:18px;}
 .dshm-queue-head{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--dsw-alias-label-secondary);padding:0 8px 8px;border-bottom:1px solid var(--dsw-alias-border-l1);margin-bottom:6px;}
 .dshm-queue-head .dshm-count{font-weight:400;}
-@container (max-width:680px){
-  .dshm-now-hero{grid-template-columns:1fr;justify-items:center;text-align:center;gap:18px;}
-  .dshm-now-cover{width:190px;height:190px;}
+.dshm-queue-list{max-height:280px;overflow-y:auto;scrollbar-width:thin;}
+@container (max-width:760px){
+  .dshm-now-stage{grid-template-columns:1fr;gap:14px;}
+  .dshm-now-side{position:static;align-self:auto;}
+  .dshm-now-cover{max-width:200px;}
+  .dshm-now-hero{align-items:center;text-align:center;}
   .dshm-now-meta{align-items:center;width:100%;}
   .dshm-source-chip{align-self:center;}
   .dshm-transport{justify-content:center;}
   .dshm-volumerow{margin:0 auto;}
 }
-.dshm-mini{position:fixed;right:16px;bottom:16px;z-index:2147483000;width:min(420px,calc(100% - 32px));background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:14px;box-shadow:0 10px 30px var(--dsw-alias-bg-mask-2);overflow:hidden;animation:dshm-mini-in .22s ease-out;}
-.dshm-mini-fab{position:fixed;right:16px;bottom:16px;z-index:2147483000;width:48px;height:48px;border-radius:50%;padding:0;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);box-shadow:0 10px 30px var(--dsw-alias-bg-mask-2);cursor:grab;touch-action:none;animation:dshm-mini-in .18s ease-out;}
+.dshm-mini{position:fixed;right:16px;bottom:16px;z-index:1100;width:min(440px,calc(100% - 32px));background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:14px;box-shadow:0 10px 30px var(--dsw-alias-bg-mask-2);overflow:hidden;animation:dshm-mini-in .22s ease-out;}
+.dshm-mini-fab{position:fixed;right:16px;bottom:16px;z-index:1100;width:48px;height:48px;border-radius:50%;padding:0;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);box-shadow:0 10px 30px var(--dsw-alias-bg-mask-2);cursor:grab;touch-action:none;animation:dshm-mini-in .18s ease-out;}
 .dshm-mini-fab:hover{box-shadow:0 12px 34px var(--dsw-alias-bg-mask-2);}
 .dshm-mini-fab:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px;}
 .dshm-mini-fab-dragging{cursor:grabbing;animation:none;box-shadow:0 16px 40px var(--dsw-alias-bg-mask-2);}
@@ -1420,53 +1504,62 @@ window.__ModuleLoader__.load({
 .dshm-mini-dragging{box-shadow:0 16px 40px var(--dsw-alias-bg-mask-2);transition:none;animation:none;}
 .dshm-mini{touch-action:none;user-select:none;-webkit-user-select:none;cursor:default;}
 @keyframes dshm-mini-in{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
-.dshm-mini-inner{display:flex;align-items:center;gap:6px;padding:8px 10px 8px 20px;}
+.dshm-mini-inner{display:flex;align-items:center;gap:4px;padding:8px 8px 8px 22px;}
 .dshm-mini-main{display:flex;align-items:center;gap:10px;flex:1;min-width:0;border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;padding:2px;border-radius:9px;text-align:left;}
 .dshm-mini-main:hover{background:var(--dsw-alias-interactive-bg-hover);}
 .dshm-mini-main:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}
 .dshm-mini-text{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
 .dshm-mini-title{font-size:12.5px;font-weight:600;color:var(--dsw-alias-label-primary);}
-.dshm-mini-sub{font-size:11px;color:var(--dsw-alias-label-tertiary);}
+.dshm-mini-sub{font-size:12px;color:var(--dsw-alias-label-tertiary);}
 .dshm-mini-sub-error{color:var(--dsw-alias-state-error-primary);}
-.dshm-mini-grip{position:absolute;left:3px;top:50%;transform:translateY(-50%);width:14px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--dsw-alias-label-tertiary);cursor:grab;border-radius:6px;touch-action:none;opacity:.6;}
+.dshm-mini-grip{position:absolute;left:3px;top:10px;width:14px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--dsw-alias-label-tertiary);cursor:grab;border-radius:6px;touch-action:none;opacity:.6;}
 .dshm-mini-grip:hover,.dshm-mini-grip:focus-visible{opacity:1;background:var(--dsw-alias-interactive-bg-hover);outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px;}
 .dshm-mini-grip:active{cursor:grabbing;}
-.dshm-mini-artist{display:inline-flex;align-items:center;gap:4px;max-width:100%;border:0;background:transparent;padding:0;margin:0;font:inherit;font-size:11px;line-height:14px;color:var(--dsw-alias-label-tertiary);cursor:pointer;text-align:left;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dshm-mini-artist{display:inline-flex;align-items:center;gap:4px;max-width:100%;border:0;background:transparent;padding:0;margin:0;font:inherit;font-size:12px;line-height:14px;color:var(--dsw-alias-label-tertiary);cursor:pointer;text-align:left;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dshm-mini-artist:hover{color:var(--dsw-alias-brand-text);text-decoration:underline;}
 .dshm-mini-artist:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}
-.dshm-mini-seek{padding:0 12px 0 20px;}
-.dshm-mini-seek .dshm-slider{height:16px;}
-.dshm-mini-lyrics{display:flex;flex-direction:column;gap:1px;padding:2px 14px 8px 20px;overflow:hidden;}
-.dshm-mini-lyric{font-size:11.5px;line-height:16px;color:var(--dsw-alias-label-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.5;transition:opacity .25s ease,color .25s ease;}
+.dshm-mini-seek{padding:0 12px 0 22px;}
+.dshm-mini-seek .dshm-slider{height:20px;}
+.dshm-mini-lyrics{display:flex;flex-direction:column;gap:1px;padding:2px 14px 8px 22px;overflow:hidden;}
+.dshm-mini-lyric{font-size:12px;line-height:16px;color:var(--dsw-alias-label-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.5;transition:opacity .25s ease,color .25s ease;}
 .dshm-mini-lyric-on{color:var(--dsw-alias-label-primary);opacity:1;font-weight:600;}
 .dshm-mode-cycle{min-width:32px;}
 .dshm-chipbtn.dshm-mode-cycle{padding:0 9px;}
-.dshm-mini-controls{display:flex;align-items:center;gap:2px;flex:none;}
-.dshm-mini-controls .dshm-iconbtn{width:28px;height:28px;}
-.dshm-mini-controls .dshm-mini-play{width:30px;height:30px;}
-.dshm-mini-like{width:24px;height:24px;margin:0 1px;}
-.dshm-mini-like:hover{background:transparent;}
-.dshm-mini-like-on{background:transparent;}
-.dshm-now-actions{display:inline-flex;align-self:flex-start;align-items:center;gap:2px;padding:3px;border-radius:999px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);box-shadow:0 1px 2px var(--dsw-alias-bg-mask-1);margin:-2px 0 2px;}
-.dshm-now-like{width:34px;height:34px;border-radius:50%;}
-.dshm-now-like:hover{background:var(--dsw-alias-interactive-bg-hover);}
-.dshm-now-like.dshm-like-btn-on{background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 12%,transparent);}
-.dshm-now-like.dshm-dislike-btn-on{background:var(--dsw-alias-interactive-bg-hover);}
+.dshm-mini-controls{display:flex;align-items:center;gap:4px;flex:none;}
+.dshm-mini-controls .dshm-iconbtn{width:30px;height:30px;}
+.dshm-mini-controls .dshm-mini-play{width:32px;height:32px;}
+.dshm-mini-like{width:28px;height:28px;margin:0 1px;}
+.dshm-mini-like:hover{background:var(--dsw-alias-interactive-bg-hover);}
+.dshm-mini-like.dshm-like-btn-on{color:var(--dshm-love);}
+/* ··· 菜单：低频动作（播放模式 / 收起 / 隐藏）的容身之处，不占常驻席位 */
+.dshm-mini-more{position:relative;display:flex;}
+.dshm-mini-menu{position:absolute;right:0;top:calc(100% + 6px);min-width:190px;padding:4px;border-radius:10px;background:var(--dsw-alias-bg-elevated);border:1px solid var(--dsw-alias-border);box-shadow:0 8px 28px rgba(0,0,0,.18);z-index:1200;display:flex;flex-direction:column;gap:1px;}
+.dshm-mini-menuitem{display:flex;align-items:center;gap:10px;padding:7px 10px;border:0;border-radius:7px;background:transparent;color:inherit;font:inherit;font-size:12.5px;text-align:left;cursor:pointer;white-space:nowrap;}
+.dshm-mini-menuitem:hover,.dshm-mini-menuitem:focus-visible{background:var(--dsw-alias-interactive-bg-hover);}
+.dshm-mini-menuitem .dshm-count{margin-left:auto;font-size:11px;}
 .dshm-mini-play{background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);border-radius:50%;width:34px;height:34px;}
 .dshm-mini-play:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover);color:var(--dsw-alias-label-primary-inverted);}
+.dshm-now-actions{display:inline-flex;align-self:flex-start;align-items:center;gap:2px;padding:0;border:0;background:transparent;box-shadow:none;margin:0;}
+.dshm-now-like{width:34px;height:34px;border-radius:50%;}
+.dshm-now-like:hover{background:var(--dsw-alias-interactive-bg-hover);}
+.dshm-now-like.dshm-like-btn-on{background:transparent;}
+.dshm-transport>.dshm-now-actions{margin:0 4px 0 auto;}
+.dshm-transport>.dshm-now-actions .dshm-now-like{width:30px;height:30px;color:var(--dsw-alias-label-tertiary);}
+.dshm-transport>.dshm-now-actions .dshm-now-like:hover{color:var(--dsw-alias-label-primary);}
+.dshm-transport>.dshm-now-actions .dshm-now-like.dshm-like-btn-on{color:var(--dshm-love);}
 .dshm-reco{max-width:560px;margin:0 auto;}
 .dshm-reco-tags{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:6px;}
-.dshm-reco-tag{font-size:11px;color:var(--dsw-alias-label-secondary);border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);border-radius:99px;padding:4px 10px;}
-.dshm-reco-page{flex:1;min-height:0;overflow-y:auto;padding:12px 20px;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2) transparent;width:100%;max-width:1280px;margin:0 auto;}
+.dshm-reco-tag{font-size:12px;color:var(--dsw-alias-label-secondary);border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);border-radius:99px;padding:4px 10px;}
+.dshm-reco-page{flex:1;min-height:0;overflow-y:auto;padding:12px var(--dshm-pad) 20px;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2) transparent;width:100%;max-width:var(--dshm-axis);margin:0 auto;}
 .dshm-reco-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:14px;}
 .dshm-reco-card{background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;transition:border-color .15s,box-shadow .15s;}
 .dshm-reco-card:hover{border-color:var(--dsw-alias-border-l3);box-shadow:0 2px 10px var(--dsw-alias-bg-mask-2);}
 .dshm-reco-card-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
-.dshm-cat-chip{font-size:11px;padding:2px 9px;border-radius:99px;border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);}
+.dshm-cat-chip{font-size:12px;padding:2px 9px;border-radius:99px;border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);}
 .dshm-cat-explore{color:var(--dsw-alias-brand-text);border-color:var(--dsw-alias-brand-primary);}
-.dshm-axis-chip{font-size:11px;padding:2px 9px;border-radius:99px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-tertiary);}
+.dshm-axis-chip{font-size:12px;padding:2px 9px;border-radius:99px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-tertiary);}
 .dshm-reco-title{font-size:13.5px;font-weight:600;color:var(--dsw-alias-label-primary);}
-.dshm-reco-sub{font-size:11.5px;color:var(--dsw-alias-label-tertiary);}
+.dshm-reco-sub{font-size:12px;color:var(--dsw-alias-label-tertiary);}
 .dshm-reco-reason{font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary);}
 .dshm-reco-foot{margin-top:auto;display:flex;align-items:center;gap:8px;padding-top:4px;}
 .dshm-dl{background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;}
@@ -1474,38 +1567,39 @@ window.__ModuleLoader__.load({
 .dshm-dl-dot{width:8px;height:8px;border-radius:50%;background:var(--dsw-alias-label-tertiary);flex:none;}
 .dshm-dl-ok{background:var(--dsw-alias-state-success-primary);}
 .dshm-dl-fail{background:var(--dsw-alias-state-error-primary);}
-.dshm-dl-status{font-size:11px;color:var(--dsw-alias-label-tertiary);flex:none;}
+.dshm-dl-status{font-size:12px;color:var(--dsw-alias-label-tertiary);flex:none;}
 .dshm-dl-bar{height:3px;border-radius:2px;background:var(--dsw-alias-bg-layer-3);overflow:hidden;margin:2px 0 4px;}
 .dshm-dl-bar>div{height:100%;background:var(--dsw-alias-brand-primary);transition:width .4s ease;}
-.dshm-dl-float{position:fixed;right:16px;bottom:16px;z-index:2147483000;width:min(340px,calc(100% - 32px));background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:14px;box-shadow:0 10px 30px var(--dsw-alias-bg-mask-2);padding:10px 12px;display:flex;flex-direction:column;gap:8px;animation:dshm-mini-in .22s ease-out;}
+.dshm-dl-float{position:fixed;right:16px;bottom:16px;z-index:1100;width:min(340px,calc(100% - 32px));background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:14px;box-shadow:0 10px 30px var(--dsw-alias-bg-mask-2);padding:10px 12px;display:flex;flex-direction:column;gap:8px;animation:dshm-mini-in .22s ease-out;}
 .dshm-dl-head{display:flex;align-items:center;gap:8px;min-width:0;}
 .dshm-dl-title{font-size:13px;font-weight:600;}
 .dshm-dl-list{display:flex;flex-direction:column;gap:4px;max-height:min(40vh,320px);overflow:auto;padding-right:2px;}
 .dshm-dl-wait{background:var(--dsw-alias-brand-primary);opacity:.45;}
-.dshm-dl-note{font-size:11px;color:var(--dsw-alias-label-tertiary);max-width:40%;flex:none;}
+.dshm-dl-note{font-size:12px;color:var(--dsw-alias-label-tertiary);max-width:40%;flex:none;}
 .dshm-dl-foot{display:flex;align-items:center;gap:8px;border-top:1px solid var(--dsw-alias-border-l1);padding-top:8px;}
 .dshm-dl-sum{font-size:12px;flex:1;min-width:0;}
 .dshm-dl-sum-ok{color:var(--dsw-alias-state-success-primary);}
 .dshm-dl-sum-warn{color:var(--dsw-alias-state-warn-primary);}
-.dshm-dl-pill{position:fixed;right:16px;bottom:16px;z-index:2147483000;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);box-shadow:0 6px 20px var(--dsw-alias-bg-mask-2);font-size:12.5px;color:var(--dsw-alias-label-primary);cursor:pointer;max-width:calc(100% - 32px);}
+.dshm-dl-pill{position:fixed;right:16px;bottom:16px;z-index:1100;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);box-shadow:0 6px 20px var(--dsw-alias-bg-mask-2);font-size:12.5px;color:var(--dsw-alias-label-primary);cursor:pointer;max-width:calc(100% - 32px);}
+.dshm-dl-pill:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px;}
 .dshm-dl-pill-bar{width:56px;height:3px;border-radius:2px;background:var(--dsw-alias-bg-layer-3);overflow:hidden;flex:none;}
 .dshm-dl-pill-bar>span{display:block;height:100%;background:var(--dsw-alias-brand-primary);transition:width .4s ease;}
-.dshm-sync{margin:12px 24px 0;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:10px;}
+.dshm-sync{margin:12px 0 0;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:10px;}
 .dshm-sync-chips{display:flex;gap:8px;flex-wrap:wrap;}
-.dshm-sync-chip{font-size:11.5px;border:1px solid var(--dsw-alias-border-l1);border-radius:99px;padding:4px 12px;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-2);}
-.dshm-sync-detail{font-size:11.5px;color:var(--dsw-alias-label-tertiary);line-height:1.7;}
+.dshm-sync-chip{font-size:12px;border:1px solid var(--dsw-alias-border-l1);border-radius:99px;padding:4px 12px;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-2);}
+.dshm-sync-detail{font-size:12px;color:var(--dsw-alias-label-tertiary);line-height:1.7;}
 .dshm-sync-chip-ok{color:var(--dsw-alias-state-success-primary);border-color:currentColor;}
 .dshm-sync-chip-warn{color:var(--dsw-alias-state-warn-primary);border-color:currentColor;}
 .dshm-imp-result{display:flex;flex-direction:column;gap:8px;}
 .dshm-state-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
 .dshm-chipbtn-plain{background:transparent;}
 .dshm-src-chips{display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle;}
-.dshm-src-chip{font-size:10px;line-height:1;border:1px solid var(--dsw-alias-border-l1);border-radius:99px;padding:2px 6px;color:var(--dsw-alias-label-tertiary);background:var(--dsw-alias-bg-layer-2);}
+.dshm-src-chip{font-size:11px;line-height:1;border:1px solid var(--dsw-alias-border-l1);border-radius:99px;padding:2px 6px;color:var(--dsw-alias-label-tertiary);background:var(--dsw-alias-bg-layer-2);}
 .dshm-src-netease{color:var(--dsw-alias-state-error-primary);}
 .dshm-src-qq{color:var(--dsw-alias-label-secondary);}
 .dshm-imp-account{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:10px;padding:8px 12px;}
 .dshm-imp-nick{font-weight:600;}
-.dshm-imp-time{font-size:11.5px;color:var(--dsw-alias-label-tertiary);}
+.dshm-imp-time{font-size:12px;color:var(--dsw-alias-label-tertiary);}
 .dshm-imp-qr{display:flex;gap:16px;align-items:flex-start;}
 .dshm-imp-qr-box{flex:none;width:196px;height:196px;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--dsw-alias-label-tertiary);}
 .dshm-imp-qr-fallback{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:12px;color:var(--dsw-alias-label-tertiary);text-align:center;padding:12px;}
@@ -1557,20 +1651,21 @@ window.__ModuleLoader__.load({
 .dshm-imp-nick{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dshm-linkbtn{display:inline-flex;align-items:center;gap:4px;padding:0;border:0;background:transparent;color:var(--dsw-alias-brand-primary);font:inherit;font-size:12.5px;cursor:pointer;align-self:flex-start;}
 .dshm-linkbtn:hover{text-decoration:underline;}
-.dshm-imp-hint-more{font-size:11.5px;padding-top:8px;border-top:1px dashed var(--dsw-alias-border-l1);}
+.dshm-linkbtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px;}
+.dshm-imp-hint-more{font-size:12px;padding-top:8px;border-top:1px dashed var(--dsw-alias-border-l1);}
 .dshm-imp-cookie:focus-visible{border-color:var(--dsw-alias-brand-primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--dsw-alias-brand-primary) 18%,transparent);}
 .dshm-row-add-ready{width:auto;height:24px;padding:0 9px 0 7px;gap:3px;border-radius:999px;background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);}
 .dshm-row-add-ready:hover{filter:brightness(1.08);background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);}
 .dshm-row-add-text{font-size:11px;font-weight:600;line-height:1;}
 .dshm-row-add-none{opacity:.6;border:1px dashed var(--dsw-alias-border-l3);}
 .dshm-missing-chip.dshm-scan-chip{display:inline-flex;align-items:center;gap:4px;color:var(--dsw-alias-brand-primary);border-color:color-mix(in srgb,var(--dsw-alias-brand-primary) 35%,transparent);}
-.dshm-missing-chip{font-size:11.5px;color:var(--dsw-alias-state-warn-primary);border:1px solid currentColor;border-radius:99px;padding:2px 9px;white-space:nowrap;}
+.dshm-missing-chip{font-size:12px;color:var(--dsw-alias-state-warn-primary);border:1px solid currentColor;border-radius:99px;padding:2px 9px;white-space:nowrap;}
 .dshm-settings{position:relative;height:100%;overflow:auto;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;animation:dshm-fade-in .28s ease-out;}
-.dshm-settings-inner{max-width:720px;margin:0 auto;padding:28px 24px 96px;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:20px;}
+.dshm-settings-inner{max-width:760px;margin:0 auto;padding:28px 24px 96px;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:20px;}
 .dshm-settings-narrow{max-width:540px;}
-.dshm-set-hero{margin:8px 0 4px;text-align:center;}
-.dshm-logo{display:block;width:160px;height:160px;object-fit:contain;filter:drop-shadow(0 12px 24px var(--dsw-alias-bg-mask-2));user-select:none;}
-.dshm-set-first-note{margin:4px 0 0;font-size:12.5px;line-height:1.7;color:var(--dsw-alias-label-tertiary);text-align:center;}
+.dshm-set-hero{margin:4px 0 4px;text-align:left;}
+.dshm-logo{display:block;width:56px;height:56px;object-fit:contain;filter:drop-shadow(0 4px 10px var(--dsw-alias-bg-mask-2));user-select:none;margin:0;}
+.dshm-set-first-note{margin:4px 0 0;font-size:12.5px;line-height:1.7;color:var(--dsw-alias-label-tertiary);text-align:left;}
 .dshm-set-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--dsw-alias-border-l1);}
 .dshm-set-top-title{display:flex;align-items:center;gap:8px;color:var(--dsw-alias-label-primary);}
 .dshm-set-top-title h1{margin:0;font-size:18px;}
@@ -1584,51 +1679,68 @@ window.__ModuleLoader__.load({
 .dshm-imp-logged{display:flex;flex-direction:column;gap:10px;min-width:0;}
 .dshm-imp-account{max-width:100%;}
 .dshm-set-foot{position:sticky;bottom:0;z-index:2;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px -24px -96px;padding:12px 24px 20px;background:var(--dsw-alias-bg-base);border-top:1px solid var(--dsw-alias-border-l1);}
-.dshm-set-foot-hint{font-size:11.5px;color:var(--dsw-alias-label-tertiary);margin-left:auto;}
+.dshm-set-foot-hint{font-size:12px;color:var(--dsw-alias-label-tertiary);margin-left:auto;}
 .dshm-set-saved{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--dsw-alias-state-success-primary);}
 @media (max-width:520px){.dshm-imp-qr{flex-direction:column;align-items:center;}.dshm-settings-inner{padding:20px 16px 88px;}.dshm-set-foot{margin:4px -16px -88px;padding:10px 16px 18px;}}
-.dshm-hrow{display:grid;grid-template-columns:40px minmax(0,1fr) auto auto auto;gap:10px;align-items:center;padding:6px 8px;border-radius:10px;}
-.dshm-hrow-click{cursor:pointer;}
+.dshm-hrow{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:10px;}
+.dshm-hrow-click{cursor:pointer;outline:none;}
 .dshm-hrow-click:hover{background:var(--dsw-alias-interactive-bg-hover);}
 .dshm-hrow-click:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px;}
-.dshm-row-sub-btn{appearance:none;background:none;border:0;padding:0;margin:0;cursor:pointer;text-align:left;font-family:inherit;font-size:12px;color:var(--dsw-alias-label-tertiary);max-width:100%;overflow:hidden;display:inline-flex;align-items:center;gap:4px;vertical-align:middle;}
+.dshm-row-sub-btn{appearance:none;background:none;border:0;padding:0;margin:0;cursor:pointer;text-align:left;font-family:inherit;font-size:12px;color:var(--dsw-alias-label-tertiary);max-width:100%;overflow:hidden;display:inline-flex;align-items:center;gap:4px;vertical-align:middle;border-radius:3px;}
 .dshm-row-sub-btn:hover{color:var(--dsw-alias-brand-text);text-decoration:underline;text-underline-offset:3px;}
+.dshm-row-sub-btn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}
 .dshm-hrow:hover{background:var(--dsw-alias-interactive-bg-hover);}
-.dshm-hbar{height:4px;border-radius:2px;background:var(--dsw-alias-bg-layer-3);overflow:hidden;}
-.dshm-hbar>div{height:100%;background:var(--dsw-alias-brand-primary);}
-.dshm-hskip{font-size:10.5px;color:var(--dsw-alias-label-tertiary);border:1px solid var(--dsw-alias-border-l2);border-radius:99px;padding:1px 8px;flex:none;}
-.dshm-htime{font-size:11px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums;flex:none;}
-.dshm-hlist{max-width:960px;margin:0 auto;padding:10px 8px 20px;}
-.dshm-explore-chip{flex:none;font-size:11px;font-weight:600;padding:1px 6px;border-radius:99px;background:var(--dsw-alias-bg-layer-3);color:var(--dsw-alias-label-primary);border:1px solid var(--dsw-alias-border-l1);}
-.dshm-explore-note{display:flex;align-items:flex-start;gap:7px;margin:10px 18px 0;padding:8px 11px;border-radius:9px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.5;}
+.dshm-hbar{height:3px;border-radius:2px;background:var(--dsw-alias-bg-layer-3);overflow:hidden;}
+.dshm-hbar>div{height:100%;background:var(--dsw-alias-label-tertiary);}
+.dshm-hskip{font-size:11px;color:var(--dsw-alias-label-tertiary);border:1px solid var(--dsw-alias-border-l2);border-radius:99px;padding:1px 8px;flex:none;}
+.dshm-htime{font-size:12px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums;flex:none;}
+.dshm-hlist{padding:4px 0 20px;}
+.dshm-explore-chip{flex:none;font-size:12px;font-weight:600;padding:1px 6px;border-radius:99px;background:var(--dsw-alias-bg-layer-3);color:var(--dsw-alias-label-primary);border:1px solid var(--dsw-alias-border-l1);}
+.dshm-explore-note{display:flex;align-items:flex-start;gap:7px;margin:10px 0 0;padding:8px 11px;border-radius:9px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.5;}
 .dshm-columns{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;}
 .dshm-column{min-height:0;display:flex;flex-direction:column;border-right:1px solid var(--dsw-alias-border-l1);}
 .dshm-column:last-child{border-right:0;}
-.dshm-col-head{flex:none;display:flex;align-items:center;gap:8px;padding:12px 14px 8px;}
+.dshm-col-head{flex:none;display:flex;align-items:center;gap:8px;padding:12px 10px 8px;}
 .dshm-col-title{font-size:13.5px;font-weight:680;color:var(--dsw-alias-label-primary);display:flex;align-items:center;gap:6px;}
-.dshm-col-count{font-size:11px;color:var(--dsw-alias-label-tertiary);}
+.dshm-col-count{font-size:12px;color:var(--dsw-alias-label-tertiary);}
 .dshm-col-play{margin-left:0;}
 .dshm-col-actions{display:flex;align-items:center;gap:6px;margin-left:auto;}
 .dshm-col-refresh{width:26px;height:26px;padding:0;justify-content:center;color:var(--dsw-alias-label-secondary);}
 .dshm-col-refresh:hover{color:var(--dsw-alias-label-primary);}
-.dshm-col-loading{display:flex;align-items:center;gap:6px;padding:0 14px 6px;font-size:12px;color:var(--dsw-alias-label-secondary);}
+.dshm-col-refresh:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-1px;}
+.dshm-col-loading{display:flex;align-items:center;gap:6px;padding:0 10px 6px;font-size:12px;color:var(--dsw-alias-label-secondary);}
 .dshm-refresh-note{color:var(--dsw-alias-label-secondary);}
 .dshm-playround-busy{background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);opacity:.7;}
 .dshm-playround .dshm-spin,.dshm-col-refresh .dshm-spin,.dshm-col-loading .dshm-spin,.dshm-row-play .dshm-spin{display:inline-block;width:12px;height:12px;border-radius:50%;border:2px solid currentColor;border-top-color:transparent;box-sizing:border-box;}
-.dshm-col-list{flex:1;min-height:0;overflow-y:auto;padding:2px 8px 16px;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2) transparent;}
-.dshm-srow{display:grid;grid-template-columns:38px minmax(0,1fr) auto auto auto;align-items:center;gap:10px;padding:6px;border-radius:10px;transition:background .12s;}
+.dshm-col-list{flex:1;min-height:0;overflow-y:auto;padding:2px 6px 16px;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2) transparent;}
+.dshm-srow{display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:10px;padding:6px;border-radius:10px;transition:background .12s;}
 .dshm-srow:hover{background:var(--dsw-alias-interactive-bg-hover);}
-.dshm-srow-main{min-width:0;display:flex;flex-direction:column;gap:1px;border:0;background:transparent;font:inherit;color:inherit;text-align:left;padding:0;cursor:pointer;}
-.dshm-srow-title{font-size:12.5px;font-weight:560;color:var(--dsw-alias-label-primary);}
-.dshm-srow-sub{font-size:11px;color:var(--dsw-alias-label-tertiary);}
+.dshm-srow-main{min-width:0;display:flex;flex-direction:column;gap:1px;border:0;background:transparent;font:inherit;color:inherit;text-align:left;padding:0;cursor:pointer;outline:none;}
+.dshm-srow-main:focus-within .dshm-srow-artist{color:var(--dsw-alias-brand-text);}
+.dshm-srow-title{font-size:13px;font-weight:560;color:var(--dsw-alias-label-primary);}
+.dshm-srow-sub{font-size:12px;color:var(--dsw-alias-label-tertiary);}
 .dshm-srow-artist{appearance:none;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer;border-radius:4px;}
 .dshm-srow-artist:hover{color:var(--dsw-alias-brand-text);text-decoration:underline;text-underline-offset:3px;}
 .dshm-srow-artist:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}
-.dshm-srow-reason{font-size:10.5px;color:var(--dsw-alias-label-tertiary);line-height:1.5;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.dshm-srow-reason{font-size:12px;color:var(--dsw-alias-label-secondary);line-height:1.45;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.dshm-srow-tail{display:flex;align-items:center;gap:0;opacity:0;transition:opacity .15s;}
+.dshm-srow:hover .dshm-srow-tail,.dshm-srow:focus-within .dshm-srow-tail{opacity:1;}
+.dshm-srow-tail .dshm-like-btn-on{opacity:1;}
+.dshm-srow:has(.dshm-like-btn-on) .dshm-srow-tail{opacity:1;}
+.dshm-srow-tail .dshm-like-btn-on{color:var(--dshm-love);}
+.dshm-srow .dshm-playcover{position:relative;flex:none;width:40px;height:40px;border-radius:8px;overflow:hidden;padding:0;border:0;background:transparent;cursor:pointer;}
+.dshm-srow .dshm-playcover .dshm-tile{width:40px;height:40px;border-radius:0;border:0;}
+.dshm-srow .dshm-playcover::after{content:"";position:absolute;inset:0;background:var(--dsw-alias-bg-mask-1);opacity:0;transition:opacity .15s;display:flex;align-items:center;justify-content:center;}
+.dshm-srow .dshm-playcover-ico{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;opacity:0;transition:opacity .15s;z-index:1;}
+.dshm-srow .dshm-playcover:hover::after,.dshm-srow .dshm-playcover:focus-visible::after{opacity:.35;}
+.dshm-srow .dshm-playcover:hover .dshm-playcover-ico,.dshm-srow .dshm-playcover:focus-visible .dshm-playcover-ico,.dshm-srow .dshm-playcover[data-on="true"] .dshm-playcover-ico{opacity:1;}
+.dshm-srow .dshm-playcover[data-on="true"]::after{opacity:.45;}
+.dshm-srow .dshm-playcover:focus-visible{outline:2px solid #fff;outline-offset:-2px;border-radius:8px;}
 .dshm-like-btn{appearance:none;border:0;background:transparent;color:var(--dsw-alias-label-tertiary);width:30px;height:30px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex:none;transition:transform .12s,color .12s;}
 .dshm-like-btn:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover);}
 .dshm-like-btn:active{transform:scale(1.18);}
-.dshm-like-btn-on{color:var(--dsw-alias-state-error-primary);}
+.dshm-like-btn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}
+.dshm-like-btn-on,.dshm-like-btn-on:hover{color:var(--dshm-love);}
 .dshm-row-off{opacity:.55;cursor:not-allowed;}
 .dshm-row-off:hover{background:transparent;}
 .dshm-dislike-btn-on{color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-interactive-bg-hover);}
@@ -1638,95 +1750,110 @@ window.__ModuleLoader__.load({
 .dshm-dislike-undo{flex:none;}
 .dshm-playround{appearance:none;border:0;width:30px;height:30px;border-radius:50%;background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex:none;transition:background .13s,transform .1s;}
 .dshm-playround:hover{background:var(--dsw-alias-button-primary-hover);transform:scale(1.06);}
+.dshm-playround:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px;}
 .dshm-playround:disabled{opacity:.45;cursor:default;transform:none;}
+.dshm-chipbtn.dshm-col-play{width:26px;height:26px;padding:0;justify-content:center;border-color:transparent;background:transparent;color:var(--dsw-alias-label-secondary);}
+.dshm-chipbtn.dshm-col-play:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary);}
+.dshm-chipbtn.dshm-col-play:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-1px;}
 .dshm-tile{border-radius:8px;overflow:hidden;background:linear-gradient(145deg,var(--dsw-alias-bg-layer-2),var(--dsw-alias-bg-layer-3));border:1px solid var(--dsw-alias-border-l1);display:flex;align-items:center;justify-content:center;color:var(--dsw-alias-label-tertiary);flex:none;}
 .dshm-tile img{width:100%;height:100%;object-fit:cover;display:block;}
-.dshm-arow{display:grid;grid-template-columns:44px minmax(0,1fr) 18px;align-items:center;gap:10px;width:100%;padding:6px;border:0;background:transparent;font:inherit;color:inherit;text-align:left;border-radius:10px;cursor:pointer;transition:background .12s;}
+.dshm-arow{display:grid;grid-template-columns:44px minmax(0,1fr) 18px;align-items:center;gap:10px;width:100%;padding:6px;border:0;background:transparent;font:inherit;color:inherit;text-align:left;border-radius:10px;cursor:pointer;transition:background .12s;outline:none;}
 .dshm-arow:hover{background:var(--dsw-alias-interactive-bg-hover);}
+.dshm-arow:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px;}
 .dshm-arow-text{display:flex;flex-direction:column;gap:1px;min-width:0;}
 .dshm-arow-arrow{color:var(--dsw-alias-label-tertiary);font-size:16px;line-height:1;}
-.dshm-apage-banner{position:relative;height:132px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,var(--dsw-alias-bg-layer-2),var(--dsw-alias-bg-module-platform));margin-bottom:-38px;display:flex;align-items:center;justify-content:flex-end;padding:0 14px;color:var(--dsw-alias-label-tertiary);}
-.dshm-apage-banner img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.85;}
-.dshm-apage-banner-mask{position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,var(--dsw-alias-bg-base));}
-.dshm-apage-hero{position:relative;display:flex;align-items:flex-end;gap:16px;margin-bottom:16px;padding:0 8px;}
-.dshm-apage-ava-wrap{width:96px;height:96px;border-radius:50%;border:2px solid var(--dsw-alias-bg-base);box-shadow:0 6px 18px var(--dsw-alias-bg-mask-2);overflow:hidden;flex:none;background:var(--dsw-alias-bg-module-platform);}
+.dshm-apage{flex:1;min-height:0;overflow-y:auto;padding:16px var(--dshm-pad) 28px;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2) transparent;width:100%;max-width:var(--dshm-axis);margin:0 auto;}
+.dshm-apage-banner{position:relative;height:180px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,var(--dsw-alias-bg-layer-2),var(--dsw-alias-bg-module-platform));margin-bottom:-56px;display:flex;align-items:center;justify-content:flex-end;padding:0 14px;color:var(--dsw-alias-label-tertiary);}
+.dshm-apage-banner img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.9;}
+.dshm-apage-banner-mask{position:absolute;inset:0;background:linear-gradient(180deg,transparent 20%,var(--dsw-alias-bg-base) 96%);}
+.dshm-apage-hero{position:relative;display:flex;align-items:flex-end;gap:18px;margin-bottom:18px;padding:0 4px;}
+.dshm-apage-ava-wrap{width:112px;height:112px;border-radius:50%;border:2px solid var(--dsw-alias-bg-base);box-shadow:0 6px 18px var(--dsw-alias-bg-mask-2);overflow:hidden;flex:none;background:var(--dsw-alias-bg-module-platform);}
 .dshm-apage-ava-wrap .dshm-tile{width:100%!important;height:100%!important;border:0;border-radius:0;}
+.dshm-apage-name{font-size:24px;font-weight:700;margin:0;letter-spacing:-.2px;}
+.dshm-apage-sub{font-size:12.5px;color:var(--dsw-alias-label-secondary);margin:2px 0 0;}
+.dshm-apage-back{margin-bottom:12px;}
 .dshm-agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;padding:4px 6px;}
-.dshm-artcard{appearance:none;border:0;background:transparent;font:inherit;color:inherit;display:flex;flex-direction:column;align-items:center;gap:7px;padding:10px 6px;border-radius:12px;cursor:pointer;transition:background .13s;}
+.dshm-artcard{appearance:none;border:0;background:transparent;font:inherit;color:inherit;display:flex;flex-direction:column;align-items:center;gap:7px;padding:10px 6px;border-radius:12px;cursor:pointer;transition:background .13s;outline:none;}
 .dshm-artcard:hover{background:var(--dsw-alias-interactive-bg-hover);}
+.dshm-artcard:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px;}
 .dshm-artcard:hover .dshm-artava{box-shadow:0 4px 14px var(--dsw-alias-bg-mask-2);}
 .dshm-artava{width:62px;height:62px;border-radius:50%;background:var(--dsw-alias-bg-module-platform);border:1px solid var(--dsw-alias-border-l2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:var(--dsw-alias-label-secondary);transition:box-shadow .15s;}
 .dshm-artname{font-size:12px;font-weight:600;text-align:center;max-width:100%;}
-.dshm-arthint{font-size:10.5px;color:var(--dsw-alias-label-tertiary);text-align:center;line-height:1.45;}
+.dshm-arthint{font-size:12px;color:var(--dsw-alias-label-tertiary);text-align:center;line-height:1.45;}
 .dshm-mode-group{display:inline-flex;align-items:center;gap:2px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:99px;padding:2px;}
 .dshm-mode-btn{appearance:none;border:0;background:transparent;color:var(--dsw-alias-label-tertiary);width:30px;height:28px;border-radius:99px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;}
 .dshm-mode-btn:hover{color:var(--dsw-alias-label-primary);}
+.dshm-mode-btn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}
 .dshm-mode-btn-on{background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);}
 .dshm-mode-btn-on:hover{color:var(--dsw-alias-label-primary-inverted);}
-.dshm-mode-hint{font-size:11px;color:var(--dsw-alias-label-tertiary);margin-top:6px;}
-.dshm-apage{flex:1;min-height:0;overflow-y:auto;padding:16px 20px 28px;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2) transparent;width:100%;max-width:1120px;margin:0 auto;}
-.dshm-apage-hero{display:flex;align-items:center;gap:16px;margin-bottom:16px;}
+.dshm-mode-hint{font-size:12px;color:var(--dsw-alias-label-tertiary);margin-top:6px;}
 .dshm-apage-ava{width:76px;height:76px;border-radius:50%;background:var(--dsw-alias-bg-module-platform);border:1px solid var(--dsw-alias-border-l2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:var(--dsw-alias-label-secondary);flex:none;}
-.dshm-apage-name{font-size:20px;font-weight:700;margin:0;}
 @media (max-width:980px){
   .dshm-columns{grid-template-columns:1fr;}
-  .dshm-toolbar{padding:10px 12px;}
   .dshm-header{padding:12px 12px 0;}
   .dshm-reco-page{padding:10px 12px;}
   .dshm-apage{padding:14px 12px 24px;}
-  .dshm-now{padding:14px 12px;}
+  .dshm-now{padding:0 12px;}
   .dshm-column{border-right:0;border-bottom:1px solid var(--dsw-alias-border-l1);max-height:46vh;}
 }
-.dshm-history-page{width:100%;max-width:960px;margin:0 auto;padding:12px 8px 24px;}
-.dshm-stats-wrap{display:flex;flex-direction:column;gap:12px;margin-bottom:8px;}
-.dshm-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;}
-.dshm-stat{background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);border-radius:12px;padding:10px 12px;min-width:0;}
-.dshm-stat-value{font-size:16px;font-weight:700;color:var(--dsw-alias-label-primary);}
-.dshm-stat-label{font-size:11px;color:var(--dsw-alias-label-tertiary);margin-top:2px;}
-.dshm-trend{background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;}
-.dshm-bars{display:flex;align-items:flex-end;gap:6px;height:88px;}
-.dshm-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%;min-width:0;}
-.dshm-bar{width:100%;max-width:34px;border-radius:6px 6px 2px 2px;background:linear-gradient(180deg,var(--dsw-alias-brand-primary),var(--dsw-alias-bg-layer-3));min-height:3px;}
-.dshm-bar-label{font-size:10px;color:var(--dsw-alias-label-tertiary);}
-.dshm-tops{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-.dshm-top-col{display:flex;flex-direction:column;gap:2px;min-width:0;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);border-radius:12px;padding:10px 12px;}
-.dshm-top-row{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;font-size:12px;min-width:0;}
+.dshm-history-page{width:100%;max-width:var(--dshm-axis);margin:0 auto;padding:12px 0 24px;}
+.dshm-hist-hero{padding:8px 8px 4px;}
+.dshm-hist-main{display:flex;align-items:baseline;gap:22px;flex-wrap:wrap;}
+.dshm-hist-big{font-size:34px;font-weight:700;letter-spacing:-.6px;color:var(--dsw-alias-label-primary);font-variant-numeric:tabular-nums;line-height:1.1;}
+.dshm-hist-big-unit{font-size:16px;font-weight:600;letter-spacing:0;margin-left:2px;}
+.dshm-hist-big-label{font-size:12px;color:var(--dsw-alias-label-tertiary);margin-left:6px;}
+.dshm-hist-foot{font-size:12.5px;color:var(--dsw-alias-label-secondary);margin:6px 0 0;}
+.dshm-hist-foot b{font-weight:600;color:var(--dsw-alias-label-primary);}
+.dshm-trend{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:18px 8px 6px;max-width:560px;}
+.dshm-bar-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:96px;min-width:0;}
+.dshm-bar-val{font-size:12px;color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums;line-height:1;}
+.dshm-bar{width:100%;max-width:36px;border-radius:5px 5px 2px 2px;background:var(--dsw-alias-label-tertiary);opacity:.55;min-height:3px;}
+.dshm-bar-today{background:var(--dsw-alias-brand-primary);opacity:1;}
+.dshm-bar-zero{background:var(--dsw-alias-border-l2);opacity:1;min-height:2px;height:2px!important;}
+.dshm-bar-label{font-size:11px;color:var(--dsw-alias-label-tertiary);}
+.dshm-tops{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:14px;padding:0 8px;}
+.dshm-top-col{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.dshm-top-title{font-size:12px;font-weight:600;color:var(--dsw-alias-label-secondary);padding:0 6px 6px;display:flex;align-items:center;gap:6px;}
+.dshm-top-row{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;font-size:12.5px;min-width:0;outline:none;}
 .dshm-top-row-click{cursor:pointer;}
 .dshm-top-row-click:hover{background:var(--dsw-alias-interactive-bg-hover);}
 .dshm-top-row-click:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px;}
-.dshm-top-row-artist{appearance:none;border:0;background:transparent;font:inherit;color:inherit;text-align:left;width:100%;cursor:pointer;}
+.dshm-top-row-artist{appearance:none;border:0;background:transparent;font:inherit;color:inherit;text-align:left;width:100%;cursor:pointer;outline:none;}
 .dshm-top-row-artist:hover{background:var(--dsw-alias-interactive-bg-hover);}
+.dshm-top-row-artist:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px;}
 .dshm-top-row-off{opacity:.55;cursor:not-allowed;}
 .dshm-top-row-off:hover{background:transparent;}
 .dshm-top-row:hover{background:var(--dsw-alias-interactive-bg-hover);}
-.dshm-top-rank{width:18px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums;font-size:11px;flex:none;}
+.dshm-top-rank{width:18px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums;font-size:12px;flex:none;}
 .dshm-hgroup{margin-top:10px;}
 .dshm-hgroup-label{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--dsw-alias-bg-base);font-size:12px;font-weight:600;color:var(--dsw-alias-label-secondary);}
-.dshm-hbadge{font-size:10.5px;border-radius:99px;padding:1px 8px;border:1px solid var(--dsw-alias-border-l2);flex:none;font-variant-numeric:tabular-nums;}
-.dshm-hbadge-good{color:var(--dsw-alias-state-success-primary);border-color:var(--dsw-alias-state-success-primary);}
-.dshm-hbadge-mid{color:var(--dsw-alias-state-warn-primary);border-color:var(--dsw-alias-state-warn-primary);}
+.dshm-hbadge{font-size:12px;border-radius:99px;padding:1px 8px;border:1px solid var(--dsw-alias-border-l2);flex:none;font-variant-numeric:tabular-nums;}
+.dshm-hbadge-good{color:var(--dsw-alias-label-tertiary);border-color:transparent;padding:0;}
+.dshm-hbadge-mid{color:var(--dsw-alias-state-warn-primary);border-color:currentColor;}
 .dshm-hbadge-low{color:var(--dsw-alias-label-tertiary);}
+.dshm-hrow-info{flex:1;min-width:0;}
 @media (max-width:680px){
   .dshm-tops{grid-template-columns:1fr;}
-  .dshm-hrow{grid-template-columns:40px minmax(0,1fr) auto;}
-  .dshm-hskip,.dshm-htime{display:none;}
+  .dshm-hrow .dshm-hskip,.dshm-hrow .dshm-htime{display:none;}
 }
 .dshm-state-spin{animation:dshm-spin 1.4s linear infinite;}
 .dshm-toolbar-flat{margin:0;padding:8px 0;border-bottom:0;}
 @media (max-width:560px){
-  .dshm-hrow{grid-template-columns:40px minmax(0,1fr) auto;}
-  .dshm-hbar,.dshm-hskip,.dshm-htime{display:none;}
+  .dshm-hrow .dshm-hbar,.dshm-hrow .dshm-hskip,.dshm-hrow .dshm-htime{display:none;}
   .dshm-sync{margin:12px 12px 0;}
   .dshm-reco-page{padding:16px 12px;}
 }
-.dshm-lyrics{max-width:860px;margin:24px auto 0;display:flex;flex-direction:column;gap:8px;}
-.dshm-lyrics-head{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--dsw-alias-label-secondary);padding:0 8px;}
-.dshm-lyrics-scroll{position:relative;max-height:300px;overflow-y:auto;padding:4px 8px;display:flex;flex-direction:column;gap:2px;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2) transparent;}
-.dshm-lyric-line{padding:5px 10px;border-radius:8px;color:var(--dsw-alias-label-tertiary);font-size:13px;line-height:1.6;transition:color .2s,background .2s;}
+.dshm-lyrics{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;}
+.dshm-lyrics-head{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--dsw-alias-label-secondary);padding:0 8px;}
+.dshm-lyrics-hint{color:var(--dsw-alias-label-tertiary);font-size:12px;margin-left:auto;font-weight:400;}
+.dshm-lyrics-scroll{position:relative;flex:1;min-height:120px;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:2px;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2) transparent;mask-image:linear-gradient(180deg,transparent,#000 28px,#000 calc(100% - 28px),transparent);}
+.dshm-lyric-line{appearance:none;border:0;background:transparent;font:inherit;text-align:left;width:100%;padding:6px 10px;border-radius:8px;color:var(--dsw-alias-label-tertiary);font-size:14px;line-height:1.6;transition:color .2s,background .2s,transform .2s;cursor:pointer;opacity:.55;}
+.dshm-lyric-line:hover{background:var(--dsw-alias-interactive-bg-hover);opacity:.85;color:var(--dsw-alias-label-secondary);}
+.dshm-lyric-line:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px;}
 .dshm-lyric-line-past{color:var(--dsw-alias-label-secondary);}
-.dshm-lyric-line-active{color:var(--dsw-alias-label-primary);font-weight:600;background:var(--dsw-alias-interactive-bg-hover);}
+.dshm-lyric-line-active{color:var(--dsw-alias-label-primary);font-weight:600;font-size:17px;background:transparent;opacity:1;transform:translateX(2px);}
 .dshm-plain-lyrics{white-space:pre-wrap;color:var(--dsw-alias-label-secondary);line-height:1.8;padding:6px 10px;font-size:13px;}
-.dshm-lyrics-hint{color:var(--dsw-alias-label-tertiary);font-size:12px;padding:6px 10px;}
+.dshm-lyrics-tip{color:var(--dsw-alias-label-tertiary);font-size:12px;padding:6px 10px;}
 .dshm-drawer-mask{position:absolute;inset:0;background:var(--dsw-alias-bg-mask-1);z-index:5;}
 .dshm-drawer{position:absolute;top:0;right:0;bottom:0;width:min(430px,92%);background:var(--dsw-alias-bg-layer-1);border-left:1px solid var(--dsw-alias-border-l2);box-shadow:-12px 0 32px var(--dsw-alias-bg-mask-2);z-index:6;display:flex;flex-direction:column;animation:dshm-drawer-in .2s ease-out;}
 @keyframes dshm-drawer-in{from{opacity:0;transform:translateX(16px);}to{opacity:1;transform:translateX(0);}}
@@ -1737,20 +1864,30 @@ window.__ModuleLoader__.load({
 .dshm-asec-title{font-size:12px;font-weight:600;color:var(--dsw-alias-label-secondary);display:flex;align-items:center;gap:6px;}
 .dshm-acard{background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;}
 .dshm-acard-text{font-size:12.5px;line-height:1.7;color:var(--dsw-alias-label-primary);word-break:break-word;}
-.dshm-acard-meta{font-size:11px;color:var(--dsw-alias-label-tertiary);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.dshm-acard-meta{font-size:12px;color:var(--dsw-alias-label-tertiary);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .dshm-acard-meta a{color:var(--dsw-alias-link);text-decoration:none;}
 .dshm-acard-meta a:hover{text-decoration:underline;}
-.dshm-kind-chip{font-size:10px;padding:1px 8px;border-radius:99px;border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);}
+.dshm-kind-chip{font-size:11px;padding:1px 8px;border-radius:99px;border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);}
 .dshm-sim{display:flex;flex-direction:column;gap:6px;}
-.dshm-sim-chip{display:inline-flex;align-items:center;gap:5px;display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);border-radius:10px;padding:7px 12px;font-size:12.5px;color:var(--dsw-alias-label-primary);cursor:pointer;text-align:left;font:inherit;}
+.dshm-sim-chip{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);border-radius:10px;padding:8px 12px;color:var(--dsw-alias-label-primary);cursor:pointer;text-align:left;font:inherit;font-size:12.5px;}
 .dshm-sim-chip:hover{background:var(--dsw-alias-interactive-bg-hover);}
-.dshm-sim-chip-reason{font-size:11px;color:var(--dsw-alias-label-tertiary);}
-.dshm-artist-btn{appearance:none;background:none;border:0;color:inherit;font:inherit;padding:0;cursor:pointer;text-align:left;display:inline-flex;align-items:center;gap:5px;max-width:100%;vertical-align:middle;}
+.dshm-sim-chip:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px;}
+.dshm-sim-chip-reason{font-size:12px;color:var(--dsw-alias-label-tertiary);}
+.dshm-artist-btn{appearance:none;background:none;border:0;color:inherit;font:inherit;padding:0;cursor:pointer;text-align:left;display:inline-flex;align-items:center;gap:5px;max-width:100%;vertical-align:middle;border-radius:4px;}
 .dshm-artist-btn:hover{text-decoration:underline;text-underline-offset:3px;}
+.dshm-artist-btn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}
+.dshm-modal-mask{position:fixed;inset:0;z-index:1300;background:var(--dsw-alias-bg-mask-2);display:flex;align-items:center;justify-content:center;animation:dshm-fade .15s ease-out;}
+.dshm-modal{width:min(420px,calc(100% - 32px));background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:14px;box-shadow:0 20px 50px var(--dsw-alias-bg-mask-2);padding:22px 22px 18px;display:flex;flex-direction:column;gap:12px;animation:dshm-pop .18s ease-out;}
+.dshm-modal-title{margin:0;font-size:15px;font-weight:650;color:var(--dsw-alias-label-primary);}
+.dshm-modal-body{margin:0;font-size:13px;line-height:1.65;color:var(--dsw-alias-label-secondary);}
+.dshm-modal-body b{color:var(--dsw-alias-label-primary);font-weight:600;}
+.dshm-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px;}
+.dshm-wbtn-danger{background:var(--dsw-alias-state-error-primary);border-color:transparent;color:#fff;}
+.dshm-wbtn-danger:hover{background:var(--dsw-alias-state-error-primary);filter:brightness(1.08);color:#fff;}
 @media (prefers-reduced-motion:reduce){
-  .dshm-eq-on i,.dshm-tab-dot,.dshm-skel-box,.dshm-spin,.dshm-state-spin,.dshm-mini,.dshm-mini-fab,.dshm-drawer,.dshm-welcome-fish,.dshm-settings,.dshm-logo{animation:none;}
-  .dshm-mini{animation:none;}
-  .dshm-row,.dshm-iconbtn,.dshm-chipbtn,.dshm-playbtn,.dshm-slider-thumb,.dshm-mini-progress>div,.dshm-reco-card,.dshm-dl-bar>div,.dshm-like-btn,.dshm-playround,.dshm-artcard,.dshm-mode-btn,.dshm-prv,.dshm-prv-chev{transition}:none;}
+  .dshm-eq-on i,.dshm-tab-dot,.dshm-skel-box,.dshm-spin,.dshm-state-spin,.dshm-mini,.dshm-mini-fab,.dshm-drawer,.dshm-welcome-fish,.dshm-settings,.dshm-logo,.dshm-toast,.dshm-dl-float,.dshm-dl-pill,.dshm-modal,.dshm-modal-mask{animation:none;}
+  .dshm-row,.dshm-iconbtn,.dshm-chipbtn,.dshm-playbtn,.dshm-slider-thumb,.dshm-mini-progress>div,.dshm-reco-card,.dshm-dl-bar>div,.dshm-dl-pill-bar>span,.dshm-like-btn,.dshm-playround,.dshm-artcard,.dshm-mode-btn,.dshm-prv,.dshm-prv-chev,.dshm-lyric-line,.dshm-row-actions,.dshm-srow-tail,.dshm-playcover::after,.dshm-playcover-ico{transition:none;}
+  .dshm-lyric-line{transform:none;}
 }
 `;
 
@@ -3098,13 +3235,63 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 8. Shared UI atoms
      * ================================================================ */
-    function IconButton({ label, onClick, active, disabled, className, children }) {
+    function IconButton({ label, title, onClick, active, disabled, className, children, ...rest }) {
       return h('button', {
         type: 'button',
         className: cx('dshm-iconbtn', active && 'dshm-iconbtn-active', className),
-        'aria-label': label, title: label, onClick, disabled,
+        'aria-label': label, title: title || label, onClick, disabled,
         'aria-pressed': active === undefined ? undefined : !!active,
+        ...rest,
       }, children);
+    }
+
+    /* 行内确认弹窗：替代浏览器原生 window.confirm（它会把 DSH 的暗色主题
+     * 撕开一道灰色系统对话框）。一次说清、一次决定 —— Spotify 曲目把两段
+     * 警告合并成一句，不再连环追问。 */
+    function ConfirmDialog({ t, title, body, confirmLabel, danger, onConfirm, onCancel }) {
+      const cancelRef = useRef(null);
+      useEffect(() => {
+        if (cancelRef.current && cancelRef.current.focus) cancelRef.current.focus();
+        const onKey = (e) => {
+          if (e.key === 'Escape') { e.stopPropagation(); onCancel(); }
+          if (e.key === 'Tab') { /* 焦点锁在弹窗内：只有两个按钮，手动轮转 */ e.preventDefault(); }
+        };
+        window.addEventListener('keydown', onKey, true);
+        return () => window.removeEventListener('keydown', onKey, true);
+      }, [onCancel]);
+      return h('div', {
+        className: 'dshm-modal-mask', role: 'presentation',
+        onClick: (e) => { if (e.target === e.currentTarget) onCancel(); },
+      }, h('div', { className: 'dshm-modal', role: 'alertdialog', 'aria-modal': true, 'aria-label': title },
+        h('h3', { className: 'dshm-modal-title' }, title),
+        h('p', { className: 'dshm-modal-body' }, body),
+        h('div', { className: 'dshm-modal-actions' },
+          h('button', { ref: cancelRef, type: 'button', className: 'dshm-wbtn', onClick: onCancel }, t('cancelBtn')),
+          h('button', {
+            type: 'button', className: cx('dshm-wbtn', danger ? 'dshm-wbtn-danger' : 'dshm-wbtn-primary'),
+            onClick: onConfirm,
+          }, confirmLabel))));
+    }
+
+    /* `const ask = useConfirm(t)` → `ask({...})` 返回 Promise<boolean>；
+     * 组件树里渲染 `{dialog}` 即可。 */
+    function useConfirm(t) {
+      const [req, setReq] = useState(null);
+      const resolveRef = useRef(null);
+      const ask = useCallback((opts) => new Promise((resolve) => {
+        resolveRef.current = resolve;
+        setReq(opts);
+      }), []);
+      const close = useCallback((val) => {
+        setReq(null);
+        if (resolveRef.current) { resolveRef.current(val); resolveRef.current = null; }
+      }, []);
+      const dialog = req ? h(ConfirmDialog, {
+        t, ...req,
+        onCancel: () => close(false),
+        onConfirm: () => close(true),
+      }) : null;
+      return [ask, dialog];
     }
 
     function Cover({ track, size, className }) {
@@ -3224,11 +3411,13 @@ window.__ModuleLoader__.load({
       const libRef = useRef(null);
 
       /* 喜欢列表区块挂载期间保持登录态（网易云未登录则自动出二维码），离开时停轮询 */
+      /* 二维码只在两种情况下拉：首次引导（确实需要连账号）/ 用户主动点开某平台。
+       * 老用户进来只是想改口味或目录 —— 不再自动展开网易云并后台轮询拉码。 */
       useEffect(() => {
-        if (!likedSync) return undefined;
+        if (!likedSync || !firstRun) return undefined;
         if (!likedSync.source.getSnapshot().open) likedSync.open('netease');
         return () => likedSync.close();
-      }, [likedSync]);
+      }, [likedSync, firstRun]);
       /* 入口可指定区块（「我喜欢」页的导入按钮 → 直接滚到喜欢列表同步） */
       useEffect(() => {
         const el = section === 'liked' ? likedRef.current : section === 'taste' ? tasteRef.current : section === 'lib' ? libRef.current : null;
@@ -3385,14 +3574,17 @@ window.__ModuleLoader__.load({
       }
 
       const hero = firstRun
-        ? h('div', { className: 'dshm-welcome-hero dshm-set-hero' },
-            h('div', { className: 'dshm-welcome-glow', 'aria-hidden': true }),
-            h('div', { className: 'dshm-welcome-fish' }, h(PluginLogo, { size: 160 })),
-            h('h1', { className: 'dshm-welcome-title' }, t('welcomeTitle')),
-            h('p', { className: 'dshm-welcome-sub' }, t('welcomeSub')),
-            h('div', { className: 'dshm-welcome-points' },
+        /* 杂志式左对齐报头：小徽标 + 标题 + 一句不兜售的副文。没有光晕、没有漂浮、没有打勾卖点墙。 */
+        ? h('header', { className: 'dshm-welcome-hero dshm-set-hero' },
+            h('div', { className: 'dshm-set-masthead' },
+              h('div', { className: 'dshm-welcome-fish' }, h(PluginLogo, { size: 56 })),
+              h('div', { className: 'dshm-set-masthead-text' },
+                h('h1', { className: 'dshm-welcome-title' }, t('welcomeTitle')),
+                h('p', { className: 'dshm-welcome-sub' }, t('welcomeSub')))),
+            /* 三条要点改成一行安静的脚注（用 · 分隔），不再是一列打勾 */
+            h('p', { className: 'dshm-welcome-points' },
               [t('welcomePoint1'), t('welcomePoint2'), t('welcomePoint3')]
-                .map((text, i) => h('div', { className: 'dshm-wpoint', key: i }, h(IconCheck, { size: 13 }), h('span', null, text)))),
+                .map((text, i) => h('span', { className: 'dshm-wpoint', key: i }, h('span', { className: 'dshm-wpoint-dot', 'aria-hidden': true }), text))),
             h('p', { className: 'dshm-set-first-note' }, t('settingsFirstRunNote')))
         : null;
 
@@ -3553,8 +3745,10 @@ window.__ModuleLoader__.load({
               }))
               : null)),
         h('span', { className: 'dshm-row-dur' }, formatTime(track.duration)),
+        h('span', { className: 'dshm-row-tail' },
         likes ? h(LikeButton, { t, item: track, likes, useLikes }) : null,
-        likes ? h(DislikeButton, { t, item: track, likes, useLikes }) : null,
+        /* 「不喜欢」只属于推荐 / 正在播放 —— 曲库里想移除一首歌，取消 ♥ 或删除文件即可。 */
+        (likes && !onDelete) ? h(DislikeButton, { t, item: track, likes, useLikes }) : null,
         /* 十三期：后台扫描结果决定样式——found → 实心「可入库」药丸；none → 虚线淡色（点了会再找一次）；未扫描 → 普通图标 */
         onAdd && track.inLibrary === false
           ? (() => {
@@ -3568,10 +3762,11 @@ window.__ModuleLoader__.load({
           })()
           : null,
         onDelete ? h('span', { className: 'dshm-row-actions', onClick: (e) => e.stopPropagation() },
-          h(IconButton, { label: t('revealTrack'), onClick: (e) => { e.stopPropagation(); onReveal(track); } }, h(IconDisc, { size: 14 })),
-          h(IconButton, { label: t('deleteTrack'), onClick: (e) => { e.stopPropagation(); onDelete(track); } }, h(IconClose, { size: 14 }))) : null,
+          h(IconButton, { label: t('revealTrack'), onClick: (e) => { e.stopPropagation(); onReveal(track); } }, h(IconFolder, { size: 15 })),
+          h(IconButton, { label: t('deleteTrack'), className: 'dshm-iconbtn-danger', onClick: (e) => { e.stopPropagation(); onDelete(track); } }, h(IconTrash, { size: 15 }))) : null,
         h('span', { className: cx('dshm-row-play', pending && 'dshm-playround-busy'), 'aria-hidden': true },
-          pending ? h('span', { className: 'dshm-spin' }) : h(IconPlay, { size: 15 })));
+          pending ? h('span', { className: 'dshm-spin' }) : h(IconPlay, { size: 15 }))),
+      );
     }
 
     /* ================================================================
@@ -3596,6 +3791,7 @@ window.__ModuleLoader__.load({
       const [rowError, setRowError] = useState('');
       const [playNotice, setPlayNotice] = useState('');
       const searchRef = useRef(null);
+      const [askConfirm, confirmDialog] = useConfirm(t);
       const shuffle = usePlayer((s) => s.shuffle);
       const repeat = usePlayer((s) => s.repeat);
       const mode = modeMeta(t, shuffle, repeat);
@@ -3696,10 +3892,13 @@ window.__ModuleLoader__.load({
 
       async function onDelete(track) {
         const liked = track.source === 'spotify-liked';
-        if (liked) {
-          if (!window.confirm(t('deleteLikedConfirm'))) return;
-          if (!window.confirm(t('deleteLikedConfirm2'))) return;
-        } else if (!window.confirm(t('deleteConfirm'))) return;
+        const ok = await askConfirm({
+          title: t('confirmDeleteTitle'),
+          body: liked ? t('deleteLikedConfirm') : fmt(t('deleteConfirm'), { title: track.title || t('untitled') }),
+          confirmLabel: t('confirmDeleteBtn'),
+          danger: true,
+        });
+        if (!ok) return;
         try {
           setRowError('');
           await library.remove(track.id, true);
@@ -3822,17 +4021,16 @@ window.__ModuleLoader__.load({
       function RemoteRow(item, i) {
         const isArtist = item.kind === 'artist';
         const name = isArtist ? (item.name || item.artist || '') : (item.title || '');
+        /* 歌手结果：整行就是入口（右侧只留一枚安静的 ›），不再每行一颗「查看歌手」按钮，也不再重复「歌手 · 歌手」 */
         const sub = isArtist
-          ? t('searchTypeArtist')
+          ? (item.profile || t('searchTypeArtist'))
           : (item.artist || '') + (item.album ? ' · ' + item.album : '');
-        return h('div', { className: 'dshm-row', key: 'r' + i, role: 'listitem' },
+        const body = h(React.Fragment, null,
           isArtist
             ? h(ArtistAvatar, { name, size: 40, service: artistImages, useArtistImages })
             : h('div', { className: 'dshm-tile', style: { width: 40, height: 40 } }, h(IconNote, { size: 15 })),
           h('div', { className: 'dshm-row-info' },
-            h('div', { className: 'dshm-row-title' },
-              isArtist ? h('span', { className: 'dshm-cat-chip' }, t('searchTypeArtist')) : null,
-              h('span', { className: 'dshm-ellipsis' }, name)),
+            h('div', { className: 'dshm-row-title dshm-ellipsis' }, name),
             h('div', { className: 'dshm-row-sub dshm-ellipsis' },
               isArtist || !item.artist
                 ? sub
@@ -3840,19 +4038,24 @@ window.__ModuleLoader__.load({
                     h('button', {
                       type: 'button', className: 'dshm-row-sub-btn',
                       title: t('artistOpen'), 'aria-label': t('artistOpen'),
-                      onClick: () => openArtistPage(item.artist),
+                      onClick: (e) => { e.stopPropagation(); openArtistPage(item.artist); },
                     }, item.artist),
                     item.album ? ' · ' + item.album : ''))),
           isArtist
-            ? h('button', {
-                type: 'button', className: 'dshm-chipbtn',
-                onClick: () => openArtistPage(name),
-              }, h(IconNote, { size: 13 }), t('artistOpen'))
+            ? h('span', { className: 'dshm-row-tail dshm-row-chev', 'aria-hidden': true }, h(IconChevronUp, { size: 14, style: { transform: 'rotate(90deg)' } }))
             : h('button', {
-                type: 'button', className: 'dshm-chipbtn',
+                type: 'button', className: 'dshm-chipbtn dshm-chipbtn-ghost',
                 onClick: () => playRemote(item),
-                title: t('previewLabel'),
-              }, h(IconPlay, { size: 13 }), t('previewLabel')));
+                title: t('previewLabel'), 'aria-label': t('previewLabel'),
+              }, h(IconPlay, { size: 13 })));
+        return isArtist
+          ? h('div', {
+              className: 'dshm-row dshm-row-click', key: 'r' + i, role: 'button', tabIndex: 0,
+              title: t('artistOpen'),
+              onClick: () => openArtistPage(name),
+              onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openArtistPage(name); } },
+            }, body)
+          : h('div', { className: 'dshm-row', key: 'r' + i, role: 'listitem' }, body);
       }
 
       let content;
@@ -4002,17 +4205,20 @@ window.__ModuleLoader__.load({
                       onClick: () => playLiked(tr),
                     },
                       h('span', { className: 'dshm-favcard-cover' },
-                        h(Thumb, { src: tr.coverUrl, size: 96 }),
+                        h(Thumb, { src: tr.coverUrl, size: 104 }),
                         h('span', { className: 'dshm-favcard-heart' }, h(IconHeart, { size: 11, style: { fill: 'currentColor' } }))),
                       h('span', { className: 'dshm-favcard-title dshm-ellipsis' }, tr.title || t('untitled')),
                       h('span', { className: 'dshm-favcard-sub dshm-ellipsis' }, tr.artist || t('unknownArtist')))),
-                    h('button', {
-                      type: 'button', className: 'dshm-favcard dshm-favcard-more',
-                      onClick: () => setLibTab('likes'),
-                    },
-                      h(IconQueue, { size: 18 }),
-                      h('span', { className: 'dshm-favcard-more-label' }, t('favsViewAll')),
-                      h('span', { className: 'dshm-count' }, likeItems.length)))),
+                    /* 末尾「查看全部」卡只在真的有折叠（>12）时出现；否则顶部「查看全部 ›」已足够 */
+                    likeItems.length > 12
+                      ? h('button', {
+                        type: 'button', className: 'dshm-favcard dshm-favcard-more',
+                        onClick: () => setLibTab('likes'),
+                      },
+                        h(IconQueue, { size: 18 }),
+                        h('span', { className: 'dshm-favcard-more-label' }, t('favsViewAll')),
+                        h('span', { className: 'dshm-count' }, likeItems.length))
+                      : null)),
         h('div', { className: 'dshm-toolbar' },
           h('label', { className: 'dshm-search' },
             h(IconSearch, { size: 15 }),
@@ -4021,14 +4227,16 @@ window.__ModuleLoader__.load({
               'aria-label': t('searchPlaceholder'),
               onChange: (e) => setQuery(e.target.value),
             })),
-          h('select', {
-            className: 'dshm-select', value: groupBy, 'aria-label': t('groupLabel'),
-            onChange: (e) => setGroupBy(e.target.value),
-          },
-            libTab === 'library' ? h(React.Fragment, null,
+          /* 「我喜欢」页没有分组概念：整个下拉都不渲染，而不是渲染一个空壳 */
+          libTab === 'library'
+            ? h('select', {
+              className: 'dshm-select', value: groupBy, 'aria-label': t('groupLabel'),
+              onChange: (e) => setGroupBy(e.target.value),
+            },
               h('option', { value: 'none' }, t('groupNone')),
               h('option', { value: 'artist' }, t('groupArtist')),
-              h('option', { value: 'album' }, t('groupAlbum'))) : null),
+              h('option', { value: 'album' }, t('groupAlbum')))
+            : null,
           h('button', {
             type: 'button', className: 'dshm-chipbtn dshm-chipbtn-primary',
             disabled: busy || (libTab === 'likes' ? likedPlayable.length === 0 : shownList.length === 0),
@@ -4048,11 +4256,14 @@ window.__ModuleLoader__.load({
             : null,
           h('span', { className: 'dshm-count', style: { marginLeft: 'auto' } },
             busy && tracks.length === 0 ? t('rescanning')
-              : (libTab === 'likes' ? likedFiltered.length : shownList.length) + ' ' + t('tracksUnit'))),
+              : query
+                ? fmt(t('searchMatchedCount'), { shown: (libTab === 'likes' ? likedFiltered.length : shownList.length), total: (libTab === 'likes' ? likeItems.length : tracks.length) })
+                : (libTab === 'likes' ? likedFiltered.length : shownList.length) + ' ' + t('tracksUnit'))),
         playNotice
           ? h('div', { className: 'dshm-mode-hint', style: { margin: '0 20px 6px', textAlign: 'right' }, role: 'status' }, playNotice)
           : null,
-        content);
+        content,
+        confirmDialog);
     }
 
     /* ================================================================
@@ -4083,63 +4294,72 @@ window.__ModuleLoader__.load({
       const RepeatIcon = repeat === 'one' ? IconRepeatOne : IconRepeat;
       const repeatLabel = repeat === 'one' ? t('repeatOne') : repeat === 'all' ? t('repeatAll') : t('repeatOff');
 
+      const sourceName = sourceLabel(track.source, t);
       return h('div', { className: 'dshm-now' },
-        h('div', { className: 'dshm-now-hero' },
-          h(Cover, { track, className: 'dshm-now-cover' }),
-          h('div', { className: 'dshm-now-meta' },
-            h('span', { className: 'dshm-source-chip' }, h(IconDisc, { size: 12 }), sourceLabel(track.source, t)),
-            h('h2', { className: 'dshm-now-title dshm-ellipsis' }, track.title),
-            h('p', { className: 'dshm-now-sub dshm-ellipsis' },
-              h('button', {
-                type: 'button', className: 'dshm-artist-btn',
-                title: t('artistOpen'), 'aria-label': t('artistOpen'),
-                onClick: () => openArtistPage(track.artist || ''),
-              },
-                h(ArtistAvatar, { name: track.artist || '', size: 18, service: artistImages, useArtistImages }),
-                h('span', null, track.artist || t('unknownArtist'))),
-              track.album ? ' · ' + track.album : ''),
-            /* ♥ / 👎：和迷你条、曲库行同一套语义；放大一号，放在歌手行下面 */
-            likes ? h('div', { className: 'dshm-now-actions', role: 'group', 'aria-label': t('nowLikesLabel') },
-              h(LikeButton, { t, item: track, likes, useLikes, size: 18, className: 'dshm-now-like' }),
-              h(DislikeButton, { t, item: track, likes, useLikes, size: 18, className: 'dshm-now-like' })) : null,
-            error ? h('div', { className: 'dshm-errorline', role: 'alert' }, h(IconAlert, { size: 15 }), error) : null,
-            h('div', { className: 'dshm-seekrow' },
-              h('span', { className: 'dshm-time' }, formatTime(position)),
-              h(Slider, {
-                value: frac, label: t('seekLabel'), disabled: !(duration > 0),
-                onChange: (f) => player.seek(f * duration),
-              }),
-              h('span', { className: 'dshm-time dshm-time-end' }, formatTime(duration))),
-            h('div', { className: 'dshm-transport' },
-              h(IconButton, {
-                label: mode.label, title: mode.hint + ' · ' + t('modeCycleHint'),
-                className: cx((shuffle || repeat === 'one') && 'dshm-iconbtn-active'),
-                onClick: () => player.cycleMode(),
-              }, h(mode.icon, { size: 17 })),
-              h(IconButton, { label: t('prev'), onClick: () => player.prev() }, h(IconPrev, { size: 20 })),
-              h('button', {
-                type: 'button', className: 'dshm-playbtn',
-                'aria-label': playing ? t('pause') : t('play'),
-                onClick: () => player.toggle(),
-              }, h(playing ? IconPause : IconPlay, { size: 22 })),
-              h(IconButton, { label: t('next'), onClick: () => player.next() }, h(IconNext, { size: 20 }))),
-            h('div', { className: 'dshm-volumerow' },
-              h(IconButton, { label: muted ? t('unmute') : t('mute'), onClick: () => player.toggleMute() },
-                h(muted || volume === 0 ? IconMute : IconVolume, { size: 17 })),
-              h(Slider, { value: muted ? 0 : volume, label: t('volume'), onChange: (f) => player.setVolume(f) }),
-              h('span', { className: 'dshm-volume-pct' }, Math.round((muted ? 0 : volume) * 100) + '%')))),
-        h(LyricsPanel, { t, lyrics, useLyrics, usePlayer }),
-        h('div', { className: 'dshm-queue' },
-          h('div', { className: 'dshm-queue-head' },
-            h(IconQueue, { size: 15 }), t('queue'),
-            h('span', { className: 'dshm-count' }, queue.length + ' ' + t('tracksUnit'))),
-          queue.length === 0
-            ? h('div', { className: 'dshm-state-body', style: { padding: '12px 8px' } }, t('queueEmpty'))
-            : queue.map((tr, i) => h(TrackRow, {
-              key: (tr.id || '') + ':' + i, track: tr, index: i,
-              isCurrent: i === queueIndex, playing: playing && i === queueIndex,
-              onPlay: (_tr, idx) => player.jumpTo(idx), onOpenArtist: openArtistPage, t,
-            }))));
+        h('div', { className: 'dshm-now-stage' },
+          /* 左栏：封面 + 标题 + 控台。粘滞垂直居中，宽屏下像一台独立的唱机。 */
+          h('div', { className: 'dshm-now-side' },
+            h('div', { className: 'dshm-now-hero' },
+              h(Cover, { track, className: 'dshm-now-cover' }),
+              h('div', { className: 'dshm-now-meta' },
+                sourceName
+                  ? h('span', { className: 'dshm-source-chip' }, h(IconDisc, { size: 12 }), sourceName)
+                  : null,
+                h('h2', { className: 'dshm-now-title' }, track.title || t('untitled')),
+                h('p', { className: 'dshm-now-sub dshm-ellipsis' },
+                  h('button', {
+                    type: 'button', className: 'dshm-artist-btn',
+                    title: t('artistOpen'), 'aria-label': t('artistOpen'),
+                    onClick: () => openArtistPage(track.artist || ''),
+                  },
+                    h(ArtistAvatar, { name: track.artist || '', size: 18, service: artistImages, useArtistImages }),
+                    h('span', null, track.artist || t('unknownArtist'))),
+                  track.album ? ' · ' + track.album : ''),
+                error ? h('div', { className: 'dshm-errorline', role: 'alert' }, h(IconAlert, { size: 15 }), error) : null,
+                h('div', { className: 'dshm-seekrow' },
+                  h('span', { className: 'dshm-time' }, formatTime(position)),
+                  h(Slider, {
+                    value: frac, label: t('seekLabel'), disabled: !(duration > 0),
+                    onChange: (f) => player.seek(f * duration),
+                  }),
+                  h('span', { className: 'dshm-time dshm-time-end' }, formatTime(duration))),
+                /* ♥ / 👎 收进控制条右端：与播放键同属「对这首歌的态度」，不再单独悬一枚白药丸 */
+                h('div', { className: 'dshm-transport' },
+                  h(IconButton, {
+                    label: mode.label, title: mode.hint + ' · ' + t('modeCycleHint'),
+                    className: cx((shuffle || repeat === 'one') && 'dshm-iconbtn-active'),
+                    onClick: () => player.cycleMode(),
+                  }, h(mode.icon, { size: 17 })),
+                  h(IconButton, { label: t('prev'), onClick: () => player.prev() }, h(IconPrev, { size: 20 })),
+                  h('button', {
+                    type: 'button', className: 'dshm-playbtn',
+                    'aria-label': playing ? t('pause') : t('play'),
+                    onClick: () => player.toggle(),
+                  }, h(playing ? IconPause : IconPlay, { size: 22 })),
+                  h(IconButton, { label: t('next'), onClick: () => player.next() }, h(IconNext, { size: 20 })),
+                  likes ? h('div', { className: 'dshm-now-actions', role: 'group', 'aria-label': t('nowLikesLabel') },
+                    h(LikeButton, { t, item: track, likes, useLikes, size: 17, className: 'dshm-now-like' }),
+                    h(DislikeButton, { t, item: track, likes, useLikes, size: 17, className: 'dshm-now-like' })) : null),
+                h('div', { className: 'dshm-volumerow' },
+                  h(IconButton, { label: muted ? t('unmute') : t('mute'), onClick: () => player.toggleMute() },
+                    h(muted || volume === 0 ? IconMute : IconVolume, { size: 17 })),
+                  h(Slider, { value: muted ? 0 : volume, label: t('volume'), onChange: (f) => player.setVolume(f) }),
+                  h('span', { className: 'dshm-volume-pct' }, Math.round((muted ? 0 : volume) * 100) + '%')))),
+          /* 右栏：歌词全高呼吸；没有歌词时让「接下来播放」顶上来，不留一片死白 */
+          h('div', { className: 'dshm-now-main' },
+            h(LyricsPanel, { t, lyrics, player, useLyrics, usePlayer }),
+            h('div', { className: 'dshm-queue' },
+              h('div', { className: 'dshm-queue-head' },
+                h(IconQueue, { size: 15 }), t('tabNowQueue'),
+                h('span', { className: 'dshm-count' }, queue.length + ' ' + t('tracksUnit'))),
+              queue.length === 0
+                ? h('div', { className: 'dshm-state-body', style: { padding: '12px 8px' } }, t('queueEmpty'))
+                : h('div', { className: 'dshm-queue-list' },
+                    queue.map((tr, i) => h(TrackRow, {
+                      key: (tr.id || '') + ':' + i, track: tr, index: i,
+                      isCurrent: i === queueIndex, playing: playing && i === queueIndex,
+                      onPlay: (_tr, idx) => player.jumpTo(idx), onOpenArtist: openArtistPage, t,
+                    }))))))));
     }
 
     /* ================================================================
@@ -4217,13 +4437,26 @@ window.__ModuleLoader__.load({
       const liked = useLikes((st) => !!st.keys[likeKey(item)]);
       /* 十期②：该行的缓存转圈态由 warm store 驱动（整栏播放时整栏一起转）。 */
       const pending = warm && useWarm ? !!useWarm((st) => !!(st.pending && st.pending[likeKey(item)])) : false;
+      const playLabel = pending ? t('previewLoading') : (isCurrent && playing ? t('pause') : t('previewLabel'));
+      /* 播放键隐入封面：整行不再以实心黑圆结尾，封面 hover / 当前播放时才浮出播放标。 */
       return h('div', { className: cx('dshm-srow', isCurrent && 'dshm-row-current') },
-        h(Thumb, { src: item.coverUrl, size: 38 }),
-        h('div', {
-          className: 'dshm-srow-main', role: 'button', tabIndex: 0,
-          'aria-label': t('playTrack') + ': ' + (item.title || ''),
+        h('button', {
+          type: 'button', className: cx('dshm-playcover', pending && 'dshm-playround-busy'),
+          'data-on': isCurrent && playing ? 'true' : undefined,
+          'aria-label': pending ? t('previewLoading') : (isCurrent && playing ? t('pause') : t('play')),
+          'aria-busy': pending ? 'true' : undefined,
+          disabled: !!pending,
+          title: playLabel,
           onClick: () => onPlay(item),
-          onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPlay(item); } },
+        },
+          h(Thumb, { src: item.coverUrl, size: 40 }),
+          pending
+            ? h('span', { className: 'dshm-spin', 'aria-hidden': true })
+            : h('span', { className: 'dshm-playcover-ico', 'aria-hidden': true }, h(isCurrent && playing ? IconPause : IconPlay, { size: 16 }))),
+        h('div', {
+          className: 'dshm-srow-main', role: 'group',
+          'aria-label': (item.title || t('untitled')) + (item.artist ? ' · ' + item.artist : ''),
+          onClick: () => onPlay(item),
         },
           h('span', { className: 'dshm-srow-title dshm-ellipsis' }, item.title || t('untitled')),
           h('span', { className: 'dshm-srow-sub dshm-ellipsis' },
@@ -4236,25 +4469,16 @@ window.__ModuleLoader__.load({
               : (item.artist || t('unknownArtist')),
             item.album ? ' · ' + item.album : ''),
           showReason && item.reason ? h('span', { className: 'dshm-srow-reason' }, item.reason) : null),
-        h('button', {
-          type: 'button',
-          className: cx('dshm-like-btn', liked && 'dshm-like-btn-on'),
-          'aria-label': liked ? t('unlikeBtn') : t('likeBtn'),
-          'aria-pressed': !!liked,
-          title: liked ? t('likedBtn') : t('likeBtn'),
-          onClick: () => likes.toggle(item, !liked),
-        }, h(IconHeart, { size: 15, style: liked ? { fill: 'currentColor' } : undefined })),
-        likes ? h(DislikeButton, { t, item, likes, useLikes }) : null,
-        h('button', {
-          type: 'button', className: cx('dshm-playround', pending && 'dshm-playround-busy'),
-          'aria-label': pending ? t('previewLoading') : (isCurrent && playing ? t('pause') : t('play')),
-          'aria-busy': pending ? 'true' : undefined,
-          disabled: !!pending,
-          title: pending ? t('previewLoading') : (isCurrent && playing ? t('pause') : t('previewLabel')),
-          onClick: () => onPlay(item),
-        }, pending
-          ? h('span', { className: 'dshm-spin', 'aria-hidden': true })
-          : h(isCurrent && playing ? IconPause : IconPlay, { size: 13 })));
+        h('span', { className: 'dshm-srow-tail' },
+          h('button', {
+            type: 'button',
+            className: cx('dshm-like-btn', liked && 'dshm-like-btn-on'),
+            'aria-label': liked ? t('unlikeBtn') : t('likeBtn'),
+            'aria-pressed': !!liked,
+            title: liked ? t('likedBtn') : t('likeBtn'),
+            onClick: () => likes.toggle(item, !liked),
+          }, h(IconHeart, { size: 15, style: liked ? { fill: 'currentColor' } : undefined })),
+          likes ? h(DislikeButton, { t, item, likes, useLikes }) : null));
     }
 
     /* Artist column row: real artist/band image + name + genre hint + chevron. */
@@ -4465,9 +4689,9 @@ window.__ModuleLoader__.load({
           column('colToday', IconSparkles, sections.today || [],
             h('button', {
               type: 'button', className: 'dshm-chipbtn dshm-col-play',
-              disabled: !(sections.today || []).length,
+              disabled: !(sections.today || []).length, title: t('playColumn'), 'aria-label': t('playColumn'),
               onClick: () => playColumn(sections.today || []),
-            }, h(IconPlay, { size: 12 }), t('playColumn')), 'today'),
+            }, h(IconPlay, { size: 13 })), 'today'),
           h('section', { className: 'dshm-column', key: 'colArtist' },
             h('div', { className: 'dshm-col-head' },
               h('div', { className: 'dshm-col-title' }, h(IconNote, { size: 14 }), t('colArtist')),
@@ -4481,9 +4705,9 @@ window.__ModuleLoader__.load({
           column('colNew', IconDisc, sections.new || [],
             h('button', {
               type: 'button', className: 'dshm-chipbtn dshm-col-play',
-              disabled: !(sections.new || []).length,
+              disabled: !(sections.new || []).length, title: t('playColumn'), 'aria-label': t('playColumn'),
               onClick: () => playColumn(sections.new || []),
-            }, h(IconPlay, { size: 12 }), t('playColumn')), 'new')));
+            }, h(IconPlay, { size: 13 })), 'new')));
     }
 
     /* Shared artist profile block (intro / news / trivia / similar), reused by
@@ -4540,7 +4764,7 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 11a2. Artist page (V3): profile + songs, play/preview + like
      * ================================================================ */
-    function ArtistPageView({ t, reco, player, likes, preview, library, openView, openArtistPage, artistImages, artistPage, useUi, useLikes, useLibrary, usePlayer, useArtistImages, useArtistPage }) {
+    function ArtistPageView({ t, reco, player, likes, preview, library, openView, openArtistPage, goBack, backLabel, artistImages, artistPage, useUi, useLikes, useLibrary, usePlayer, useArtistImages, useArtistPage }) {
       const name = useUi((s) => s.artistName);
       const tracks = useLibrary((st) => st.tracks);
       const currentId = usePlayer((st) => (st.track ? st.track.id : null));
@@ -4593,7 +4817,7 @@ window.__ModuleLoader__.load({
       }
       return h('div', { className: 'dshm-apage' },
         h('div', { className: 'dshm-toolbar dshm-toolbar-flat' },
-          h('button', { type: 'button', className: 'dshm-chipbtn', onClick: () => openView('reco') }, '← ' + t('artistPageBack')),
+          h('button', { type: 'button', className: 'dshm-chipbtn dshm-apage-back', onClick: () => (goBack ? goBack() : openView('reco')) }, h(IconChevronUp, { size: 14, style: { transform: 'rotate(-90deg)' } }), backLabel ? backLabel(t) : t('artistPageBack')),
           notice ? h('span', { className: 'dshm-mode-hint', style: { marginLeft: '8px' } }, notice) : null,
           library && ready ? h('button', {
             type: 'button', className: 'dshm-chipbtn', disabled: !songs.length,
@@ -4845,7 +5069,8 @@ window.__ModuleLoader__.load({
       const qrProvider = tab === 'netease' ? 'netease' : (tab === 'qq' && qqQr ? 'qq' : null);
       const qrOn = qrProvider ? (qrProvider === 'netease' ? neOn : qqOn) : true;
       useEffect(() => {
-        if (!enabled || !qrProvider || qrOn || s.qrPhase !== 'idle') return undefined;
+        /* 只有面板真的展开（open）且未登录才自动取码；折叠状态下 tab 仍可能是 netease，不能因此在后台拉码轮询 */
+        if (!s.open || !enabled || !qrProvider || qrOn || s.qrPhase !== 'idle') return undefined;
         likedSync.startQr(qrProvider);
         return undefined;
       }, [enabled, qrProvider, qrOn, s.qrPhase]);
@@ -4975,15 +5200,34 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 11c. History view (S3): plays, completion, skips
      * ================================================================ */
-    function fmtDuration(sec) {
+    function fmtDuration(sec, t) {
       const v = Math.max(0, Math.round(sec || 0));
       const hh = Math.floor(v / 3600), mm = Math.floor((v % 3600) / 60);
-      return hh > 0 ? hh + ' 小时 ' + mm + ' 分' : mm + ' 分 ' + (v % 60) + ' 秒';
+      if (t) return hh > 0 ? fmt(t('durationHours'), { h: hh, m: mm }) : fmt(t('durationMins'), { m: mm });
+      return hh > 0 ? hh + 'h ' + mm + 'm' : mm + 'm';
     }
 
+    /* 本地日期键 + 人话标签：今天 / 昨天 / 4月17日（不再是 2026-4-17） */
     function dayKeyOf(ts) {
-      const d = new Date(ts || Date.now());
+      const d = ts ? new Date(ts) : new Date();
       return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+    }
+    function fmtDay(ts) {
+      const d = ts ? new Date(ts) : new Date();
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function dayLabel(ts, t) {
+      const d = ts ? new Date(ts) : new Date();
+      if (t) {
+        if (dayKeyOf(d.getTime()) === dayKeyOf(Date.now())) return t('dayToday');
+        const y = new Date(); y.setDate(y.getDate() - 1);
+        if (dayKeyOf(d.getTime()) === dayKeyOf(y.getTime())) return t('dayYesterday');
+      }
+      const now = new Date();
+      /* 中日文用「4月17日」；其他语言用 4/17 —— 只看当前文案是不是中文，而不是硬编码 */
+      const zh = t && /[\u4e00-\u9fff]/.test(String(t('dayToday') || ''));
+      const md = zh ? (d.getMonth() + 1) + '月' + d.getDate() + '日' : (d.getMonth() + 1) + '/' + d.getDate();
+      return d.getFullYear() === now.getFullYear() ? md : (zh ? d.getFullYear() + '年' + md : d.getFullYear() + '/' + md);
     }
 
     function HistoryView({ t, history, player, openArtistPage, artistImages, likes, useHistory, useLibrary, useArtistImages, useLikes }) {
@@ -4996,9 +5240,6 @@ window.__ModuleLoader__.load({
         const tr = ev.trackId && tracks.find((x) => x.id === ev.trackId);
         return tr && tr.coverUrl ? tr.coverUrl : null;
       };
-      const statCard = (label, value) => h('div', { className: 'dshm-stat', key: label },
-        h('div', { className: 'dshm-stat-value dshm-ellipsis' }, value),
-        h('div', { className: 'dshm-stat-label' }, label));
       const trackForTop = (it) => (it && ((it.trackId && tracks.find((x) => x.id === it.trackId)) || (it.id && tracks.find((x) => x.id === it.id)))) || null;
       const topTracks = [];
       for (const it of (stats && stats.topSongs) || []) {
@@ -5012,97 +5253,123 @@ window.__ModuleLoader__.load({
         player.playTracks(topTracks, idx >= 0 ? idx : 0);
       };
       const daily = (stats && stats.daily) || [];
-      const maxPlays = Math.max(1, ...daily.map((d) => d.plays || 0));
-      const statsBlock = stats
-        ? h('div', { className: 'dshm-stats-wrap' },
-            h('div', { className: 'dshm-stats' },
-              statCard(t('statPlays'), String(stats.totalPlays || 0)),
-              statCard(t('statSeconds'), fmtDuration(stats.totalSeconds)),
-              statCard(t('statSongs'), String(stats.uniqueSongs || 0)),
-              statCard(t('statArtists'), String(stats.uniqueArtists || 0)),
-              statCard(t('statSkipped'), String(stats.skippedCount || 0)),
-              statCard(t('statCompletion'), Math.round((stats.avgCompletion || 0) * 100) + '%'),
-              statCard(t('statDislikes'), String((stats.dislikes && stats.dislikes.count) || 0))),
-            h('div', { className: 'dshm-trend' },
-              h('div', { className: 'dshm-asec-title' }, h(IconQueue, { size: 13 }), t('trendTitle')),
-              h('div', { className: 'dshm-bars' }, daily.map((d, i) => h('div', { className: 'dshm-bar-col', key: i },
-                h('div', { className: 'dshm-bar', title: (d.date || '') + ' · ' + (d.plays || 0) + ' ' + t('playsUnit'), style: { height: Math.max(3, Math.round(((d.plays || 0) / maxPlays) * 100)) + '%' } }),
-                h('div', { className: 'dshm-bar-label' }, String(d.date || '').slice(5)))))),
-            h('div', { className: 'dshm-tops' },
-              h('div', { className: 'dshm-top-col' },
-                h('div', { className: 'dshm-asec-title' }, h(IconNote, { size: 13 }), t('topSongs'),
-                  h('button', {
-                    type: 'button', className: 'dshm-chipbtn dshm-col-play', style: { marginLeft: 'auto' },
-                    disabled: topTracks.length === 0, title: t('playList'),
-                    onClick: () => player.playTracks(topTracks, 0),
-                  }, h(IconPlay, { size: 12 }), t('playList'))),
-                ((stats.topSongs || []).length
-                  ? stats.topSongs.map((it, i) => {
-                      const tr = trackForTop(it);
-                      const play = () => { setNotice(''); playTopSong(it); };
-                      const explain = () => setNotice(t('topUnplayable'));
-                      return h('div', {
-                        className: cx('dshm-top-row', tr ? 'dshm-top-row-click' : 'dshm-top-row-off'), key: i,
-                        role: 'button', tabIndex: 0,
-                        'aria-disabled': tr ? undefined : true,
-                        title: tr ? t('playTrack') : t('topUnplayable'),
-                        onClick: tr ? play : explain,
-                        onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (tr) play(); else explain(); } },
-                      },
-                        h('span', { className: 'dshm-top-rank' }, String(i + 1)),
-                        h('span', { className: 'dshm-ellipsis', style: { flex: 1 } }, (it.title || '') + (it.artist ? ' · ' + it.artist : '')),
-                        h('span', { className: 'dshm-count' }, (it.plays || 0) + ' ' + t('playsUnit')));
-                    })
-                  : h('div', { className: 'dshm-lyrics-hint' }, t('noSection')))),
-              h('div', { className: 'dshm-top-col' },
-                h('div', { className: 'dshm-asec-title' }, h(IconDisc, { size: 13 }), t('topArtists')),
-                ((stats.topArtists || []).length
-                  ? stats.topArtists.map((it, i) => h('button', {
-                      key: i, type: 'button', className: 'dshm-top-row dshm-top-row-artist',
-                      title: t('artistOpen'), onClick: () => openArtistPage(it.name || ''),
+      const maxDaily = Math.max(1, ...daily.map((d) => d.plays || 0));
+      const plays = (stats && stats.plays) || 0;
+      const totalSeconds = (stats && stats.seconds) || 0;
+      const songs = (stats && stats.songs) || 0;
+      const artists = (stats && stats.artists) || 0;
+      const skipped = (stats && stats.skipped) || 0;
+      const completion = (stats && stats.completion) || 0;
+      const dislikes = (stats && stats.dislikes && stats.dislikes.songs) || [];
+
+      /* 摘要只留「两个主角数字 + 一行安静的脚注」。
+       * 旧版 7 张等权 KPI 卡像运维监控面板；正常听完的歌也不再涂绿。 */
+      const statsBlock = stats ? h('div', { className: 'dshm-hist-hero' },
+        h('div', { className: 'dshm-hist-main' },
+          h('span', { className: 'dshm-hist-big' },
+            h('span', { className: 'dshm-hist-num' }, String(plays)),
+            h('span', { className: 'dshm-hist-unit' }, t('playsUnit')),
+            h('span', { className: 'dshm-hist-label' }, t('statPlays'))),
+          h('span', { className: 'dshm-hist-big' },
+            h('span', { className: 'dshm-hist-num' }, fmtDuration(totalSeconds, t)),
+            h('span', { className: 'dshm-hist-unit' }, ''),
+            h('span', { className: 'dshm-hist-label' }, t('statSeconds'))),
+          h('span', { className: 'dshm-hist-big' },
+            h('span', { className: 'dshm-hist-num' }, completion + '%'),
+            h('span', { className: 'dshm-hist-unit' }, ''),
+            h('span', { className: 'dshm-hist-label' }, t('statCompletion')))),
+        h('p', { className: 'dshm-hist-foot' },
+          fmt(t('histSummaryFoot'), { songs, artists, pct: completion }),
+          skipped ? ' · ' + fmt(t('histSummarySkip'), { n: skipped }) : '',
+          dislikes.length ? ' · ' + fmt(t('histSummaryDislike'), { n: dislikes.length }) : ''),
+        daily.length ? h('div', { className: 'dshm-trend', role: 'img', 'aria-label': t('statDaily') || '7 days' },
+          daily.map((d) => {
+            const n = d.plays || 0;
+            const pct = Math.round((n / maxDaily) * 100);
+            const isToday = d.day === fmtDay(Date.now());
+            return h('div', { key: d.day, className: 'dshm-bar-col' + (isToday ? ' dshm-bar-col-today' : ''), title: (d.label || d.day) + ' · ' + n },
+              h('span', { className: 'dshm-bar-val' }, n ? String(n) : '–'),
+              h('div', { className: 'dshm-bar' + (isToday ? ' dshm-bar-today' : '') + (n ? '' : ' dshm-bar-zero') }),
+              h('span', { className: 'dshm-bar-label' }, (d.label || d.day || '').slice(5)));
+          })) : null,
+        h('div', { className: 'dshm-tops' },
+        h('div', { className: 'dshm-top-col' },
+              h('div', { className: 'dshm-top-title' }, t('topSongs'),
+                h('button', {
+                  type: 'button', className: 'dshm-chipbtn dshm-col-play',
+                  disabled: topTracks.length === 0, title: t('playList'), 'aria-label': t('playList'),
+                  onClick: () => player.playTracks(topTracks, 0),
+                }, h(IconPlay, { size: 13 }))),
+              ((stats.topSongs || []).length
+                ? stats.topSongs.map((it, i) => {
+                    const tr = trackForTop(it);
+                    const play = () => { setNotice(''); playTopSong(it); };
+                    const explain = () => setNotice(t('topUnplayable'));
+                    return h('div', {
+                      className: cx('dshm-top-row', tr ? 'dshm-top-row-click' : 'dshm-top-row-off'), key: i,
+                      role: 'button', tabIndex: 0,
+                      'aria-disabled': tr ? undefined : true,
+                      title: tr ? t('playTrack') : t('topUnplayable'),
+                      onClick: tr ? play : explain,
+                      onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (tr) play(); else explain(); } },
                     },
                       h('span', { className: 'dshm-top-rank' }, String(i + 1)),
-                      h('span', { className: 'dshm-ellipsis', style: { flex: 1 } }, it.name || ''),
-                      h('span', { className: 'dshm-count' }, (it.plays || 0) + ' ' + t('playsUnit'))))
-                  : h('div', { className: 'dshm-lyrics-hint' }, t('noSection')))),
+                      h('span', { className: 'dshm-top-name dshm-ellipsis' }, it.title || t('untitled')),
+                      h('span', { className: 'dshm-top-sub dshm-ellipsis' }, it.artist || ''),
+                      h('span', { className: 'dshm-count' }, (it.plays || 0) + ' ' + t('playsUnit')));
+                  })
+                : h('div', { className: 'dshm-lyrics-hint' }, t('noSection')))),
+            h('div', { className: 'dshm-top-col' },
+              h('div', { className: 'dshm-top-title' }, t('topArtists')),
+              ((stats.topArtists || []).length
+                ? stats.topArtists.map((it, i) => h('button', {
+                    key: i, type: 'button', className: 'dshm-top-row dshm-top-row-artist',
+                    title: t('artistOpen'), onClick: () => openArtistPage(it.name || ''),
+                  },
+                    h('span', { className: 'dshm-top-rank' }, String(i + 1)),
+                    h(ArtistAvatar, { name: it.name || '', size: 24, service: artistImages, useArtistImages }),
+                    h('span', { className: 'dshm-top-name dshm-ellipsis' }, it.name || ''),
+                    h('span', { className: 'dshm-count' }, (it.plays || 0) + ' ' + t('playsUnit'))))
+                : h('div', { className: 'dshm-lyrics-hint' }, t('noSection')))),
             h('div', { className: 'dshm-dislikes' },
-              h('div', { className: 'dshm-asec-title' }, h(IconThumbDown, { size: 13 }), t('dislikesTitle')),
+              h('div', { className: 'dshm-top-title' }, t('dislikesTitle')),
               ((stats.dislikes && stats.dislikes.songs) || []).length
                 ? stats.dislikes.songs.map((it, i) => h('div', { className: 'dshm-dislike-row', key: i },
-                    h('span', { className: 'dshm-ellipsis', style: { flex: 1 } },
+                    h('span', { className: 'dshm-ellipsis dshm-dislike-name' },
                       (it.title || '') + (it.artist ? ' · ' + it.artist : '')),
-                    h('span', { className: 'dshm-count' }, it.dislikedAt ? new Date(it.dislikedAt).toISOString().slice(0, 10) : ''),
+                    h('span', { className: 'dshm-count dshm-dislike-date' }, it.dislikedAt ? fmtDay(it.dislikedAt) : ''),
                     likes ? h('button', {
                       type: 'button', className: 'dshm-chipbtn dshm-dislike-undo',
                       title: t('undislikeBtn'),
                       onClick: () => likes.setDislike({ artist: it.artist, title: it.title }, false),
                     }, t('undislikeBtn')) : null))
                 : h('div', { className: 'dshm-lyrics-hint' }, t('dislikesEmpty')))))
-        : null;
+            : null;
 
       let list;
-      if (s.status === 'loading' && s.events.length === 0) {
+      const events = s.events || [];
+      if (s.status === 'loading' && events.length === 0) {
         list = h(React.Fragment, null,
           h('div', { className: 'dshm-lyrics-hint' }, t('historyLoading')),
-          h(SkeletonRows));
-      } else if (s.status === 'error' && s.events.length === 0) {
+          h(SkeletonRows, { t }));
+      } else if (s.status === 'error' && events.length === 0) {
         list = h(EmptyState, {
           icon: h(IconAlert, { size: 30 }), tone: 'error',
           title: t('historyError'), body: s.error || '',
         }, h('button', { type: 'button', className: 'dshm-chipbtn', onClick: () => history.load(50) }, t('lyricsRetry')));
-      } else if (s.events.length === 0) {
+      } else if (events.length === 0) {
         list = h(EmptyState, { icon: h(IconQueue, { size: 30 }), title: t('historyEmpty') });
       } else {
         const groups = [];
         let last = null;
-        for (const ev of s.events) {
+        for (const ev of events) {
           const k = dayKeyOf(ev.timestamp || Date.now());
-          if (k !== last) { groups.push({ key: k, label: k, items: [] }); last = k; }
+          if (k !== last) { groups.push({ key: k, items: [] }); last = k; }
           groups[groups.length - 1].items.push(ev);
         }
         const trackById = (ev) => (ev && ev.trackId ? tracks.find((x) => x.id === ev.trackId) : null);
         const queue = [];
-        for (const ev of s.events) {
+        for (const ev of events) {
           const tr = trackById(ev);
           if (tr && !queue.some((x) => x.id === tr.id)) queue.push(tr);
         }
@@ -5113,17 +5380,18 @@ window.__ModuleLoader__.load({
           player.playTracks(queue, idx >= 0 ? idx : 0);
         };
         list = h('div', { className: 'dshm-hlist' },
-          h('div', { className: 'dshm-queue-head' }, h(IconQueue, { size: 14 }), t('historyTitle'),
+          h('div', { className: 'dshm-queue-head' },
+            h('span', { className: 'dshm-queue-title' }, t('historyTitle')),
             h('span', { className: 'dshm-count' }, s.total + ' ' + t('tracksUnit')),
             h('button', {
-              type: 'button', className: 'dshm-chipbtn dshm-col-play', style: { marginLeft: 'auto' },
+              type: 'button', className: 'dshm-chipbtn dshm-col-play',
               disabled: queue.length === 0,
-              title: t('playList'),
+              title: t('playList'), 'aria-label': t('playList'),
               onClick: () => player.playTracks(queue, 0),
-            }, h(IconPlay, { size: 12 }), t('playList'))),
+            }, h(IconPlay, { size: 13 }))),
           groups.map((g) => h('section', { className: 'dshm-hgroup', key: g.key },
             h('div', { className: 'dshm-hgroup-label' },
-              g.label,
+              dayLabel(g.items[0].timestamp, t),
               h('span', { className: 'dshm-count' }, g.items.length + ' ' + t('playsUnit'))),
             g.items.map((ev, i) => {
               const pct = Math.round((ev.completion || 0) * 100);
@@ -5153,6 +5421,7 @@ window.__ModuleLoader__.load({
                   ev.timestamp ? new Date(ev.timestamp).toLocaleString(undefined, { hour: '2-digit', minute: '2-digit' }) : ''));
             }))));
       }
+
       return h('div', { className: 'dshm-history-page' },
         notice ? h('div', { className: 'dshm-mode-hint', role: 'status', style: { margin: '6px 8px 0' } }, notice) : null,
         statsBlock, list);
@@ -5168,9 +5437,10 @@ window.__ModuleLoader__.load({
       return source || '';
     }
 
-    function LyricsPanel({ t, lyrics, useLyrics, usePlayer }) {
+    function LyricsPanel({ t, lyrics, player, useLyrics, usePlayer }) {
       const track = usePlayer((s) => s.track);
       const position = usePlayer((s) => s.position);
+      const duration = usePlayer((s) => s.duration);
       const trackId = track ? track.id : null;
       const snap = useLyrics((s) => (s.trackId === trackId ? s : null));
 
@@ -5178,6 +5448,8 @@ window.__ModuleLoader__.load({
 
       const scrollRef = useRef(null);
       const activeRef = useRef(null);
+      /* 用户刚点了某一句：短暂忽略自动滚动，免得歌词框在 seek 后「抢」回位置 */
+      const seekHoldRef = useRef(0);
       const lines = snap && snap.data && snap.data.synced ? snap.data.lines : null;
       let activeIdx = -1;
       if (lines && lines.length) {
@@ -5189,6 +5461,7 @@ window.__ModuleLoader__.load({
         }
       }
       useEffect(() => {
+        if (Date.now() < seekHoldRef.current) return;
         const el = activeRef.current, box = scrollRef.current;
         if (el && box) {
           box.scrollTo({
@@ -5200,6 +5473,14 @@ window.__ModuleLoader__.load({
 
       if (!track || !snap) return null;
 
+      /* 点击任意一句 → 跳到那句的时间。这是所有歌词界面的第一直觉。 */
+      const playerApi = player || (usePlayer && usePlayer.getSnapshot ? usePlayer.getSnapshot() : null);
+      function seekTo(line) {
+        if (line.time == null || !playerApi || typeof playerApi.seek !== 'function') return;
+        seekHoldRef.current = Date.now() + 900;
+        playerApi.seek(line.time);
+      }
+
       let body;
       if (snap.status === 'loading') {
         body = h('div', { className: 'dshm-lyrics-hint' }, t('lyricsLoading'));
@@ -5210,13 +5491,18 @@ window.__ModuleLoader__.load({
       } else if (snap.data && snap.data.source === 'none') {
         body = h('div', { className: 'dshm-lyrics-hint' }, (snap.data.message || t('lyricsNone')));
       } else if (lines && lines.length) {
-        body = h('div', { className: 'dshm-lyrics-scroll', ref: scrollRef },
-          lines.map((line, i) => h('div', {
+        body = h('div', { className: 'dshm-lyrics-scroll', ref: scrollRef, role: 'list' },
+          lines.map((line, i) => h('button', {
             key: i,
+            type: 'button',
             ref: i === activeIdx ? activeRef : null,
+            role: 'listitem',
             className: cx('dshm-lyric-line',
               i === activeIdx && 'dshm-lyric-line-active',
               i < activeIdx && 'dshm-lyric-line-past'),
+            'aria-current': i === activeIdx ? 'true' : undefined,
+            disabled: line.time == null,
+            onClick: () => seekTo(line),
           }, line.text || '♪')));
       } else if (snap.data && snap.data.plain) {
         body = h('div', { className: 'dshm-plain-lyrics' }, snap.data.plain);
@@ -5224,13 +5510,15 @@ window.__ModuleLoader__.load({
         body = h('div', { className: 'dshm-lyrics-hint' }, t('lyricsNone'));
       }
 
+      const synced = !!(lines && lines.length && snap.status !== 'loading');
       return h('section', { className: 'dshm-lyrics', 'aria-label': t('lyricsTitle') },
         h('div', { className: 'dshm-lyrics-head' },
           h(IconNote, { size: 14 }),
           t('lyricsTitle'),
           snap.data && snap.data.source && snap.data.source !== 'none'
             ? h('span', { className: 'dshm-source-chip' }, t('lyricsSource') + ' · ' + lyricsSourceLabel(snap.data.source, t))
-            : null),
+            : null,
+          synced ? h('span', { className: 'dshm-lyrics-hint' }, t('lyricsClickHint')) : null),
         body);
     }
 
@@ -5247,7 +5535,7 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 12. Music panel (main slot): header + tabs + per-view body
      * ================================================================ */
-    function MusicPanel({ t, player, library, lyrics, reco, download, sync, history, likes, preview, warm, openView, openArtistPage, setMiniHidden, ui, artistImages, artistPage, onboarding, likedSync, useUi, useLibrary, usePlayer, useLyrics, useReco, useDownload, useSync, useHistory, useLikes, usePreview, useWarm, useArtistImages, useArtistPage, useOnboarding, useLikedSync }) {
+    function MusicPanel({ t, player, library, lyrics, reco, download, sync, history, likes, preview, warm, openView, openArtistPage, goBack, backLabel, setMiniHidden, ui, artistImages, artistPage, onboarding, likedSync, useUi, useLibrary, usePlayer, useLyrics, useReco, useDownload, useSync, useHistory, useLikes, usePreview, useWarm, useArtistImages, useArtistPage, useOnboarding, useLikedSync }) {
       const view = useUi((s) => s.view);
       const settingsSection = useUi((s) => s.settingsSection);
       const libTabWish = useUi((s) => s.libTabWish);
@@ -5278,21 +5566,27 @@ window.__ModuleLoader__.load({
 
       /* 设置页：首启（onboarding 未完成）自动进入；老用户从右上角「设置」进入。
        * section 让「我喜欢」页的入口直接滚到「喜欢列表同步」。 */
-      const openSettings = (section) => ui.set({ view: 'settings', settingsSection: section || null });
+      const openSettings = (section) => {
+        const cur = ui.getSnapshot();
+        /* 进入设置也压栈：退出时回到进来前的那一页 */
+        const stack = cur.view !== 'settings' ? [...(cur.navStack || []), { view: cur.view, artistName: cur.artistName || null }].slice(-20) : (cur.navStack || []);
+        ui.set({ view: 'settings', settingsSection: section || null, navStack: stack });
+      };
       if (view === 'settings') {
         return h(SettingsView, {
           t, onboarding, useOnboarding, sync, useSync, likedSync, useLikedSync,
           section: settingsSection,
           /* 导入结果里的「查看我喜欢」：回曲库并直接打开「我喜欢」子页 */
-          onViewLikes: () => { ui.set({ view: 'library', settingsSection: null, libTabWish: 'likes' }); openView('library'); },
-          onExit: () => { ui.set({ view: 'library', settingsSection: null }); openView('library'); },
+          onViewLikes: () => { ui.set({ view: 'library', settingsSection: null, libTabWish: 'likes', navStack: [] }); },
+          /* 退出设置 = 回到进设置之前的那一页（首启除外：首启没有上一页，回曲库） */
+          onExit: () => { const cur = ui.getSnapshot(); const stack = cur.navStack || []; const top = stack[stack.length - 1]; if (top) { ui.set({ view: top.view, artistName: top.artistName, settingsSection: null, navStack: stack.slice(0, -1) }); } else { ui.set({ view: 'library', settingsSection: null, navStack: [] }); } },
           onRoute: (target) => {
-            ui.set({ settingsSection: null });
+            ui.set({ settingsSection: null, navStack: [] });
             if (target === 'library') {
               library.load();
               setTimeout(() => library.load(), 1500);
-              openView('library');
-            } else openView('reco');
+            }
+            ui.set({ view: target === 'library' ? 'library' : 'reco' });
           },
         });
       }
@@ -5309,38 +5603,73 @@ window.__ModuleLoader__.load({
         : view === 'reco'
           ? h(RecoView, { t, reco, download, player, library, likes, preview, history, openArtistPage, warm, useReco, useDownload, useLibrary, useLikes, usePlayer, useHistory, useWarm })
           : view === 'artist'
-            ? h(ArtistPageView, { t, reco, player, likes, preview, library, openView, openArtistPage, artistImages, artistPage, useUi, useLikes, useLibrary, usePlayer, useArtistImages, useArtistPage })
+            ? h(ArtistPageView, { t, reco, player, likes, preview, library, openView, openArtistPage, goBack, backLabel, artistImages, artistPage, useUi, useLikes, useLibrary, usePlayer, useArtistImages, useArtistPage })
             : view === 'history'
               ? h(HistoryView, { t, history, player, openArtistPage, artistImages, likes, useHistory, useLibrary, useArtistImages, useLikes })
               : h(NowPlayingView, { t, player, lyrics, usePlayer, useLyrics, openView, openArtistPage, artistImages, useArtistImages, likes, useLikes });
 
+      /* 全局键盘快捷键（桌面端肌肉记忆）：Space 播放/暂停 · ⌘/Ctrl+K 聚焦搜索 · Esc 退回上一页。
+       * 焦点在输入框 / 下拉 / 文本域里时一律不抢按键。 */
+      useEffect(() => {
+        const onKey = (e) => {
+          const el = e.target && e.target.tagName ? e.target : null;
+          const typing = el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || (e.target && e.target.isContentEditable));
+          const mod = e.metaKey || e.ctrlKey;
+          if (mod && (e.key === 'k' || e.key === 'K')) {
+            const inp = document.querySelector('.dshm-panel .dshm-search input');
+            if (inp) { e.preventDefault(); inp.focus(); inp.select && inp.select(); }
+            return;
+          }
+          if (typing) return;
+          if (e.code === 'Space' || e.key === ' ') {
+            /* 按钮上的 Space 本身就是点击：不要劫持 */
+            if (el && /^(BUTTON|A)$/.test(el.tagName)) return;
+            e.preventDefault();
+            player.toggle();
+            return;
+          }
+          if (e.key === 'Escape') {
+            if (view === 'settings' || view === 'artist') { e.preventDefault(); goBack(); return; }
+            const inp = document.querySelector('.dshm-panel .dshm-search input');
+            if (inp && inp.value) { e.preventDefault(); inp.value = ''; inp.dispatchEvent(new Event('input', { bubbles: true })); }
+          }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+      }, [view, player, goBack]);
+
       return h(React.Fragment, null,
         h('div', { className: 'dshm-panel' },
           h('header', { className: 'dshm-header' },
-            h('div', { className: 'dshm-title-row' },
-              h('h1', { className: 'dshm-title' }, t('panel')),
-              h('span', { className: 'dshm-count' }, count > 0 ? count + ' ' + t('tracksUnit') : ''),
-              h('div', { className: 'dshm-header-actions' },
-                h('button', {
-                  type: 'button', className: 'dshm-chipbtn',
-                  title: t('settingsHint'), 'aria-label': t('settingsTitle'), onClick: () => openSettings(),
-                }, h(IconGear, { size: 13 }), t('settingsTitle')),
-                h('button', {
-                  type: 'button', className: cx('dshm-chipbtn', !miniHidden && 'dshm-chipbtn-primary'),
-                  disabled: miniHidden && !hasTrack,
-                  title: miniHidden && !hasTrack ? t('miniNeedsTrack') : (miniHidden ? t('showMini') : t('hideMini')),
-                  onClick: () => setMiniHidden(miniHidden ? false : true),
-                }, h(IconNote, { size: 14 }), miniHidden ? t('showMini') : t('hideMini')),
-                h('button', {
-                  type: 'button', className: 'dshm-chipbtn', disabled: busy,
-                  onClick: () => library.rescan(),
-                }, h(IconRefresh, { size: 14, className: busy ? 'dshm-spin' : undefined }), busy ? t('rescanning') : t('rescan')))),
-            h('nav', { className: 'dshm-tabs', role: 'tablist', 'aria-label': t('panel') },
-              tabs.map((tab) => h('button', {
-                key: tab.id, type: 'button', role: 'tab',
-                className: 'dshm-tab', 'aria-selected': view === tab.id,
-                onClick: () => openView(tab.id),
-              }, tab.label, tab.dot ? h('span', { className: 'dshm-tab-dot', 'aria-hidden': true }) : null)))),
+            h('div', { className: 'dshm-header-inner' },
+              h('div', { className: 'dshm-title-row' },
+                h('h1', { className: 'dshm-title' }, t('panel')),
+                h('span', { className: 'dshm-count' }, count > 0 ? count + ' ' + t('tracksUnit') : ''),
+                h('div', { className: 'dshm-header-actions' },
+                  /* 迷你条开关：状态型幽灵按钮（不是实心主 CTA），aria-pressed 说明「现在开着」 */
+                  h('button', {
+                    type: 'button', className: cx('dshm-chipbtn dshm-chipbtn-icon dshm-chipbtn-toggle', !miniHidden && 'dshm-chipbtn-on'),
+                    disabled: miniHidden && !hasTrack,
+                    'aria-pressed': !miniHidden,
+                    title: miniHidden && !hasTrack ? t('miniNeedsTrack') : t('miniToggle'),
+                    'aria-label': t('miniToggle'),
+                    onClick: () => setMiniHidden(miniHidden ? false : true),
+                  }, h(IconNote, { size: 14 })),
+                  h('button', {
+                    type: 'button', className: 'dshm-chipbtn dshm-chipbtn-icon',
+                    title: t('settingsHint'), 'aria-label': t('settingsTitle'), onClick: () => openSettings(),
+                  }, h(IconGear, { size: 14 })),
+                  /* 「重新扫描」是曲库维护动作：只在曲库页出现，不再霸占全站右上角 */
+                  view === 'library' ? h('button', {
+                    type: 'button', className: 'dshm-chipbtn', disabled: busy,
+                    onClick: () => library.rescan(),
+                  }, h(IconRefresh, { size: 14, className: busy ? 'dshm-spin' : undefined }), busy ? t('rescanning') : t('rescan')) : null)),
+              h('nav', { className: 'dshm-tabs', role: 'tablist', 'aria-label': t('panel') },
+                tabs.map((tab) => h('button', {
+                  key: tab.id, type: 'button', role: 'tab',
+                  className: 'dshm-tab', 'aria-selected': view === tab.id,
+                  onClick: () => openView(tab.id),
+                }, tab.label, tab.dot ? h('span', { className: 'dshm-tab-dot', 'aria-hidden': true }) : null))))),
           h('div', { className: 'dshm-body', role: 'tabpanel' }, body)),
         toast
           ? h('div', { className: 'dshm-toast', role: 'status' },
@@ -5386,8 +5715,19 @@ window.__ModuleLoader__.load({
       const [pos, setPos] = useState(() => readPrefs().miniPos || null);
       const [fabPos, setFabPos] = useState(() => readPrefs().miniFabPos || null);
       const [dragging, setDragging] = useState(false);
+      const [menuOpen, setMenuOpen] = useState(false);
+      const menuRef = useRef(null);
       const boxRef = useRef(null);
       const dragRef = useRef(null);
+      /* ··· 菜单：点外面 / Esc 关闭 */
+      useEffect(() => {
+        if (!menuOpen) return () => {};
+        const onDoc = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
+        const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); setMenuOpen(false); } };
+        document.addEventListener('pointerdown', onDoc, true);
+        document.addEventListener('keydown', onKey, true);
+        return () => { document.removeEventListener('pointerdown', onDoc, true); document.removeEventListener('keydown', onKey, true); };
+      }, [menuOpen]);
       const posRef = useRef(pos);
       posRef.current = pos;
       const fabRef = useRef(null);
@@ -5515,7 +5855,9 @@ window.__ModuleLoader__.load({
           ref: fabRef, style: fabStyle,
           className: cx('dshm-mini-fab', dragging && 'dshm-mini-fab-dragging'),
           role: 'button', tabIndex: 0,
-          title: t('miniExpand'), 'aria-label': t('miniExpand'),
+          /* 悬浮球提示直接说「现在在放什么」，一眼可扫 */
+          title: fmt(t(playing ? 'miniFabPlaying' : 'miniFabPaused'), { title: track.title || t('untitled'), artist: track.artist || '' }),
+          'aria-label': fmt(t(playing ? 'miniFabPlaying' : 'miniFabPaused'), { title: track.title || t('untitled'), artist: track.artist || '' }),
           onPointerDown: onFabDown, onPointerMove: onFabMove,
           onPointerUp: onFabUp, onPointerCancel: onFabUp,
           onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expandFromFab(); setMiniCollapsed(false); } },
@@ -5639,6 +5981,8 @@ const DRAG_THRESHOLD = 4;
             h('span', { className: 'dshm-mini-text' },
               h('span', { className: 'dshm-mini-title dshm-ellipsis' }, track.title),
               artistBtn)),
+          /* 只留 4 个高频核心控制：上一首 / 播放暂停 / 下一首 / ♥。
+           * 播放模式、收起、隐藏这些低频「窗口与设定」动作收进 ··· 菜单，歌名区从 93px 回到 200px+。 */
           h('div', { className: 'dshm-mini-controls' },
             h(IconButton, { label: t('prev'), onClick: () => player.prev() }, h(IconPrev, { size: 15 })),
             h(IconButton, {
@@ -5646,19 +5990,27 @@ const DRAG_THRESHOLD = 4;
               onClick: () => player.toggle(),
             }, h(playing ? IconPause : IconPlay, { size: 16 })),
             h(IconButton, { label: t('next'), onClick: () => player.next() }, h(IconNext, { size: 15 })),
-            /* ♥ / 👎：与曲库行、正在播放页同一套语义（喜欢才入库，不喜欢从推荐里剔除） */
+            /* ♥：与曲库行、正在播放页同一套语义（喜欢才入库）。👎 不再挤在迷你条里 —— 它在推荐页 / 正在播放页都有，且离「下一首」太近容易误触。 */
             likes ? h(LikeButton, { t, item: track, likes, useLikes, size: 14, className: 'dshm-mini-like' }) : null,
-            likes ? h(DislikeButton, { t, item: track, likes, useLikes, size: 14, className: 'dshm-mini-like' }) : null,
-            h(IconButton, {
-              label: mode.label, title: mode.hint + ' · ' + t('modeCycleHint'),
-              className: cx((shuffle || repeat === 'one') && 'dshm-iconbtn-active'),
-              onClick: () => player.cycleMode(),
-            }, h(mode.icon, { size: 15 })),
-            h(IconButton, {
-              label: t('miniCollapse'), title: t('miniCollapse'),
-              onClick: () => { collapseToFab(); setMiniCollapsed(true); },
-            }, h(IconChevronDown, { size: 15 })),
-            h(IconButton, { label: t('hideMini'), title: t('hideMini'), onClick: () => setMiniHidden(true) }, h(IconClose, { size: 13 })))),
+            h('div', { className: 'dshm-mini-more', ref: menuRef },
+              h(IconButton, {
+                label: t('miniMore'), title: t('miniMore'), className: 'dshm-mini-morebtn',
+                'aria-haspopup': 'menu', 'aria-expanded': menuOpen,
+                onClick: () => setMenuOpen((v) => !v),
+              }, h(IconMore, { size: 15 })),
+              menuOpen ? h('div', { className: 'dshm-mini-menu', role: 'menu', 'aria-label': t('miniMore') },
+                h('button', {
+                  type: 'button', role: 'menuitem', className: 'dshm-mini-menuitem',
+                  onClick: () => { setMenuOpen(false); player.cycleMode(); },
+                }, h(mode.icon, { size: 14 }), h('span', null, mode.label), h('span', { className: 'dshm-count' }, mode.hint)),
+                h('button', {
+                  type: 'button', role: 'menuitem', className: 'dshm-mini-menuitem',
+                  onClick: () => { setMenuOpen(false); collapseToFab(); setMiniCollapsed(true); },
+                }, h(IconChevronDown, { size: 14 }), h('span', null, t('miniCollapse'))),
+                h('button', {
+                  type: 'button', role: 'menuitem', className: 'dshm-mini-menuitem',
+                  onClick: () => { setMenuOpen(false); setMiniHidden(true); },
+                }, h(IconClose, { size: 13 }), h('span', null, t('hideMini')))) : null))),
         h('div', { className: 'dshm-mini-seek' },
           h(Slider, {
             value: frac, label: t('seekLabel'), disabled: !(duration > 0),
@@ -5811,9 +6163,38 @@ const DRAG_THRESHOLD = 4;
         libTabWish: null,
         downloadFloat: null,
         miniRect: null,
+        /* 导航历史栈：返回 = 回到刚才的地方（不再写死「返回推荐」/「返回曲库」） */
+        navStack: [],
       });
-      const openView = (view) => ui.set({ view });
-      const openArtistPage = (name) => ui.set({ view: 'artist', artistName: name });
+      /* 主视图切换：栈里只记「能回到的」视图（带歌手名），上限 20 */
+      const openView = (view, extra) => {
+        const cur = ui.getSnapshot();
+        const prev = cur.view === 'settings' || cur.view === 'artist' || cur.view === 'now' || cur.view === 'reco' || cur.view === 'library' || cur.view === 'history'
+          ? cur.view : null;
+        const stack = prev && prev !== view ? [...(cur.navStack || []), { view: prev, artistName: cur.artistName || null }].slice(-20) : (cur.navStack || []);
+        ui.set({ view, navStack: stack, ...(extra || {}) });
+      };
+      const openArtistPage = (name) => {
+        const cur = ui.getSnapshot();
+        const from = { view: cur.view, artistName: cur.artistName || null };
+        const stack = [...(cur.navStack || []), from].slice(-20);
+        ui.set({ view: 'artist', artistName: name, navStack: stack });
+      };
+      /* 回退一步：没有历史就回曲库 */
+      const goBack = () => {
+        const cur = ui.getSnapshot();
+        const stack = cur.navStack || [];
+        const top = stack[stack.length - 1];
+        ui.set(top
+          ? { view: top.view, artistName: top.artistName, settingsSection: null, navStack: stack.slice(0, -1) }
+          : { view: 'library', settingsSection: null, navStack: [] });
+      };
+      const backLabel = (t) => {
+        const cur = ui.getSnapshot();
+        const top = (cur.navStack || [])[(cur.navStack || []).length - 1];
+        const names = { library: t('tabLibrary'), reco: t('tabReco'), now: t('tabNow'), history: t('tabHistory'), artist: (top && top.artistName) || t('artistPageTitle'), settings: t('settingsTitle') };
+        return top ? fmt(t('backTo'), { target: names[top.view] || names.library }) : fmt(t('backTo'), { target: names.library });
+      };
       const setMiniHidden = (hidden) => {
         /* Showing the mini player always restores the full bar (fab -> bar). */
         ui.set(hidden ? { miniHidden: true } : { miniHidden: false, miniCollapsed: false });
@@ -5853,7 +6234,7 @@ const DRAG_THRESHOLD = 4;
           player, library, lyrics: lyricsService, artist: artistService, artistImages: artistImageService, onboarding: onboardingService,
           reco: recoService, download: downloadService, sync: syncService, history: historyService,
           likes: likesService, preview: previewService, warm: warmService, likedSync: likedSyncService,
-          openView, openArtistPage, setMiniHidden, ui, artistPage: artistPageService,
+          openView, openArtistPage, goBack, backLabel, setMiniHidden, ui, artistPage: artistPageService,
           hooks: {
             player: player.source, library: library.source, ui,
             lyrics: lyricsService.source, artist: artistService.source, artistPage: artistPageService.source, artistImages: artistImageService.source, onboarding: onboardingService.source,
@@ -5871,7 +6252,7 @@ const DRAG_THRESHOLD = 4;
         id: 'dsh-music.mini-player',
         locale: NS,
         inject: () => ({
-          player, lyrics: lyricsService, artistImages: artistImageService, likes: likesService, setMiniHidden, setMiniCollapsed,
+          player, lyrics: lyricsService, artistImages: artistImageService, likes: likesService, setMiniHidden, setMiniCollapsed, goBack, openView,
           openNow: () => { openView('now'); ctx.layout.selectPanel(PANEL_ID); },
           openArtistPage: (name) => { if (!name) return; openArtistPage(name); ctx.layout.selectPanel(PANEL_ID); },
           publishRect: (rect) => ui.set({ miniRect: rect }),

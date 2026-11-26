@@ -40,6 +40,8 @@ let recoState = { status: 'ready', items: [], sections: { today: [{ title: '推�
 const noop = () => {};
 let groupDefault = 'none';
 let libTabDefault = 'library';
+/* test hook: force the mini-bar ··· menu open so its items render (useState setter is a noop here) */
+let miniMenuDefault = false;
 const React = {
   Fragment: 'Fragment',
   createElement: (type, props, ...children) => {
@@ -54,6 +56,8 @@ const React = {
     if (v === 'none') v = groupDefault;
     /* test hook: force the library sub-tab so the「我喜欢」list renders */
     if (v === 'library') v = libTabDefault;
+    /* test hook: open the mini-bar ··· menu */
+    if (v === false && miniMenuDefault) v = true;
     return [v, noop];
   },
   useEffect: (fn) => { try { fn(); } catch (e) { throw e; } },
@@ -373,7 +377,7 @@ const saveFail = await runSettings(saveBody, { mode: 'local' }, { fail: true });
 check('returning save failure: failed flag, no saved flag', saveFail.failed === 1 && saveFail.saved === 0);
 state.view = 'library';
 const backTree = expand(music(baseProps));
-const gearBtn = walk(backTree).find((n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('settingsTitle'));
+const gearBtn = walk(backTree).find((n) => /dshm-chipbtn-icon/.test(String(cls(n) || '')) && (n.props || {})['aria-label'] === 'settingsTitle');
 check('returning user gets a header 「设置」entry (gear, hint title)', !!gearBtn && (gearBtn.props || {}).title === 'settingsHint'
   && (gearBtn.props || {})['aria-label'] === 'settingsTitle');
 check('preview-welcome entry is gone', !has(backTree, (n) => (n.children || []).includes('welcomePreview')));
@@ -540,18 +544,32 @@ check('mini has seek slider', has(expanded, (n) => cls(n).includes('dshm-slider'
 check('mini shows 3 lyric lines', walk(expanded).filter((n) => /dshm-mini-lyric\b/.test(cls(n))).length === 3,
   'count=' + walk(expanded).filter((n) => /dshm-mini-lyric\b/.test(cls(n))).length);
 check('mini artist clickable', has(expanded, (n) => cls(n).includes('dshm-mini-artist') && typeof n.props.onClick === 'function'));
-check('mini has collapse button', has(expanded, (n) => (n.props && n.props.title) === 'miniCollapse'));
-/* 十三期：迷你条 ♥ / 👎（与曲库行同一套语义），点 ♥ 走 /library/like */
+check('mini has a ··· more button (low-frequency actions moved off the bar)', has(expanded, (n) => /dshm-mini-morebtn/.test(cls(n))));
+/* 十三期→本次升级：迷你条只留 4 个核心控件，♥ 保留（与曲库行同一套语义），点 ♥ 走 /library/like；👎/模式/收起/隐藏收进 ··· 菜单 */
 {
   const likeBtns = walk(expanded).filter((n) => cls(n).includes('dshm-mini-like'));
-  check('mini bar carries ♥ and 👎 for the current track', likeBtns.length === 2, 'count=' + likeBtns.length);
+  check('mini bar carries only ♥ (no 👎) for the current track', likeBtns.length === 1 && !likeBtns.some((n) => cls(n).includes('dshm-dislike-btn')), 'count=' + likeBtns.length);
+  /* 常驻控件 = 上一首 / 播放暂停 / 下一首（3 个 iconbtn）+ ♥（like-btn）= 4；· 的 more 按钮单独算 */
+  const controlsRow = walk(expanded).find((n) => /dshm-mini-controls/.test(cls(n)));
+  const directKids = (controlsRow && controlsRow.children) || [];
+  const inlineIconBtns = directKids.filter((x) => /dshm-iconbtn/.test(String(cls(x) || '')));
+  const inlineLike = directKids.filter((x) => /dshm-mini-like/.test(String(cls(x) || '')));
+  const inlineMore = directKids.filter((x) => /dshm-mini-more\b/.test(String(cls(x) || '')));
+  check('mini bar has 4 resident controls (prev/play/next/♥) + one ··· more button, no extra inline buttons', inlineIconBtns.length === 3 && inlineLike.length === 1 && inlineMore.length === 1
+    && has(expanded, (n) => /dshm-mini-morebtn/.test(cls(n)) && (n.props || {})['aria-haspopup'] === 'menu'), 'icon=' + inlineIconBtns.length + ' like=' + inlineLike.length + ' more=' + inlineMore.length);
+  miniMenuDefault = true;
+  const menuOpenTree = expand(mini(miniProps));
+  miniMenuDefault = false;
+  const menuItems = walk(menuOpenTree).filter((n) => cls(n) === 'dshm-mini-menuitem');
+  check('··· menu exposes play mode / collapse / hide as menu items', menuItems.length === 3, 'items=' + menuItems.length);
   const heart = likeBtns.find((n) => !cls(n).includes('dshm-dislike-btn'));
   const b = fetchBodies.length;
   if (heart) heart.props.onClick({ stopPropagation: noop });
   await new Promise((r) => setTimeout(r, 80));
   check('mini ♥ toggles the like through the likes API', fetchBodies.slice(b).some((x) => x.url.includes('/dsh-music/api/library/like') && x.body.includes('"liked":true')),
     JSON.stringify(fetchBodies.slice(b).map((x) => x.url)));
-  const collapseBtn = walk(expanded).find((n) => (n.props && n.props.title) === 'miniCollapse');
+  const hasText = (n, txt) => walk(n).some((x) => (x.children || []).includes(txt));
+  const collapseBtn = menuItems.find((n) => hasText(n, 'miniCollapse'));
   let collapsedTo = null;
   const prevSet = miniProps.setMiniCollapsed;
   /* collapse must derive the badge position from the bar (shared anchor) — the DOM-less smoke only proves the write */
@@ -628,18 +646,46 @@ uiStore.set({ view: 'library', settingsSection: null, lyricsOpen: false });
 const useUiReal = (sel) => sel(uiStore.getSnapshot());
 const realProps = { ...baseProps, useUi: useUiReal };
 const realHeader = expand(music(realProps));
-const settingsBtn = walk(realHeader).find((n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('settingsTitle'));
+/* 右上角「设置」是纯图标幽灵按钮（不再常驻文字），靠 aria-label 识别 */
+const settingsBtn = walk(realHeader).find((n) => /dshm-chipbtn-icon/.test(String(cls(n) || '')) && (n.props || {})['aria-label'] === 'settingsTitle');
 check('settings button is rendered and enabled', !!settingsBtn && !(settingsBtn.props || {}).disabled);
+check('header mini-bar toggle is a ghost state button (aria-pressed), not a primary CTA', (() => {
+  const tg = walk(realHeader).find((n) => /dshm-chipbtn-toggle/.test(String(cls(n) || '')));
+  return !!tg && (tg.props || {})['aria-pressed'] === true && !/dshm-chipbtn-primary/.test(String(cls(tg)));
+})());
+check('rescan stays inside the library tab only (not in reco/history/now header)', (() => {
+  const hdr = (v) => { uiStore.set({ view: v }); return expand(music(realProps)); };
+  const inLib = has(hdr('library'), (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('rescan'));
+  const inReco = has(hdr('reco'), (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('rescan'));
+  uiStore.set({ view: 'library' });
+  return inLib && !inReco;
+})());
 settingsBtn.props.onClick();
 const afterClick = uiStore.getSnapshot();
 check('settings click writes the real ui store', afterClick.view === 'settings' && afterClick.settingsSection === null,
   'view=' + afterClick.view + ' section=' + afterClick.settingsSection);
+check('entering settings remembers where you came from (nav stack)', ((afterClick.navStack || []).slice(-1)[0] || {}).view === 'library',
+  JSON.stringify(afterClick.navStack));
+check('artist page back label names the page you came from', (() => {
+  uiStore.set({ view: 'history' });
+  svc.openArtistPage('导航歌手');
+  const tree = expand(music(realProps));
+  const back = walk(tree).find((n) => /dshm-apage-back/.test(String(cls(n) || '')));
+  /* 宿主里 t 是真翻译；冒烟里 t 是恒等函数，只能验「标签键 + 栈顶目标」 */
+  const labelOk = !!back && (back.children || []).some((c) => typeof c === 'string' && /backTo/.test(c));
+  back.props.onClick();
+  const st = uiStore.getSnapshot();
+  const okNav = labelOk && st.view === 'history';
+  /* 回到设置页，继续验证「返回设置」页脚 */
+  uiStore.set({ view: 'settings', settingsSection: null, navStack: [{ view: 'library', artistName: null }] });
+  return okNav;
+})());
 const realSettingsTree = expand(music(realProps));
 check('returning settings view renders the title row (no first-run hero) + three cards', has(realSettingsTree, (n) => cls(n) === 'dshm-set-top' && has(n, (x) => (x.children || []).includes('settingsTitle')))
   && !has(realSettingsTree, (n) => cls(n) === 'dshm-logo') && walk(realSettingsTree).filter(isCard).length === 3);
 const backBtn = walk(realSettingsTree).find((n) => cls(n) === 'dshm-wbtn' && (n.children || []).includes('settingsBack'));
 check('returning foot has back + save', !!backBtn && has(realSettingsTree, (n) => cls(n) === 'dshm-wbtn dshm-wbtn-primary' && (n.children || []).includes('settingsSave')));
-backBtn.props.onClick();
+if (backBtn) backBtn.props.onClick();
 const afterBack = uiStore.getSnapshot();
 check('back returns to the library view', afterBack.view === 'library' && afterBack.settingsSection === null, 'view=' + afterBack.view);
 const saveBtn = walk(realSettingsTree).find((n) => cls(n) === 'dshm-wbtn dshm-wbtn-primary' && (n.children || []).includes('settingsSave'));
@@ -655,9 +701,16 @@ const likedItemsState = (sel) => sel({
   keys: {}, dislikes: {}, loaded: true, error: null,
   items: [{ key: 'k1', artist: '甲', title: '乙', trackId: 't1', audioUrl: '/a.mp3', coverUrl: null, inLibrary: true, durationMs: 1000 }],
 });
+/* 「我喜欢」书架：≤12 首时只在顶部留「查看全部 ›」，末尾不再重复一张虚线卡（去双入口） */
 const railTree = expand(music({ ...baseProps, useUi: (sel) => sel({ ...state, view: 'library' }), useLikes: likedItemsState }));
-check('liked rail renders a card + view-all card', has(railTree, (n) => String(cls(n) || '').includes('dshm-favcard'))
-  && has(railTree, (n) => String(cls(n) || '').includes('dshm-favcard-more')));
+check('liked rail renders a card, no duplicate view-all card when ≤12', has(railTree, (n) => String(cls(n) || '').includes('dshm-favcard'))
+  && !has(railTree, (n) => String(cls(n) || '').includes('dshm-favcard-more')));
+const manyLiked = (sel) => sel({
+  keys: {}, dislikes: {}, loaded: true, error: null,
+  items: Array.from({ length: 13 }, (_, i) => ({ key: 'k' + i, artist: '甲', title: '乙' + i, trackId: 't' + i, audioUrl: '/a' + i + '.mp3', coverUrl: null, inLibrary: true, durationMs: 1000 })),
+});
+const railMany = expand(music({ ...baseProps, useUi: (sel) => sel({ ...state, view: 'library' }), useLikes: manyLiked }));
+check('liked rail shows the view-all card only when items overflow (>12)', has(railMany, (n) => String(cls(n) || '').includes('dshm-favcard-more')));
 uiStore.set({ toast: { kind: 'artist', name: '测试歌手', at: Date.now() } });
 const toastTree = expand(music({ ...realProps, useUi: useUiReal }));
 check('background-complete toast renders', has(toastTree, (n) => cls(n) === 'dshm-toast'));
@@ -671,7 +724,10 @@ await svc.artistPage.load('缓存歌手');
 const artistFetchesAfter = fetchCalls.filter((u) => u.includes('/reco/artist')).length;
 check('artist page session cache: one request per name', artistFetchesAfter - artistFetchesBefore === 1);
 check('artist page load records lastReady', (svc.artistPage.source.getSnapshot().lastReady || {}).name === '缓存歌手');
-check('rows carry a dislike button', has(realHeader, (n) => String(cls(n) || '').includes('dshm-dislike-btn')));
+/* 👎 只留在推荐 / 正在播放 / 队列这些「正在做选择」的场景；曲库与「我喜欢」行不再常驻 👎（减噪 + 防误触） */
+check('library rows no longer carry a dislike button', !has(realHeader, (n) => String(cls(n) || '').includes('dshm-dislike-btn')));
+const queueTree = expand(music({ ...realProps, useUi: (sel) => sel({ ...uiStore.getSnapshot(), view: 'now' }) }));
+check('now-playing queue rows still carry a dislike button', has(queueTree, (n) => String(cls(n) || '').includes('dshm-dislike-btn')));
 const dislikesBefore = fetchCalls.length;
 await svc.likes.setDislike({ artist: '冒烟歌手', title: '冒烟歌' }, true);
 check('dislike POSTs to the host route', fetchCalls.slice(dislikesBefore).some((u) => u.includes('/library/dislike')));
@@ -901,7 +957,7 @@ check('library toolbar shows only a running-sync status chip (→ settings)', ha
   && !has(runningTree, (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('importBtn')));
 const noLikesTree = expand(music({ ...realProps, useLikes: (sel) => sel({ keys: {}, dislikes: {}, loaded: true, error: null, items: [] }) }));
 check('empty likes rail still renders and the header keeps the settings entry', has(noLikesTree, (n) => cls(n) === 'dshm-favs-empty')
-  && has(noLikesTree, (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('settingsTitle')));
+  && has(noLikesTree, (n) => /dshm-chipbtn-icon/.test(String(cls(n) || '')) && (n.props || {})['aria-label'] === 'settingsTitle'));
 uiStore.set({ view: 'library', settingsSection: null });
 
 /* 5x) download status float (shell.overlay): opens itself while a batch runs, lists per-song status,
