@@ -404,7 +404,7 @@ const realPlayTracks = playerSvc.playTracks.bind(playerSvc); /* 真·playTracks�
 playerSvc.playTracks = (list, idx) => plays.push({ len: list.length, idx, first: list[0] && list[0].id, last: list[list.length - 1] && list[list.length - 1].id });
 
 state.view = 'library';
-const libRows = walk(expand(music(baseProps))).filter((n) => /^dshm-row( |$)/.test(cls(n)) && n.props.role === 'button');
+const libRows = walk(expand(music(baseProps))).filter((n) => /^dshm-row( |$)/.test(cls(n)) && typeof n.props.onClick === 'function');
 check('library has 2 clickable rows', libRows.length === 2, 'count=' + libRows.length);
 libRows[1].props.onClick();
 check('library row 2 queues both tracks at index 1', plays.length === 1 && plays[0].len === 2 && plays[0].idx === 1,

@@ -434,7 +434,7 @@ window.__ModuleLoader__.load({
       searchMatchedCount: '匹配 {shown} / {total} 首',
       histSummaryFoot: '{songs} 首歌 · {artists} 位歌手 · 平均完整度 {pct}%',
       histSummarySkip: '{n} 次跳过',
-      histSummaryDislike: '{dislikes} 首不喜欢',
+      histSummaryDislike: '{n} 首不喜欢',
     };
     const en = {
       panel: 'Music',
@@ -826,7 +826,7 @@ window.__ModuleLoader__.load({
       searchMatchedCount: '{shown} / {total} matched',
       histSummaryFoot: '{songs} songs · {artists} artists · {pct}% avg completion',
       histSummarySkip: '{n} skipped',
-      histSummaryDislike: '{dislikes} disliked',
+      histSummaryDislike: '{n} disliked',
     };
 
     /* ================================================================
@@ -1414,8 +1414,9 @@ window.__ModuleLoader__.load({
 /* 搜索结果里的歌手行：整行可点，右侧一枚安静 › */
 .dshm-row-chev{color:var(--dsw-alias-label-tertiary);opacity:.6;transition:opacity .15s,transform .15s;}
 .dshm-row:hover .dshm-row-chev{opacity:1;transform:translateX(2px);}
-.dshm-row-play{display:flex;align-items:center;justify-content:center;color:var(--dsw-alias-label-secondary);opacity:0;transition:opacity .12s;}
-.dshm-row:hover .dshm-row-play,.dshm-row:focus-visible .dshm-row-play{opacity:1;}
+.dshm-row-play{appearance:none;border:0;background:transparent;padding:0;width:28px;height:28px;border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--dsw-alias-label-secondary);opacity:0;transition:opacity .12s,background .12s;}
+.dshm-row:hover .dshm-row-play,.dshm-row:focus-within .dshm-row-play,.dshm-row-play:focus-visible{opacity:1;}
+.dshm-row-play:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary);}
 .dshm-row-current .dshm-row-play{opacity:0;}
 .dshm-ellipsis{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
 .dshm-cover{flex:none;position:relative;border-radius:8px;overflow:hidden;background:linear-gradient(145deg,var(--dsw-alias-bg-layer-2),var(--dsw-alias-bg-layer-3));display:flex;align-items:center;justify-content:center;border:1px solid var(--dsw-alias-border-l1);}
@@ -1451,8 +1452,9 @@ window.__ModuleLoader__.load({
 .dshm-skel{padding:8px 16px;}
 .dshm-skel-row{display:flex;gap:12px;align-items:center;padding:8px;}
 .dshm-skel-box{border-radius:8px;background:var(--dsw-alias-bg-skeleton);animation:dshm-pulse 1.4s ease-in-out infinite;}
-.dshm-now{flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:var(--dshm-axis);margin:0 auto;padding:0 var(--dshm-pad);}
-.dshm-now-stage{flex:1;min-height:0;display:grid;grid-template-columns:minmax(280px,380px) minmax(0,1fr);gap:clamp(20px,3vw,40px);align-items:stretch;padding:18px 0 8px;}
+.dshm-now{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:var(--dshm-axis);margin:0 auto;padding:0 var(--dshm-pad);overflow:hidden;}
+.dshm-now-glow{position:absolute;inset:-40px;pointer-events:none;z-index:0;opacity:.085;filter:blur(72px) saturate(1.15);transform:scale(1.15);background-position:center;background-size:cover;mask-image:radial-gradient(ellipse 68% 64% at 28% 46%,#000 0%,transparent 74%);}
+.dshm-now-stage{position:relative;z-index:1;flex:1;min-height:0;display:grid;grid-template-columns:minmax(280px,380px) minmax(0,1fr);gap:clamp(20px,3vw,40px);align-items:stretch;padding:18px 0 8px;}
 .dshm-now-side{display:flex;flex-direction:column;gap:14px;min-width:0;align-self:center;position:sticky;top:0;}
 .dshm-now-hero{display:flex;flex-direction:column;gap:16px;min-width:0;}
 .dshm-now-cover{width:100%;max-width:340px;aspect-ratio:1;height:auto;border-radius:14px;box-shadow:0 14px 38px var(--dsw-alias-bg-mask-2);border:1px solid var(--dsw-alias-border-l1);}
@@ -1480,11 +1482,16 @@ window.__ModuleLoader__.load({
 .dshm-volumerow .dshm-slider{flex:1;}
 .dshm-volume-pct{font-size:12px;color:var(--dsw-alias-label-tertiary);min-width:32px;font-variant-numeric:tabular-nums;}
 .dshm-errorline{display:flex;align-items:center;gap:7px;color:var(--dsw-alias-state-error-primary);font-size:12px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);border-radius:9px;padding:8px 12px;}
-.dshm-now-main{flex:1;min-height:0;display:flex;flex-direction:column;min-width:0;}
-.dshm-queue{margin-top:18px;}
-.dshm-queue-head{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--dsw-alias-label-secondary);padding:0 8px 8px;border-bottom:1px solid var(--dsw-alias-border-l1);margin-bottom:6px;}
+.dshm-now-main{flex:1;min-height:0;display:flex;flex-direction:column;min-width:0;gap:10px;}
+.dshm-now-tabs{display:inline-flex;align-items:center;gap:4px;align-self:flex-start;padding:3px;border-radius:10px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);flex:none;}
+.dshm-now-tab{appearance:none;border:0;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12.5px;font-weight:500;padding:5px 12px;border-radius:7px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .15s,color .15s;}
+.dshm-now-tab:hover{color:var(--dsw-alias-label-primary);}
+.dshm-now-tab[aria-selected="true"]{background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font-weight:600;box-shadow:0 1px 3px var(--dsw-alias-bg-mask-2);}
+.dshm-now-tab .dshm-count{font-size:11px;font-weight:500;}
+.dshm-queue{flex:1;min-height:0;display:flex;flex-direction:column;}
+.dshm-queue-head{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--dsw-alias-label-secondary);padding:0 8px 8px;border-bottom:1px solid var(--dsw-alias-border-l1);margin-bottom:6px;flex:none;}
 .dshm-queue-head .dshm-count{font-weight:400;}
-.dshm-queue-list{max-height:280px;overflow-y:auto;scrollbar-width:thin;}
+.dshm-queue-list{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;}
 @container (max-width:760px){
   .dshm-now-stage{grid-template-columns:1fr;gap:14px;}
   .dshm-now-side{position:static;align-self:auto;}
@@ -1495,7 +1502,7 @@ window.__ModuleLoader__.load({
   .dshm-transport{justify-content:center;}
   .dshm-volumerow{margin:0 auto;}
 }
-.dshm-mini{position:fixed;right:16px;bottom:16px;z-index:1100;width:min(440px,calc(100% - 32px));background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:14px;box-shadow:0 10px 30px var(--dsw-alias-bg-mask-2);overflow:hidden;animation:dshm-mini-in .22s ease-out;}
+.dshm-mini{position:fixed;right:16px;bottom:16px;z-index:1100;width:min(440px,calc(100% - 32px));background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:14px;box-shadow:0 10px 30px var(--dsw-alias-bg-mask-2);animation:dshm-mini-in .22s ease-out;}
 .dshm-mini-fab{position:fixed;right:16px;bottom:16px;z-index:1100;width:48px;height:48px;border-radius:50%;padding:0;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);box-shadow:0 10px 30px var(--dsw-alias-bg-mask-2);cursor:grab;touch-action:none;animation:dshm-mini-in .18s ease-out;}
 .dshm-mini-fab:hover{box-shadow:0 12px 34px var(--dsw-alias-bg-mask-2);}
 .dshm-mini-fab:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px;}
@@ -1531,12 +1538,15 @@ window.__ModuleLoader__.load({
 .dshm-mini-like{width:28px;height:28px;margin:0 1px;}
 .dshm-mini-like:hover{background:var(--dsw-alias-interactive-bg-hover);}
 .dshm-mini-like.dshm-like-btn-on{color:var(--dshm-love);}
-/* ··· 菜单：低频动作（播放模式 / 收起 / 隐藏）的容身之处，不占常驻席位 */
+.dshm-mini-titlebtn{appearance:none;border:0;background:transparent;padding:0;margin:0;color:inherit;font:inherit;text-align:left;cursor:pointer;max-width:100%;border-radius:4px;}
+.dshm-mini-titlebtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}
+/* ··· 菜单：默认向上展开（贴底停靠不被裁切），拖到视口上半部时自动切为向下 */
 .dshm-mini-more{position:relative;display:flex;}
-.dshm-mini-menu{position:absolute;right:0;top:calc(100% + 6px);min-width:190px;padding:4px;border-radius:10px;background:var(--dsw-alias-bg-elevated);border:1px solid var(--dsw-alias-border);box-shadow:0 8px 28px rgba(0,0,0,.18);z-index:1200;display:flex;flex-direction:column;gap:1px;}
-.dshm-mini-menuitem{display:flex;align-items:center;gap:10px;padding:7px 10px;border:0;border-radius:7px;background:transparent;color:inherit;font:inherit;font-size:12.5px;text-align:left;cursor:pointer;white-space:nowrap;}
+.dshm-mini-menu{position:absolute;right:0;bottom:calc(100% + 8px);top:auto;min-width:208px;padding:5px;border-radius:11px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);box-shadow:0 12px 32px var(--dsw-alias-bg-mask-2);z-index:1200;display:flex;flex-direction:column;gap:2px;}
+.dshm-mini-menu-down{top:calc(100% + 8px);bottom:auto;}
+.dshm-mini-menuitem{display:flex;align-items:center;gap:10px;padding:7px 10px;border:0;border-radius:7px;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:12.5px;text-align:left;cursor:pointer;white-space:nowrap;}
 .dshm-mini-menuitem:hover,.dshm-mini-menuitem:focus-visible{background:var(--dsw-alias-interactive-bg-hover);}
-.dshm-mini-menuitem .dshm-count{margin-left:auto;font-size:11px;}
+.dshm-mini-menuitem .dshm-count{margin-left:auto;padding-left:10px;font-size:11px;color:var(--dsw-alias-label-tertiary);}
 .dshm-mini-play{background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);border-radius:50%;width:34px;height:34px;}
 .dshm-mini-play:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover);color:var(--dsw-alias-label-primary-inverted);}
 .dshm-now-actions{display:inline-flex;align-self:flex-start;align-items:center;gap:2px;padding:0;border:0;background:transparent;box-shadow:none;margin:0;}
@@ -1683,6 +1693,8 @@ window.__ModuleLoader__.load({
 .dshm-set-saved{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--dsw-alias-state-success-primary);}
 @media (max-width:520px){.dshm-imp-qr{flex-direction:column;align-items:center;}.dshm-settings-inner{padding:20px 16px 88px;}.dshm-set-foot{margin:4px -16px -88px;padding:10px 16px 18px;}}
 .dshm-hrow{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:10px;}
+.dshm-hrow-play{appearance:none;border:0;background:transparent;padding:0;margin:0;cursor:pointer;flex:none;border-radius:8px;display:inline-flex;}
+.dshm-hrow-play:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}
 .dshm-hrow-click{cursor:pointer;outline:none;}
 .dshm-hrow-click:hover{background:var(--dsw-alias-interactive-bg-hover);}
 .dshm-hrow-click:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px;}
@@ -1798,10 +1810,11 @@ window.__ModuleLoader__.load({
 }
 .dshm-history-page{width:100%;max-width:var(--dshm-axis);margin:0 auto;padding:12px 0 24px;}
 .dshm-hist-hero{padding:8px 8px 4px;}
-.dshm-hist-main{display:flex;align-items:baseline;gap:22px;flex-wrap:wrap;}
+.dshm-hist-main{display:flex;align-items:baseline;gap:28px;flex-wrap:wrap;}
+.dshm-hist-big-item{display:inline-flex;align-items:baseline;gap:6px;}
 .dshm-hist-big{font-size:34px;font-weight:700;letter-spacing:-.6px;color:var(--dsw-alias-label-primary);font-variant-numeric:tabular-nums;line-height:1.1;}
-.dshm-hist-big-unit{font-size:16px;font-weight:600;letter-spacing:0;margin-left:2px;}
-.dshm-hist-big-label{font-size:12px;color:var(--dsw-alias-label-tertiary);margin-left:6px;}
+.dshm-hist-big-unit{font-size:15px;font-weight:600;letter-spacing:0;margin-left:3px;color:var(--dsw-alias-label-secondary);}
+.dshm-hist-big-label{font-size:12px;font-weight:400;letter-spacing:0;color:var(--dsw-alias-label-tertiary);margin-left:4px;}
 .dshm-hist-foot{font-size:12.5px;color:var(--dsw-alias-label-secondary);margin:6px 0 0;}
 .dshm-hist-foot b{font-weight:600;color:var(--dsw-alias-label-primary);}
 .dshm-trend{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:18px 8px 6px;max-width:560px;}
@@ -1824,7 +1837,10 @@ window.__ModuleLoader__.load({
 .dshm-top-row-off{opacity:.55;cursor:not-allowed;}
 .dshm-top-row-off:hover{background:transparent;}
 .dshm-top-row:hover{background:var(--dsw-alias-interactive-bg-hover);}
-.dshm-top-rank{width:18px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums;font-size:12px;flex:none;}
+.dshm-top-rank{width:18px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums;font-size:12px;flex:none;text-align:right;}
+.dshm-top-name{flex:1;min-width:0;color:var(--dsw-alias-label-primary);font-weight:500;}
+.dshm-top-sub{color:var(--dsw-alias-label-tertiary);font-size:12px;max-width:36%;flex-shrink:1;}
+.dshm-top-row .dshm-count{margin-left:auto;flex:none;font-variant-numeric:tabular-nums;}
 .dshm-hgroup{margin-top:10px;}
 .dshm-hgroup-label{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--dsw-alias-bg-base);font-size:12px;font-weight:600;color:var(--dsw-alias-label-secondary);}
 .dshm-hbadge{font-size:12px;border-radius:99px;padding:1px 8px;border:1px solid var(--dsw-alias-border-l2);flex:none;font-variant-numeric:tabular-nums;}
@@ -1882,8 +1898,8 @@ window.__ModuleLoader__.load({
 .dshm-modal-body{margin:0;font-size:13px;line-height:1.65;color:var(--dsw-alias-label-secondary);}
 .dshm-modal-body b{color:var(--dsw-alias-label-primary);font-weight:600;}
 .dshm-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px;}
-.dshm-wbtn-danger{background:var(--dsw-alias-state-error-primary);border-color:transparent;color:#fff;}
-.dshm-wbtn-danger:hover{background:var(--dsw-alias-state-error-primary);filter:brightness(1.08);color:#fff;}
+.dshm-wbtn-danger{background:var(--dsw-alias-state-error-primary);border-color:transparent;color:var(--dsw-alias-label-primary-inverted);}
+.dshm-wbtn-danger:hover{background:var(--dsw-alias-state-error-primary);filter:brightness(1.08);color:var(--dsw-alias-label-primary-inverted);}
 @media (prefers-reduced-motion:reduce){
   .dshm-eq-on i,.dshm-tab-dot,.dshm-skel-box,.dshm-spin,.dshm-state-spin,.dshm-mini,.dshm-mini-fab,.dshm-drawer,.dshm-welcome-fish,.dshm-settings,.dshm-logo,.dshm-toast,.dshm-dl-float,.dshm-dl-pill,.dshm-modal,.dshm-modal-mask{animation:none;}
   .dshm-row,.dshm-iconbtn,.dshm-chipbtn,.dshm-playbtn,.dshm-slider-thumb,.dshm-mini-progress>div,.dshm-reco-card,.dshm-dl-bar>div,.dshm-dl-pill-bar>span,.dshm-like-btn,.dshm-playround,.dshm-artcard,.dshm-mode-btn,.dshm-prv,.dshm-prv-chev,.dshm-lyric-line,.dshm-row-actions,.dshm-srow-tail,.dshm-playcover::after,.dshm-playcover-ico{transition:none;}
@@ -2552,7 +2568,7 @@ window.__ModuleLoader__.load({
      * ================================================================ */
     function createLikedSyncService(api, onChange) {
       const store = createStore({
-        open: false, tab: 'netease', enabled: true, providers: {}, loaded: false, error: null, errorProvider: null,
+        open: false, tab: null, enabled: true, providers: {}, loaded: false, error: null, errorProvider: null,
         qr: null, qrPhase: 'idle', qrMessage: '', qqMode: 'qr', qqCookie: '', connecting: false, syncing: null, result: null, notice: null, copied: false,
       });
       let pollTimer = null;
@@ -3410,12 +3426,14 @@ window.__ModuleLoader__.load({
       const tasteRef = useRef(null);
       const libRef = useRef(null);
 
-      /* 喜欢列表区块挂载期间保持登录态（网易云未登录则自动出二维码），离开时停轮询 */
-      /* 二维码只在两种情况下拉：首次引导（确实需要连账号）/ 用户主动点开某平台。
-       * 老用户进来只是想改口味或目录 —— 不再自动展开网易云并后台轮询拉码。 */
+      /* 喜欢列表区块挂载期间保持登录态：首启自动展开网易云扫码；老用户仅静默加载状态，默认收起三家卡片、按需点击才取码。 */
       useEffect(() => {
-        if (!likedSync || !firstRun) return undefined;
-        if (!likedSync.source.getSnapshot().open) likedSync.open('netease');
+        if (!likedSync) return undefined;
+        if (firstRun) {
+          if (!likedSync.source.getSnapshot().open) likedSync.open('netease');
+        } else if (!likedSync.source.getSnapshot().loaded) {
+          likedSync.load();
+        }
         return () => likedSync.close();
       }, [likedSync, firstRun]);
       /* 入口可指定区块（「我喜欢」页的导入按钮 → 直接滚到喜欢列表同步） */
@@ -3717,12 +3735,8 @@ window.__ModuleLoader__.load({
     function TrackRow({ track, index, isCurrent, playing, onPlay, onDelete, onReveal, onOpenArtist, likes, useLikes, t, muted, pending, onAdd }) {
       return h('div', {
         className: cx('dshm-row', isCurrent && 'dshm-row-current', muted && 'dshm-row-off'),
-        role: 'button', tabIndex: 0,
-        'aria-label': t('playTrack') + ': ' + track.title,
+        role: 'listitem',
         onClick: () => onPlay(track, index),
-        onKeyDown: (e) => {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPlay(track, index); }
-        },
       },
         h(Cover, { track, size: 40 }),
         h('div', { className: 'dshm-row-info' },
@@ -3764,7 +3778,12 @@ window.__ModuleLoader__.load({
         onDelete ? h('span', { className: 'dshm-row-actions', onClick: (e) => e.stopPropagation() },
           h(IconButton, { label: t('revealTrack'), onClick: (e) => { e.stopPropagation(); onReveal(track); } }, h(IconFolder, { size: 15 })),
           h(IconButton, { label: t('deleteTrack'), className: 'dshm-iconbtn-danger', onClick: (e) => { e.stopPropagation(); onDelete(track); } }, h(IconTrash, { size: 15 }))) : null,
-        h('span', { className: cx('dshm-row-play', pending && 'dshm-playround-busy'), 'aria-hidden': true },
+        h('button', {
+          type: 'button', className: cx('dshm-row-play', pending && 'dshm-playround-busy'),
+          'aria-label': t('playTrack') + ': ' + (track.title || t('untitled')),
+          title: t('playTrack'),
+          onClick: (e) => { e.stopPropagation(); onPlay(track, index); },
+        },
           pending ? h('span', { className: 'dshm-spin' }) : h(IconPlay, { size: 15 }))),
       );
     }
@@ -3791,6 +3810,12 @@ window.__ModuleLoader__.load({
       const [rowError, setRowError] = useState('');
       const [playNotice, setPlayNotice] = useState('');
       const searchRef = useRef(null);
+      useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        const onClear = () => setQuery('');
+        window.addEventListener('dshm:clear-search', onClear);
+        return () => window.removeEventListener('dshm:clear-search', onClear);
+      }, []);
       const [askConfirm, confirmDialog] = useConfirm(t);
       const shuffle = usePlayer((s) => s.shuffle);
       const repeat = usePlayer((s) => s.repeat);
@@ -4186,7 +4211,7 @@ window.__ModuleLoader__.load({
               }, h(IconGear, { size: 13 }), t('setLikedTitle')) : null)
           : h('div', { className: 'dshm-favs' },
               h('div', { className: 'dshm-favs-head' },
-                h(IconHeart, { size: 14, style: { color: 'var(--dsw-alias-state-error-primary)' } }),
+                h(IconHeart, { size: 14, style: { color: 'var(--dshm-love)' } }),
                 h('span', { className: 'dshm-favs-title' }, t('favsTitle')),
                 likeItems.length ? h('span', { className: 'dshm-count' }, likeItems.length + ' ' + t('tracksUnit')) : null,
                 likeItems.length
@@ -4226,6 +4251,7 @@ window.__ModuleLoader__.load({
               type: 'search', value: query, placeholder: t('searchPlaceholder'), ref: searchRef,
               'aria-label': t('searchPlaceholder'),
               onChange: (e) => setQuery(e.target.value),
+              onKeyDown: (e) => { if (e.key === 'Escape' && query) { e.preventDefault(); setQuery(''); } },
             })),
           /* 「我喜欢」页没有分组概念：整个下拉都不渲染，而不是渲染一个空壳 */
           libTab === 'library'
@@ -4254,11 +4280,13 @@ window.__ModuleLoader__.load({
               onClick: () => openSettings('liked'),
             }, h(IconRefresh, { size: 13, className: 'dshm-spin' }), t('syncing'))
             : null,
-          h('span', { className: 'dshm-count', style: { marginLeft: 'auto' } },
-            busy && tracks.length === 0 ? t('rescanning')
-              : query
-                ? fmt(t('searchMatchedCount'), { shown: (libTab === 'likes' ? likedFiltered.length : shownList.length), total: (libTab === 'likes' ? likeItems.length : tracks.length) })
-                : (libTab === 'likes' ? likedFiltered.length : shownList.length) + ' ' + t('tracksUnit'))),
+          (query || (busy && tracks.length === 0) || libTab === 'likes')
+            ? h('span', { className: 'dshm-count', style: { marginLeft: 'auto' } },
+                busy && tracks.length === 0 ? t('rescanning')
+                  : query
+                    ? fmt(t('searchMatchedCount'), { shown: (libTab === 'likes' ? likedFiltered.length : shownList.length), total: (libTab === 'likes' ? likeItems.length : tracks.length) })
+                    : likedFiltered.length + ' ' + t('tracksUnit'))
+            : null),
         playNotice
           ? h('div', { className: 'dshm-mode-hint', style: { margin: '0 20px 6px', textAlign: 'right' }, role: 'status' }, playNotice)
           : null,
@@ -4282,6 +4310,11 @@ window.__ModuleLoader__.load({
       const error = usePlayer((s) => s.error);
       const queue = usePlayer((s) => s.queue);
       const queueIndex = usePlayer((s) => s.queueIndex);
+      const trackId = track ? track.id : null;
+      const lyrSnap = useLyrics((s) => (trackId && s.trackId === trackId ? s : null));
+      const [rightTab, setRightTab] = useState(null);
+      useEffect(() => { setRightTab(null); }, [trackId]);
+      useEffect(() => { if (trackId) lyrics.load(trackId); }, [trackId, lyrics]);
 
       if (!track) {
         return h(EmptyState, {
@@ -4293,9 +4326,15 @@ window.__ModuleLoader__.load({
       const frac = duration > 0 ? position / duration : 0;
       const RepeatIcon = repeat === 'one' ? IconRepeatOne : IconRepeat;
       const repeatLabel = repeat === 'one' ? t('repeatOne') : repeat === 'all' ? t('repeatAll') : t('repeatOff');
+      const lyricsEmpty = !!(lyrSnap && lyrSnap.status === 'ready' && lyrSnap.data && (lyrSnap.data.source === 'none' || (!lyrSnap.data.synced && !lyrSnap.data.plain)));
+      const activeRightTab = rightTab || (lyricsEmpty ? 'queue' : 'lyrics');
 
       const sourceName = sourceLabel(track.source, t);
       return h('div', { className: 'dshm-now' },
+        track.coverUrl ? h('div', {
+          className: 'dshm-now-glow', 'aria-hidden': true,
+          style: { backgroundImage: 'url("' + imgUrl(track.coverUrl) + '")' },
+        }) : null,
         h('div', { className: 'dshm-now-stage' },
           /* 左栏：封面 + 标题 + 控台。粘滞垂直居中，宽屏下像一台独立的唱机。 */
           h('div', { className: 'dshm-now-side' },
@@ -4345,21 +4384,30 @@ window.__ModuleLoader__.load({
                     h(muted || volume === 0 ? IconMute : IconVolume, { size: 17 })),
                   h(Slider, { value: muted ? 0 : volume, label: t('volume'), onChange: (f) => player.setVolume(f) }),
                   h('span', { className: 'dshm-volume-pct' }, Math.round((muted ? 0 : volume) * 100) + '%'))))),
-          /* 右栏：歌词全高呼吸；没有歌词时让「接下来播放」顶上来，不留一片死白 */
+          /* 右栏：轻量切换「歌词 / 接下来播放」，让歌词独占全高呼吸；无歌词时自动切到队列 */
           h('div', { className: 'dshm-now-main' },
-            h(LyricsPanel, { t, lyrics, player, useLyrics, usePlayer }),
-            h('div', { className: 'dshm-queue' },
-              h('div', { className: 'dshm-queue-head' },
-                h(IconQueue, { size: 15 }), t('tabNowQueue'),
-                h('span', { className: 'dshm-count' }, queue.length + ' ' + t('tracksUnit'))),
-              queue.length === 0
-                ? h('div', { className: 'dshm-state-body', style: { padding: '12px 8px' } }, t('queueEmpty'))
-                : h('div', { className: 'dshm-queue-list' },
-                    queue.map((tr, i) => h(TrackRow, {
-                      key: (tr.id || '') + ':' + i, track: tr, index: i,
-                      isCurrent: i === queueIndex, playing: playing && i === queueIndex,
-                      onPlay: (_tr, idx) => player.jumpTo(idx), onOpenArtist: openArtistPage, t,
-                    })))))));
+            h('div', { className: 'dshm-now-tabs', role: 'tablist', 'aria-label': t('tabNow') },
+              h('button', {
+                type: 'button', role: 'tab', className: 'dshm-now-tab',
+                'aria-selected': activeRightTab === 'lyrics',
+                onClick: () => setRightTab('lyrics'),
+              }, h(IconNote, { size: 13 }), t('lyricsTitle')),
+              h('button', {
+                type: 'button', role: 'tab', className: 'dshm-now-tab',
+                'aria-selected': activeRightTab === 'queue',
+                onClick: () => setRightTab('queue'),
+              }, h(IconQueue, { size: 13 }), t('tabNowQueue'), h('span', { className: 'dshm-count' }, String(queue.length)))),
+            activeRightTab === 'lyrics'
+              ? h(LyricsPanel, { t, lyrics, player, useLyrics, usePlayer })
+              : h('div', { className: 'dshm-queue' },
+                  queue.length === 0
+                    ? h('div', { className: 'dshm-state-body', style: { padding: '12px 8px' } }, t('queueEmpty'))
+                    : h('div', { className: 'dshm-queue-list' },
+                        queue.map((tr, i) => h(TrackRow, {
+                          key: (tr.id || '') + ':' + i, track: tr, index: i,
+                          isCurrent: i === queueIndex, playing: playing && i === queueIndex,
+                          onPlay: (_tr, idx) => player.jumpTo(idx), onOpenArtist: openArtistPage, t,
+                        })))))));
     }
 
     /* ================================================================
@@ -5267,18 +5315,12 @@ window.__ModuleLoader__.load({
        * 旧版 7 张等权 KPI 卡像运维监控面板；正常听完的歌也不再涂绿。 */
       const statsBlock = stats ? h('div', { className: 'dshm-hist-hero' },
         h('div', { className: 'dshm-hist-main' },
-          h('span', { className: 'dshm-hist-big' },
-            h('span', { className: 'dshm-hist-num' }, String(plays)),
-            h('span', { className: 'dshm-hist-unit' }, t('playsUnit')),
-            h('span', { className: 'dshm-hist-label' }, t('statPlays'))),
-          h('span', { className: 'dshm-hist-big' },
-            h('span', { className: 'dshm-hist-num' }, fmtDuration(totalSeconds, t)),
-            h('span', { className: 'dshm-hist-unit' }, ''),
-            h('span', { className: 'dshm-hist-label' }, t('statSeconds'))),
-          h('span', { className: 'dshm-hist-big' },
-            h('span', { className: 'dshm-hist-num' }, completion + '%'),
-            h('span', { className: 'dshm-hist-unit' }, ''),
-            h('span', { className: 'dshm-hist-label' }, t('statCompletion')))),
+          h('span', { className: 'dshm-hist-big-item' },
+            h('span', { className: 'dshm-hist-big' }, String(plays), h('span', { className: 'dshm-hist-big-unit' }, t('playsUnit'))),
+            h('span', { className: 'dshm-hist-big-label' }, t('statPlays'))),
+          h('span', { className: 'dshm-hist-big-item' },
+            h('span', { className: 'dshm-hist-big' }, fmtDuration(totalSeconds, t)),
+            h('span', { className: 'dshm-hist-big-label' }, t('statSeconds')))),
         h('p', { className: 'dshm-hist-foot' },
           fmt(t('histSummaryFoot'), { songs, artists, pct: completion }),
           skipped ? ' · ' + fmt(t('histSummarySkip'), { n: skipped }) : '',
@@ -5332,19 +5374,17 @@ window.__ModuleLoader__.load({
                     h('span', { className: 'dshm-top-name dshm-ellipsis' }, it.name || ''),
                     h('span', { className: 'dshm-count' }, (it.plays || 0) + ' ' + t('playsUnit'))))
                 : h('div', { className: 'dshm-lyrics-hint' }, t('noSection')))),
-            h('div', { className: 'dshm-dislikes' },
+            dislikes.length ? h('div', { className: 'dshm-dislikes' },
               h('div', { className: 'dshm-top-title' }, t('dislikesTitle')),
-              ((stats.dislikes && stats.dislikes.songs) || []).length
-                ? stats.dislikes.songs.map((it, i) => h('div', { className: 'dshm-dislike-row', key: i },
-                    h('span', { className: 'dshm-ellipsis dshm-dislike-name' },
-                      (it.title || '') + (it.artist ? ' · ' + it.artist : '')),
-                    h('span', { className: 'dshm-count dshm-dislike-date' }, it.dislikedAt ? fmtDay(it.dislikedAt) : ''),
-                    likes ? h('button', {
-                      type: 'button', className: 'dshm-chipbtn dshm-dislike-undo',
-                      title: t('undislikeBtn'),
-                      onClick: () => likes.setDislike({ artist: it.artist, title: it.title }, false),
-                    }, t('undislikeBtn')) : null))
-                : h('div', { className: 'dshm-lyrics-hint' }, t('dislikesEmpty')))))
+              dislikes.map((it, i) => h('div', { className: 'dshm-dislike-row', key: i },
+                h('span', { className: 'dshm-ellipsis dshm-dislike-name' },
+                  (it.title || '') + (it.artist ? ' · ' + it.artist : '')),
+                h('span', { className: 'dshm-count dshm-dislike-date' }, it.dislikedAt ? fmtDay(it.dislikedAt) : ''),
+                likes ? h('button', {
+                  type: 'button', className: 'dshm-chipbtn dshm-dislike-undo',
+                  title: t('undislikeBtn'),
+                  onClick: () => likes.setDislike({ artist: it.artist, title: it.title }, false),
+                }, t('undislikeBtn')) : null))) : null))
             : null;
 
       let list;
@@ -5400,12 +5440,17 @@ window.__ModuleLoader__.load({
               const tr = trackById(ev);
               return h('div', {
                 className: cx('dshm-hrow', tr && 'dshm-hrow-click'), key: i,
-                role: tr ? 'button' : undefined, tabIndex: tr ? 0 : undefined,
-                title: tr ? t('playTrack') : undefined,
+                role: 'listitem',
                 onClick: tr ? () => playHistory(ev) : undefined,
-                onKeyDown: tr ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); playHistory(ev); } } : undefined,
               },
-                h(Thumb, { src: coverOf(ev), size: 40 }),
+                tr
+                  ? h('button', {
+                    type: 'button', className: 'dshm-hrow-play',
+                    'aria-label': t('playTrack') + ': ' + (ev.title || t('untitled')),
+                    title: t('playTrack'),
+                    onClick: (e) => { e.stopPropagation(); playHistory(ev); },
+                  }, h(Thumb, { src: coverOf(ev), size: 40 }))
+                  : h(Thumb, { src: coverOf(ev), size: 40 }),
                 h('div', { className: 'dshm-row-info' },
                   h('div', { className: 'dshm-row-title dshm-ellipsis' }, ev.title || ev.trackId || ''),
                   ev.artist
@@ -5573,6 +5618,63 @@ window.__ModuleLoader__.load({
         const stack = cur.view !== 'settings' ? [...(cur.navStack || []), { view: cur.view, artistName: cur.artistName || null }].slice(-20) : (cur.navStack || []);
         ui.set({ view: 'settings', settingsSection: section || null, navStack: stack });
       };
+      const exitSettings = () => {
+        const cur = ui.getSnapshot();
+        const stack = cur.navStack || [];
+        const top = stack[stack.length - 1];
+        if (top) ui.set({ view: top.view, artistName: top.artistName, settingsSection: null, navStack: stack.slice(0, -1) });
+        else ui.set({ view: 'library', settingsSection: null, navStack: [] });
+      };
+
+      /* 全局键盘快捷键（桌面端肌肉记忆）：必须放在所有条件 return 之前，严守 React Hooks 顺序。
+       * Space 播放/暂停 · ←/→ 快退/快进 5 秒 · ⌘/Ctrl+K 聚焦搜索 · Esc 退回上一页或清空搜索。 */
+      useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        const onKey = (e) => {
+          const el = e.target && e.target.tagName ? e.target : null;
+          const typing = el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || (e.target && e.target.isContentEditable));
+          const mod = e.metaKey || e.ctrlKey;
+          if (mod && (e.key === 'k' || e.key === 'K')) {
+            const inp = document.querySelector('.dshm-panel .dshm-search input');
+            if (inp) { e.preventDefault(); inp.focus(); inp.select && inp.select(); }
+            return;
+          }
+          if (typing) return;
+          if (e.code === 'Space' || e.key === ' ') {
+            /* 按钮与链接上的 Space 本身就是点击：不要劫持 */
+            if (el && /^(BUTTON|A)$/.test(el.tagName)) return;
+            e.preventDefault();
+            player.toggle();
+            return;
+          }
+          if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+            if (el && (/^(BUTTON|A)$/.test(el.tagName) || (el.getAttribute && el.getAttribute('role') === 'slider'))) return;
+            const st = player.source && player.source.getSnapshot ? player.source.getSnapshot() : null;
+            if (st && st.duration > 0) {
+              e.preventDefault();
+              const delta = e.key === 'ArrowRight' ? 5 : -5;
+              player.seek(Math.max(0, Math.min(st.duration, (st.position || 0) + delta)));
+            }
+            return;
+          }
+          if (e.key === 'Escape') {
+            if (view === 'settings') {
+              const firstRun = onboarding && onboarding.source ? !onboarding.source.getSnapshot().completed : false;
+              if (!firstRun) { e.preventDefault(); exitSettings(); }
+              return;
+            }
+            if (view === 'artist') { e.preventDefault(); goBack(); return; }
+            const inp = document.querySelector('.dshm-panel .dshm-search input');
+            if (inp && inp.value) {
+              e.preventDefault();
+              window.dispatchEvent(new CustomEvent('dshm:clear-search'));
+            }
+          }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+      }, [view, player, goBack, onboarding]);
+
       if (view === 'settings') {
         return h(SettingsView, {
           t, onboarding, useOnboarding, sync, useSync, likedSync, useLikedSync,
@@ -5580,7 +5682,7 @@ window.__ModuleLoader__.load({
           /* 导入结果里的「查看我喜欢」：回曲库并直接打开「我喜欢」子页 */
           onViewLikes: () => { ui.set({ view: 'library', settingsSection: null, libTabWish: 'likes', navStack: [] }); },
           /* 退出设置 = 回到进设置之前的那一页（首启除外：首启没有上一页，回曲库） */
-          onExit: () => { const cur = ui.getSnapshot(); const stack = cur.navStack || []; const top = stack[stack.length - 1]; if (top) { ui.set({ view: top.view, artistName: top.artistName, settingsSection: null, navStack: stack.slice(0, -1) }); } else { ui.set({ view: 'library', settingsSection: null, navStack: [] }); } },
+          onExit: exitSettings,
           onRoute: (target) => {
             ui.set({ settingsSection: null, navStack: [] });
             if (target === 'library') {
@@ -5608,36 +5710,6 @@ window.__ModuleLoader__.load({
             : view === 'history'
               ? h(HistoryView, { t, history, player, openArtistPage, artistImages, likes, useHistory, useLibrary, useArtistImages, useLikes })
               : h(NowPlayingView, { t, player, lyrics, usePlayer, useLyrics, openView, openArtistPage, artistImages, useArtistImages, likes, useLikes });
-
-      /* 全局键盘快捷键（桌面端肌肉记忆）：Space 播放/暂停 · ⌘/Ctrl+K 聚焦搜索 · Esc 退回上一页。
-       * 焦点在输入框 / 下拉 / 文本域里时一律不抢按键。 */
-      useEffect(() => {
-        const onKey = (e) => {
-          const el = e.target && e.target.tagName ? e.target : null;
-          const typing = el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || (e.target && e.target.isContentEditable));
-          const mod = e.metaKey || e.ctrlKey;
-          if (mod && (e.key === 'k' || e.key === 'K')) {
-            const inp = document.querySelector('.dshm-panel .dshm-search input');
-            if (inp) { e.preventDefault(); inp.focus(); inp.select && inp.select(); }
-            return;
-          }
-          if (typing) return;
-          if (e.code === 'Space' || e.key === ' ') {
-            /* 按钮上的 Space 本身就是点击：不要劫持 */
-            if (el && /^(BUTTON|A)$/.test(el.tagName)) return;
-            e.preventDefault();
-            player.toggle();
-            return;
-          }
-          if (e.key === 'Escape') {
-            if (view === 'settings' || view === 'artist') { e.preventDefault(); goBack(); return; }
-            const inp = document.querySelector('.dshm-panel .dshm-search input');
-            if (inp && inp.value) { e.preventDefault(); inp.value = ''; inp.dispatchEvent(new Event('input', { bubbles: true })); }
-          }
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-      }, [view, player, goBack]);
 
       return h(React.Fragment, null,
         h('div', { className: 'dshm-panel' },
@@ -5876,9 +5948,9 @@ window.__ModuleLoader__.load({
        * 这里统一挂在 box 上并按下即捕获（快速一甩时首个 move 可能已在条外，延迟捕获会丢拖动）；
        * 捕获会让 Chrome 把 click 投递给 box，所以未拖动的轻点由我们转发给标题按钮，单击行为不变。 */
 const DRAG_THRESHOLD = 4;
-      /* 只有真正的控件排除在拖动区之外；标题主按钮(.dshm-mini-main)既是拖动区也保留单击 */
+      /* 只有真正的控件排除在拖动区之外；标题区(.dshm-mini-main / .dshm-mini-titlebtn)既是拖动区也保留单击 */
       const interactiveTarget = (target) => Boolean(target && typeof target.closest === 'function'
-        && target.closest('button:not(.dshm-mini-main), a, input, textarea, select, [role="slider"], [role="button"]:not(.dshm-mini-grip)'));
+        && target.closest('button:not(.dshm-mini-main):not(.dshm-mini-titlebtn), a, input, textarea, select, [role="slider"], [role="button"]:not(.dshm-mini-grip)'));
       const barDown = (e) => {
         if (e.button !== 0 || interactiveTarget(e.target)) return;
         const el = boxRef.current;
@@ -5938,18 +6010,22 @@ const DRAG_THRESHOLD = 4;
       }
       const style = pos ? { left: pos.left, top: pos.top, right: 'auto', bottom: 'auto' } : undefined;
       const activeLine = activeIdx >= 0 && lines && lines[activeIdx] ? (lines[activeIdx].text || '♪') : '';
-      /* 歌手入口用 span[role=button]：外层 .dshm-mini-main 已经是 <button>，HTML 不允许按钮嵌套（浏览器解析会把它拆开） */
+      /* .dshm-mini-main 用 <div> 容器，歌名与歌手各自是独立原生 <button>，彻底消除按钮嵌套 */
       const openArtist = (e) => { e.stopPropagation(); openArtistPage(track.artist || ''); };
-      const artistBtn = h('span', {
-        role: 'button', tabIndex: 0, className: 'dshm-mini-artist',
+      const artistBtn = h('button', {
+        type: 'button', className: 'dshm-mini-artist',
         title: t('artistOpen'), 'aria-label': t('artistOpen'),
         onClick: openArtist,
-        onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openArtist(e); } },
       },
         track.artist
           ? h(ArtistAvatar, { name: track.artist, size: 14, service: artistImages, useArtistImages })
           : null,
         h('span', { className: 'dshm-ellipsis' }, error ? t('playError') : (track.artist || t('unknownArtist'))));
+      const modeHintShort = String(mode.hint || '').replace(
+        new RegExp('^' + String(mode.label || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[：:]\\s*'),
+        '',
+      );
+      const menuDown = !!(menuOpen && boxRef.current && boxRef.current.getBoundingClientRect && boxRef.current.getBoundingClientRect().top < 180);
 
       return portalToBody(h('div', {
         ref: boxRef, style,
@@ -5974,13 +6050,17 @@ const DRAG_THRESHOLD = 4;
           },
         }, h(IconGrip, { size: 14 })),
         h('div', { className: 'dshm-mini-inner' },
-          h('button', {
-            type: 'button', className: 'dshm-mini-main',
-            onClick: openNow, title: t('openNow'), 'aria-label': t('openNow'),
+          h('div', {
+            className: 'dshm-mini-main',
+            onClick: openNow, title: t('openNow'),
           },
             h(Cover, { track, size: 36 }),
             h('span', { className: 'dshm-mini-text' },
-              h('span', { className: 'dshm-mini-title dshm-ellipsis' }, track.title),
+              h('button', {
+                type: 'button', className: 'dshm-mini-titlebtn dshm-mini-title dshm-ellipsis',
+                onClick: (e) => { e.stopPropagation(); openNow(); },
+                title: t('openNow'), 'aria-label': t('openNow'),
+              }, track.title),
               artistBtn)),
           /* 只留 4 个高频核心控制：上一首 / 播放暂停 / 下一首 / ♥。
            * 播放模式、收起、隐藏这些低频「窗口与设定」动作收进 ··· 菜单，歌名区从 93px 回到 200px+。 */
@@ -5999,11 +6079,11 @@ const DRAG_THRESHOLD = 4;
                 'aria-haspopup': 'menu', 'aria-expanded': menuOpen,
                 onClick: () => setMenuOpen((v) => !v),
               }, h(IconMore, { size: 15 })),
-              menuOpen ? h('div', { className: 'dshm-mini-menu', role: 'menu', 'aria-label': t('miniMore') },
+              menuOpen ? h('div', { className: cx('dshm-mini-menu', menuDown && 'dshm-mini-menu-down'), role: 'menu', 'aria-label': t('miniMore') },
                 h('button', {
                   type: 'button', role: 'menuitem', className: 'dshm-mini-menuitem',
                   onClick: () => { setMenuOpen(false); player.cycleMode(); },
-                }, h(mode.icon, { size: 14 }), h('span', null, mode.label), h('span', { className: 'dshm-count' }, mode.hint)),
+                }, h(mode.icon, { size: 14 }), h('span', null, mode.label), modeHintShort ? h('span', { className: 'dshm-count' }, modeHintShort) : null),
                 h('button', {
                   type: 'button', role: 'menuitem', className: 'dshm-mini-menuitem',
                   onClick: () => { setMenuOpen(false); collapseToFab(); setMiniCollapsed(true); },
