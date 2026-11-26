@@ -207,6 +207,18 @@ check('library row artist is a clickable button', has(libTree, (n) => cls(n) ===
 state.view = 'now';
 const nowTree = expand(music(baseProps));
 check('now-playing renders', !!nowTree);
+/* 十三期：正在播放页 ♥ / 👎 */
+{
+  const acts = walk(nowTree).find((n) => cls(n) === 'dshm-now-actions');
+  const btns = acts ? walk(acts).filter((n) => cls(n).includes('dshm-like-btn')) : [];
+  check('now-playing has a ♥ / 👎 group under the artist line', !!acts && btns.length === 2 && acts.props.role === 'group', 'btns=' + btns.length);
+  const heart = btns.find((n) => !cls(n).includes('dshm-dislike-btn'));
+  const b = fetchBodies.length;
+  if (heart) heart.props.onClick({ stopPropagation: noop });
+  await new Promise((r) => setTimeout(r, 0));
+  check('now-playing ♥ toggles the like through the likes API', fetchBodies.slice(b).some((x) => x.url.includes('/dsh-music/api/library/like')),
+    JSON.stringify(fetchBodies.slice(b).map((x) => x.url)));
+}
 check('now-playing has 1 cycle-mode control', walk(nowTree).filter((n) => /dshm-mode-cycle|dshm-iconbtn/.test(cls(n))).length >= 1);
 check('now-playing artist opens artist page (button present)', has(nowTree, (n) => cls(n).includes('dshm-artist-btn')));
 
@@ -504,6 +516,25 @@ check('mini shows 3 lyric lines', walk(expanded).filter((n) => /dshm-mini-lyric\
   'count=' + walk(expanded).filter((n) => /dshm-mini-lyric\b/.test(cls(n))).length);
 check('mini artist clickable', has(expanded, (n) => cls(n).includes('dshm-mini-artist') && typeof n.props.onClick === 'function'));
 check('mini has collapse button', has(expanded, (n) => (n.props && n.props.title) === 'miniCollapse'));
+/* 十三期：迷你条 ♥ / 👎（与曲库行同一套语义），点 ♥ 走 /library/like */
+{
+  const likeBtns = walk(expanded).filter((n) => cls(n).includes('dshm-mini-like'));
+  check('mini bar carries ♥ and 👎 for the current track', likeBtns.length === 2, 'count=' + likeBtns.length);
+  const heart = likeBtns.find((n) => !cls(n).includes('dshm-dislike-btn'));
+  const b = fetchBodies.length;
+  if (heart) heart.props.onClick({ stopPropagation: noop });
+  await new Promise((r) => setTimeout(r, 80));
+  check('mini ♥ toggles the like through the likes API', fetchBodies.slice(b).some((x) => x.url.includes('/dsh-music/api/library/like') && x.body.includes('"liked":true')),
+    JSON.stringify(fetchBodies.slice(b).map((x) => x.url)));
+  const collapseBtn = walk(expanded).find((n) => (n.props && n.props.title) === 'miniCollapse');
+  let collapsedTo = null;
+  const prevSet = miniProps.setMiniCollapsed;
+  /* collapse must derive the badge position from the bar (shared anchor) — the DOM-less smoke only proves the write */
+  collapseBtn.props.onClick();
+  const prefsAfter = JSON.parse(localStorage.getItem('dsh-music.prefs') || '{}');
+  check('collapsing syncs the badge anchor prefs (miniFabPos written alongside miniPos)', 'miniFabPos' in prefsAfter, JSON.stringify(prefsAfter));
+  void prevSet; void collapsedTo;
+}
 
 state.miniCollapsed = true;
 const collapsedTree = expand(mini(miniProps));
@@ -771,6 +802,9 @@ if (addBtn) {
   check('add-to-library resolves a verified search hit and POSTs it to the download route',
     fetchBodies.slice(b).some((x) => x.url.includes('/dsh-music/api/download') && x.body.includes('"verification"')),
     JSON.stringify(fetchBodies.slice(b).map((x) => x.url)));
+  check('a per-song add is prioritised: body carries front:true (top of the pending list)',
+    fetchBodies.slice(b).some((x) => x.url.includes('/dsh-music/api/download') && x.body.includes('"front":true')),
+    JSON.stringify(fetchBodies.slice(b).map((x) => x.body)));
 }
 /* 点一首还没入库的导入歌 = 先入库（而不是只报「无法播放」） */
 {

@@ -388,12 +388,13 @@ window.__ModuleLoader__.load({
       setLikedSub: '把你在音乐 App 里「喜欢」的歌带进来：只读、不改云端；导入的歌先进「我喜欢」，想听再入库。',
       addMissing: '入库（联网核实后下载）',
       addMissingQueued: '已加入入库队列，完成后自动出现在曲库',
+      addMissingQueuedFront: '「{title}」已置顶到入库队列，下载完成后自动出现在曲库',
+      nowLikesLabel: '喜欢 / 不喜欢',
       addMissingSearching: '还没入库：正在找已核实的音源，找到就加入下载队列…',
       addMissingSearchingBatch: '正在为没入库的歌逐首找已核实的音源…',
       addMissingBatch: '入库 {n} 首',
       addMissingBatchQueued: '已把 {n} 首加入入库队列（每批最多 20 首，串行下载），{m} 首暂时没找到可靠音源',
       addMissingNoneBatch: '这些歌暂时都没找到可靠音源',
-      addMissingBusy: '下载队列正在忙，等这一批完成后再试',
       addMissingNone: '没找到可靠的音源，去曲库搜「{title}」试试',
       likesMissingCount: '{n} 首还没入库',
       addMissingHint: '这些歌只标记了 ♥、还没下载。点歌后面的入库按钮会先联网核实再下载。',
@@ -754,12 +755,13 @@ window.__ModuleLoader__.load({
       setLikedSub: 'Bring in the songs you liked in other music apps: read-only, nothing changes in the cloud; imported songs land in Liked first, and you add them to the library when you want to listen.',
       addMissing: 'Add to library (verified download)',
       addMissingQueued: 'Queued — it appears in the library when done',
+      addMissingQueuedFront: '“{title}” moved to the top of the queue — it appears in the library when done',
+      nowLikesLabel: 'Like / dislike',
       addMissingSearching: 'Not in your library yet — looking for a verified source, it gets queued automatically…',
       addMissingSearchingBatch: 'Looking up verified sources for the songs that are not in your library yet…',
       addMissingBatch: 'Download {n}',
       addMissingBatchQueued: 'Queued {n} songs (up to 20 per batch, one at a time); no reliable source found for {m} yet',
       addMissingNoneBatch: 'No reliable source found for these songs yet',
-      addMissingBusy: 'The download queue is busy — try again after this batch finishes',
       addMissingNone: 'No reliable source found — try searching “{title}” in the library',
       likesMissingCount: '{n} not in library yet',
       addMissingHint: 'These songs are only marked ♥ and not downloaded yet. The add-to-library button verifies online first, then downloads.',
@@ -1399,7 +1401,7 @@ window.__ModuleLoader__.load({
   .dshm-transport{justify-content:center;}
   .dshm-volumerow{margin:0 auto;}
 }
-.dshm-mini{position:fixed;right:16px;bottom:16px;z-index:2147483000;width:min(380px,calc(100% - 32px));background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:14px;box-shadow:0 10px 30px var(--dsw-alias-bg-mask-2);overflow:hidden;animation:dshm-mini-in .22s ease-out;}
+.dshm-mini{position:fixed;right:16px;bottom:16px;z-index:2147483000;width:min(420px,calc(100% - 32px));background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:14px;box-shadow:0 10px 30px var(--dsw-alias-bg-mask-2);overflow:hidden;animation:dshm-mini-in .22s ease-out;}
 .dshm-mini-fab{position:fixed;right:16px;bottom:16px;z-index:2147483000;width:48px;height:48px;border-radius:50%;padding:0;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);box-shadow:0 10px 30px var(--dsw-alias-bg-mask-2);cursor:grab;touch-action:none;animation:dshm-mini-in .18s ease-out;}
 .dshm-mini-fab:hover{box-shadow:0 12px 34px var(--dsw-alias-bg-mask-2);}
 .dshm-mini-fab:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px;}
@@ -1430,6 +1432,16 @@ window.__ModuleLoader__.load({
 .dshm-mode-cycle{min-width:32px;}
 .dshm-chipbtn.dshm-mode-cycle{padding:0 9px;}
 .dshm-mini-controls{display:flex;align-items:center;gap:2px;flex:none;}
+.dshm-mini-controls .dshm-iconbtn{width:28px;height:28px;}
+.dshm-mini-controls .dshm-mini-play{width:30px;height:30px;}
+.dshm-mini-like{width:24px;height:24px;margin:0 1px;}
+.dshm-mini-like:hover{background:transparent;}
+.dshm-mini-like-on{background:transparent;}
+.dshm-now-actions{display:inline-flex;align-self:flex-start;align-items:center;gap:2px;padding:3px;border-radius:999px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);box-shadow:0 1px 2px var(--dsw-alias-bg-mask-1);margin:-2px 0 2px;}
+.dshm-now-like{width:34px;height:34px;border-radius:50%;}
+.dshm-now-like:hover{background:var(--dsw-alias-interactive-bg-hover);}
+.dshm-now-like.dshm-like-btn-on{background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 12%,transparent);}
+.dshm-now-like.dshm-dislike-btn-on{background:var(--dsw-alias-interactive-bg-hover);}
 .dshm-mini-play{background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);border-radius:50%;width:34px;height:34px;}
 .dshm-mini-play:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover);color:var(--dsw-alias-label-primary-inverted);}
 .dshm-reco{max-width:560px;margin:0 auto;}
@@ -1455,7 +1467,7 @@ window.__ModuleLoader__.load({
 .dshm-dl-status{font-size:11px;color:var(--dsw-alias-label-tertiary);flex:none;}
 .dshm-dl-bar{height:3px;border-radius:2px;background:var(--dsw-alias-bg-layer-3);overflow:hidden;margin:2px 0 4px;}
 .dshm-dl-bar>div{height:100%;background:var(--dsw-alias-brand-primary);transition:width .4s ease;}
-.dshm-dl-float{position:fixed;left:16px;bottom:16px;z-index:2147483000;width:min(340px,calc(100% - 32px));background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:14px;box-shadow:0 10px 30px var(--dsw-alias-bg-mask-2);padding:10px 12px;display:flex;flex-direction:column;gap:8px;animation:dshm-mini-in .22s ease-out;}
+.dshm-dl-float{position:fixed;right:16px;bottom:16px;z-index:2147483000;width:min(340px,calc(100% - 32px));background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:14px;box-shadow:0 10px 30px var(--dsw-alias-bg-mask-2);padding:10px 12px;display:flex;flex-direction:column;gap:8px;animation:dshm-mini-in .22s ease-out;}
 .dshm-dl-head{display:flex;align-items:center;gap:8px;min-width:0;}
 .dshm-dl-title{font-size:13px;font-weight:600;}
 .dshm-dl-list{display:flex;flex-direction:column;gap:4px;max-height:min(40vh,320px);overflow:auto;padding-right:2px;}
@@ -1465,7 +1477,7 @@ window.__ModuleLoader__.load({
 .dshm-dl-sum{font-size:12px;flex:1;min-width:0;}
 .dshm-dl-sum-ok{color:var(--dsw-alias-state-success-primary);}
 .dshm-dl-sum-warn{color:var(--dsw-alias-state-warn-primary);}
-.dshm-dl-pill{position:fixed;left:16px;bottom:16px;z-index:2147483000;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);box-shadow:0 6px 20px var(--dsw-alias-bg-mask-2);font-size:12.5px;color:var(--dsw-alias-label-primary);cursor:pointer;max-width:calc(100% - 32px);}
+.dshm-dl-pill{position:fixed;right:16px;bottom:16px;z-index:2147483000;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);box-shadow:0 6px 20px var(--dsw-alias-bg-mask-2);font-size:12.5px;color:var(--dsw-alias-label-primary);cursor:pointer;max-width:calc(100% - 32px);}
 .dshm-dl-pill-bar{width:56px;height:3px;border-radius:2px;background:var(--dsw-alias-bg-layer-3);overflow:hidden;flex:none;}
 .dshm-dl-pill-bar>span{display:block;height:100%;background:var(--dsw-alias-brand-primary);transition:width .4s ease;}
 .dshm-sync{margin:12px 24px 0;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:10px;}
@@ -1790,8 +1802,10 @@ window.__ModuleLoader__.load({
         }),
         reco: (taste) => request('/dsh-music/api/reco' + tasteQuery(taste)),
         recoStatus: () => request('/dsh-music/api/reco/status'),
-        download: (items) => request('/dsh-music/api/download', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items }),
+        /* opts.front：运行中也接收，并置顶到待下载列表顶部（用户点了想先听的歌） */
+        download: (items, opts) => request('/dsh-music/api/download', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(opts && opts.front ? { items, front: true } : { items }),
         }),
         downloadStatus: () => request('/dsh-music/api/download/status'),
         sync: () => request('/dsh-music/api/sync', { method: 'POST' }),
@@ -2209,9 +2223,9 @@ window.__ModuleLoader__.load({
         };
         tick();
       }
-      async function start(items) {
+      async function start(items, opts) {
         try {
-          await api.download(items);
+          await api.download(items, opts);
           store.set({ error: null, finishedAt: 0 });
         } catch (err) {
           store.set({ error: (err && err.message) || String(err) });
@@ -3454,28 +3468,28 @@ window.__ModuleLoader__.load({
       return source || '';
     }
 
-    function LikeButton({ t, item, likes, useLikes }) {
+    function LikeButton({ t, item, likes, useLikes, size = 15, className }) {
       const liked = useLikes((st) => !!st.keys[likeKey(item)]);
       return h('button', {
         type: 'button',
-        className: cx('dshm-like-btn', liked && 'dshm-like-btn-on'),
+        className: cx('dshm-like-btn', liked && 'dshm-like-btn-on', className),
         'aria-label': liked ? t('unlikeBtn') : t('likeBtn'),
         'aria-pressed': !!liked,
         title: liked ? t('likedBtn') : t('likeBtn'),
         onClick: (e) => { e.stopPropagation(); likes.toggle(item, !liked); },
-      }, h(IconHeart, { size: 15, style: liked ? { fill: 'currentColor' } : undefined }));
+      }, h(IconHeart, { size, style: liked ? { fill: 'currentColor' } : undefined }));
     }
 
-    function DislikeButton({ t, item, likes, useLikes }) {
+    function DislikeButton({ t, item, likes, useLikes, size = 15, className }) {
       const disliked = useLikes((st) => !!((st.dislikes || {})[likeKey(item)]));
       return h('button', {
         type: 'button',
-        className: cx('dshm-like-btn', 'dshm-dislike-btn', disliked && 'dshm-dislike-btn-on'),
+        className: cx('dshm-like-btn', 'dshm-dislike-btn', disliked && 'dshm-dislike-btn-on', className),
         'aria-label': disliked ? t('undislikeBtn') : t('dislikeBtn'),
         'aria-pressed': !!disliked,
         title: disliked ? t('undislikedBtn') : t('dislikeBtn'),
         onClick: (e) => { e.stopPropagation(); likes.setDislike(item, !disliked); },
-      }, h(IconThumbDown, { size: 15, style: disliked ? { fill: 'currentColor' } : undefined }));
+      }, h(IconThumbDown, { size, style: disliked ? { fill: 'currentColor' } : undefined }));
     }
 
     function TrackRow({ track, index, isCurrent, playing, onPlay, onDelete, onReveal, onOpenArtist, likes, useLikes, t, muted, pending, onAdd }) {
@@ -3651,7 +3665,7 @@ window.__ModuleLoader__.load({
         if (!track.audioUrl) {
           if (track.inLibrary === false && download) {
             setPlayNotice(fmt(t('addMissingSearching'), { title: track.title }));
-            addMissing(track);
+            addMissing(track, { front: true });
             return;
           }
           setPlayNotice(t('topUnplayable'));
@@ -3681,14 +3695,17 @@ window.__ModuleLoader__.load({
         }
         return best ? best.x : null;
       }
-      async function addMissing(item) {
+      async function addMissing(item, opts) {
         try {
           const r = await library.searchRemote((item.artist ? item.artist + ' ' : '') + item.title);
           const remote = (r && Array.isArray(r.remote) ? r.remote : []);
           const hit = pickMissingHit(item, remote);
           if (!hit) { setPlayNotice(fmt(t('addMissingNone'), { title: item.title })); return null; }
-          const ok = await download.start([hit]);
-          setPlayNotice(ok ? t('addMissingQueued') : (download.source.getSnapshot().error || t('downloadError')));
+          /* 单首点击 → front：置顶到待下载列表（正在下载的那首相让不了）；批量 → 排队尾 */
+          const ok = await download.start([hit], opts);
+          setPlayNotice(ok
+            ? (opts && opts.front ? fmt(t('addMissingQueuedFront'), { title: item.title }) : t('addMissingQueued'))
+            : (download.source.getSnapshot().error || t('downloadError')));
           return ok ? hit : null;
         } catch (err) {
           setPlayNotice((err && err.message) || t('downloadError'));
@@ -3698,7 +3715,7 @@ window.__ModuleLoader__.load({
       /* 「入库 N 首」：给所有还没入库的导入条目逐个找核实候选（最多找 30 首），凑一批（≤20）一起交给下载队列 */
       const [adding, setAdding] = useState(false);
       async function addMissingBatch() {
-        if (adding || download.source.getSnapshot().running) { setPlayNotice(t('addMissingBusy')); return; }
+        if (adding) return;
         const items = likedTracks.filter((tr) => !tr.inLibrary).slice(0, 30);
         if (!items.length) return;
         setAdding(true);
@@ -3791,7 +3808,7 @@ window.__ModuleLoader__.load({
                   isCurrent: currentId === tr.id, playing, muted: tr.muted,
                   onPlay: playLiked, onOpenArtist: openArtistPage, likes, useLikes, t,
                   /* 行尾「入库」只给「导入且不在曲库」的条目（有 audioUrl 的已在曲库） */
-                  onAdd: download && !tr.inLibrary && !tr.audioUrl ? addMissing : null,
+                  onAdd: download && !tr.inLibrary && !tr.audioUrl ? (tr2) => addMissing(tr2, { front: true }) : null,
                 })));
       } else if (status === 'loading' && tracks.length === 0) {
         content = h('div', { className: 'dshm-list' }, h(SkeletonRows));
@@ -3961,7 +3978,7 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 10. Now-playing view — hero + transport + queue
      * ================================================================ */
-    function NowPlayingView({ t, player, lyrics, usePlayer, useLyrics, openView, openArtistPage, artistImages, useArtistImages }) {
+    function NowPlayingView({ t, player, lyrics, usePlayer, useLyrics, openView, openArtistPage, artistImages, useArtistImages, likes, useLikes }) {
       const track = usePlayer((s) => s.track);
       const playing = usePlayer((s) => s.playing);
       const position = usePlayer((s) => s.position);
@@ -4001,6 +4018,10 @@ window.__ModuleLoader__.load({
                 h(ArtistAvatar, { name: track.artist || '', size: 18, service: artistImages, useArtistImages }),
                 h('span', null, track.artist || t('unknownArtist'))),
               track.album ? ' · ' + track.album : ''),
+            /* ♥ / 👎：和迷你条、曲库行同一套语义；放大一号，放在歌手行下面 */
+            likes ? h('div', { className: 'dshm-now-actions', role: 'group', 'aria-label': t('nowLikesLabel') },
+              h(LikeButton, { t, item: track, likes, useLikes, size: 18, className: 'dshm-now-like' }),
+              h(DislikeButton, { t, item: track, likes, useLikes, size: 18, className: 'dshm-now-like' })) : null,
             error ? h('div', { className: 'dshm-errorline', role: 'alert' }, h(IconAlert, { size: 15 }), error) : null,
             h('div', { className: 'dshm-seekrow' },
               h('span', { className: 'dshm-time' }, formatTime(position)),
@@ -5211,7 +5232,7 @@ window.__ModuleLoader__.load({
             ? h(ArtistPageView, { t, reco, player, likes, preview, library, openView, openArtistPage, artistImages, artistPage, useUi, useLikes, useLibrary, usePlayer, useArtistImages, useArtistPage })
             : view === 'history'
               ? h(HistoryView, { t, history, player, openArtistPage, artistImages, likes, useHistory, useLibrary, useArtistImages, useLikes })
-              : h(NowPlayingView, { t, player, lyrics, usePlayer, useLyrics, openView, openArtistPage, artistImages, useArtistImages });
+              : h(NowPlayingView, { t, player, lyrics, usePlayer, useLyrics, openView, openArtistPage, artistImages, useArtistImages, likes, useLikes });
 
       return h(React.Fragment, null,
         h('div', { className: 'dshm-panel' },
@@ -5269,7 +5290,7 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 14. Mini player (shell.overlay — mounted across navigation)
      * ================================================================ */
-    function MiniPlayer({ t, player, lyrics, artistImages, usePlayer, useUi, useLyrics, useArtistImages, openNow, openArtistPage, setMiniHidden, setMiniCollapsed }) {
+    function MiniPlayer({ t, player, lyrics, artistImages, likes, useLikes, usePlayer, useUi, useLyrics, useArtistImages, openNow, openArtistPage, setMiniHidden, setMiniCollapsed, publishRect }) {
       const track = usePlayer((s) => s.track);
       const playing = usePlayer((s) => s.playing);
       const position = usePlayer((s) => s.position);
@@ -5294,6 +5315,53 @@ window.__ModuleLoader__.load({
       const fabPosRef = useRef(fabPos);
       fabPosRef.current = fabPos;
       const fabMoved = useRef(0);
+      /* 展开条的尺寸（收起时元素不在，用上次量到的值把圆标放到条的右下角） */
+      const sizeRef = useRef({ w: 380, h: 72 });
+      const FAB = 48;
+      const inWindow = (next, w, h) => (typeof window === 'undefined'
+        ? next
+        : { left: Math.max(0, Math.min(next.left, window.innerWidth - w - 8)), top: Math.max(0, Math.min(next.top, window.innerHeight - h - 8)) });
+      /* 收起 / 展开共用同一个锚点：圆标的右下角 = 展开条的右下角。
+       * 收起时圆标落在条的右下角；再从圆标展开时，条从圆标位置向左上长出来，不会跳回默认角。 */
+      function collapseToFab() {
+        const el = boxRef.current;
+        let base = posRef.current;
+        if (el && typeof window !== 'undefined') {
+          const r = el.getBoundingClientRect();
+          sizeRef.current = { w: r.width, h: r.height };
+          base = { left: r.left, top: r.top };
+        }
+        if (!base) { setFabPos(null); writePrefs({ miniFabPos: null }); return; }
+        const next = inWindow({ left: base.left + sizeRef.current.w - FAB, top: base.top + sizeRef.current.h - FAB }, FAB, FAB);
+        fabPosRef.current = next;
+        setFabPos(next);
+        writePrefs({ miniFabPos: next });
+      }
+      function expandFromFab() {
+        const el = fabRef.current;
+        let f = fabPosRef.current;
+        if (el && typeof window !== 'undefined') {
+          const r = el.getBoundingClientRect();
+          f = { left: r.left, top: r.top };
+        } else if (!f && typeof window !== 'undefined') {
+          f = { left: window.innerWidth - 16 - FAB, top: window.innerHeight - 16 - FAB };
+        }
+        if (!f) return;
+        const next = inWindow({ left: f.left + FAB - sizeRef.current.w, top: f.top + FAB - sizeRef.current.h }, sizeRef.current.w, sizeRef.current.h);
+        posRef.current = next;
+        setPos(next);
+        writePrefs({ miniPos: next });
+      }
+      /* 把迷你播放条（或圆标）的位置发布到 ui store：右下角的入库悬浮窗据此叠在它上方，不互相遮挡 */
+      useEffect(() => {
+        if (!publishRect || typeof window === 'undefined') return;
+        if (hidden || !track) { publishRect(null); return; }
+        const el = collapsed ? fabRef.current : boxRef.current;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        if (!collapsed) sizeRef.current = { w: r.width, h: r.height };
+        publishRect({ left: r.left, top: r.top, w: r.width, h: r.height, collapsed: !!collapsed });
+      }, [pos, fabPos, collapsed, hidden, track ? 1 : 0]);
 
       useEffect(() => { if (trackId) lyrics.load(trackId); }, [trackId]);
 
@@ -5357,7 +5425,7 @@ window.__ModuleLoader__.load({
         const onFabUp = (e) => {
           if (!fabDragRef.current) return;
           fabDragRef.current = null;
-          if (fabMoved.current < 5) { setMiniCollapsed(false); return; }
+          if (fabMoved.current < 5) { expandFromFab(); setMiniCollapsed(false); return; }
           setDragging(false);
           if (fabPosRef.current) writePrefs({ miniFabPos: fabPosRef.current });
           try { if (fabRef.current) fabRef.current.releasePointerCapture(e.pointerId); } catch { /* released */ }
@@ -5370,7 +5438,7 @@ window.__ModuleLoader__.load({
           title: t('miniExpand'), 'aria-label': t('miniExpand'),
           onPointerDown: onFabDown, onPointerMove: onFabMove,
           onPointerUp: onFabUp, onPointerCancel: onFabUp,
-          onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setMiniCollapsed(false); } },
+          onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expandFromFab(); setMiniCollapsed(false); } },
         },
           h(Thumb, { src: track.coverUrl, size: 48, round: true, glyph: IconNote }),
           h('span', { className: 'dshm-mini-fab-badge', 'aria-hidden': true },
@@ -5387,7 +5455,7 @@ window.__ModuleLoader__.load({
 const DRAG_THRESHOLD = 4;
       /* 只有真正的控件排除在拖动区之外；标题主按钮(.dshm-mini-main)既是拖动区也保留单击 */
       const interactiveTarget = (target) => Boolean(target && typeof target.closest === 'function'
-        && target.closest('button:not(.dshm-mini-main), a, input, textarea, select, [role="slider"]'));
+        && target.closest('button:not(.dshm-mini-main), a, input, textarea, select, [role="slider"], [role="button"]:not(.dshm-mini-grip)'));
       const barDown = (e) => {
         if (e.button !== 0 || interactiveTarget(e.target)) return;
         const el = boxRef.current;
@@ -5447,10 +5515,13 @@ const DRAG_THRESHOLD = 4;
       }
       const style = pos ? { left: pos.left, top: pos.top, right: 'auto', bottom: 'auto' } : undefined;
       const activeLine = activeIdx >= 0 && lines && lines[activeIdx] ? (lines[activeIdx].text || '♪') : '';
-      const artistBtn = h('button', {
-        type: 'button', className: 'dshm-mini-artist',
+      /* 歌手入口用 span[role=button]：外层 .dshm-mini-main 已经是 <button>，HTML 不允许按钮嵌套（浏览器解析会把它拆开） */
+      const openArtist = (e) => { e.stopPropagation(); openArtistPage(track.artist || ''); };
+      const artistBtn = h('span', {
+        role: 'button', tabIndex: 0, className: 'dshm-mini-artist',
         title: t('artistOpen'), 'aria-label': t('artistOpen'),
-        onClick: (e) => { e.stopPropagation(); openArtistPage(track.artist || ''); },
+        onClick: openArtist,
+        onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openArtist(e); } },
       },
         track.artist
           ? h(ArtistAvatar, { name: track.artist, size: 14, service: artistImages, useArtistImages })
@@ -5495,6 +5566,9 @@ const DRAG_THRESHOLD = 4;
               onClick: () => player.toggle(),
             }, h(playing ? IconPause : IconPlay, { size: 16 })),
             h(IconButton, { label: t('next'), onClick: () => player.next() }, h(IconNext, { size: 15 })),
+            /* ♥ / 👎：与曲库行、正在播放页同一套语义（喜欢才入库，不喜欢从推荐里剔除） */
+            likes ? h(LikeButton, { t, item: track, likes, useLikes, size: 14, className: 'dshm-mini-like' }) : null,
+            likes ? h(DislikeButton, { t, item: track, likes, useLikes, size: 14, className: 'dshm-mini-like' }) : null,
             h(IconButton, {
               label: mode.label, title: mode.hint + ' · ' + t('modeCycleHint'),
               className: cx((shuffle || repeat === 'one') && 'dshm-iconbtn-active'),
@@ -5502,7 +5576,7 @@ const DRAG_THRESHOLD = 4;
             }, h(mode.icon, { size: 15 })),
             h(IconButton, {
               label: t('miniCollapse'), title: t('miniCollapse'),
-              onClick: () => setMiniCollapsed(true),
+              onClick: () => { collapseToFab(); setMiniCollapsed(true); },
             }, h(IconChevronDown, { size: 15 })),
             h(IconButton, { label: t('hideMini'), title: t('hideMini'), onClick: () => setMiniHidden(true) }, h(IconClose, { size: 13 })))),
         h('div', { className: 'dshm-mini-seek' },
@@ -5528,6 +5602,15 @@ const DRAG_THRESHOLD = 4;
     function DownloadFloat({ t, download, library, player, ui, useUi, useDownload, openLibrary }) {
       const s = useDownload((st) => st);
       const panel = useUi((st) => st.downloadFloat);
+      const miniRect = useUi((st) => st.miniRect);
+      /* 固定右下角；迷你播放条（或圆标）也在右侧时叠到它上方，两者互不遮挡 */
+      const floatStyle = (() => {
+        if (typeof window === 'undefined') return undefined;
+        const width = Math.min(340, window.innerWidth - 32);
+        const floatLeft = window.innerWidth - 16 - width;
+        const overlapsX = !!miniRect && miniRect.left < window.innerWidth - 16 && (miniRect.left + miniRect.w) > floatLeft;
+        return overlapsX ? { bottom: Math.max(16, window.innerHeight - miniRect.top + 12) + 'px' } : undefined;
+      })();
       const running = !!s.running;
       useEffect(() => {
         if (running && !panel) ui.set({ downloadFloat: 'open' });
@@ -5552,7 +5635,7 @@ const DRAG_THRESHOLD = 4;
             : st === 'downloading' ? t('downloading') : t('downloadQueued'));
       if (panel === 'collapsed') {
         return portalToBody(h('button', {
-          type: 'button', className: 'dshm-dl-pill', title: t('downloadExpand'), 'aria-label': t('downloadTitle'),
+          type: 'button', className: 'dshm-dl-pill', style: floatStyle, title: t('downloadExpand'), 'aria-label': t('downloadTitle'),
           onClick: () => ui.set({ downloadFloat: 'open' }),
         },
           running ? h(IconRefresh, { size: 13, className: 'dshm-spin' }) : h(IconDownload, { size: 13 }),
@@ -5561,7 +5644,7 @@ const DRAG_THRESHOLD = 4;
             : (failN ? fmt(t('downloadPillDoneFail'), { ok: okN, fail: failN }) : fmt(t('downloadPillDone'), { ok: okN }))),
           h('span', { className: 'dshm-dl-pill-bar', 'aria-hidden': true }, h('span', { style: { width: pct + '%' } }))));
       }
-      return portalToBody(h('div', { className: 'dshm-dl-float', role: 'region', 'aria-label': t('downloadTitle') },
+      return portalToBody(h('div', { className: 'dshm-dl-float', style: floatStyle, role: 'region', 'aria-label': t('downloadTitle') },
         h('div', { className: 'dshm-dl-head' },
           h(IconDownload, { size: 14 }),
           h('span', { className: 'dshm-dl-title' }, t('downloadTitle')),
@@ -5647,6 +5730,7 @@ const DRAG_THRESHOLD = 4;
         settingsSection: null,
         libTabWish: null,
         downloadFloat: null,
+        miniRect: null,
       });
       const openView = (view) => ui.set({ view });
       const openArtistPage = (name) => ui.set({ view: 'artist', artistName: name });
@@ -5707,14 +5791,15 @@ const DRAG_THRESHOLD = 4;
         id: 'dsh-music.mini-player',
         locale: NS,
         inject: () => ({
-          player, lyrics: lyricsService, artistImages: artistImageService, setMiniHidden, setMiniCollapsed,
+          player, lyrics: lyricsService, artistImages: artistImageService, likes: likesService, setMiniHidden, setMiniCollapsed,
           openNow: () => { openView('now'); ctx.layout.selectPanel(PANEL_ID); },
           openArtistPage: (name) => { if (!name) return; openArtistPage(name); ctx.layout.selectPanel(PANEL_ID); },
-          hooks: { player: player.source, ui, lyrics: lyricsService.source, artistImages: artistImageService.source },
+          publishRect: (rect) => ui.set({ miniRect: rect }),
+          hooks: { player: player.source, ui, lyrics: lyricsService.source, artistImages: artistImageService.source, likes: likesService.source },
         }),
       }, MiniPlayer)), 'dsh-music: mini player');
 
-      // Persistent download/add-to-library status float (bottom-left), above every column.
+      // Persistent download/add-to-library status float (bottom-right, stacked above the mini bar), above every column.
       ctx.effect(() => ctx.slots.inject('shell.overlay', () => ctx.slots.register({
         name: 'shell.overlay',
         id: 'dsh-music.download-float',

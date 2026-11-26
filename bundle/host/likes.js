@@ -139,11 +139,10 @@ export function createLikes({ storage, library, download, logger, history }) {
     if (verr) {
       return { key, liked: true, disliked: false, inLibrary: false, downloading: false, message: verr }
     }
-    if (download.isRunning()) {
-      return { key, liked: true, disliked: false, inLibrary: false, downloading: false, message: '下载管线正忙，请稍后重试下载入库' }
-    }
     await download.archiveVerification(item)
-    const snapshot = download.start([item])
+    /* 管线正忙时并入队列（排在队尾），不再让用户「稍后重试」。 */
+    const launchOne = download.enqueue ? (its) => download.enqueue(its).snapshot : download.start
+    const snapshot = launchOne([item])
     return { key, liked: true, disliked: false, inLibrary: false, downloading: true, runId: snapshot.runId }
   }
 

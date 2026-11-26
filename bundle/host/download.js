@@ -3,7 +3,9 @@
  * 红线：与 spotify-sync/试听共享一把锁（不并发）；核实前置；只写 ~/Music/dsh-music/，
  * 绝不写 ~/Music/spotify-liked/；绝不读取 ~/.config/spotify-sync/refresh_token（只操作 sync.lock）。
  * 三期批1 语义补充：推荐曲的入库由「喜欢」触发（likes.js 调用本模块），POST /api/download
- * 端点保留（其他用途），调用方决定何时入库。 */
+ * 端点保留（其他用途），调用方决定何时入库。
+ * 十三期队列语义：运行中再提交不再 409，而是并入当前批次——front=true 插到待处理队首（用户点了
+ * 想先听的那首），否则排到队尾；撞锁（spotify-sync/试听持锁）才整批不执行。 */
 import { mkdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -19,7 +21,8 @@ export function createDownload({ storage, library, config = {}, logger }) {
   const lock = createPipelineLock(config.pipelineLockPath) // 默认与 spotify-sync 同锁
   const warn = (msg) => logger?.warn?.(msg)
   let disposed = false
-  let job = null // 当前运行状态
+  let job = null // 当前批次（可序列化状态：items 按执行顺序排列）
+  let ctl = null // 当前批次的运行时句柄 { sources, finishing, done, resolve }
 
   async function persistRun(summary) {
     const file = join(storage.dataDir, 'downloads.json')
@@ -36,39 +39,52 @@ export function createDownload({ storage, library, config = {}, logger }) {
     }
   }
 
-  /** 启动一批下载（顺序执行，绝不并发）。调用前已完成参数与核实校验。 */
-  function start(items) {
+  function entryOf(it) {
+    return { artist: it.artist, title: it.title, status: 'pending', note: null, trackId: null }
+  }
+
+  /** 新建一批并开始执行。wait：等上一批收尾（释放锁）后再取锁。 */
+  function launch(items, wait) {
     const runId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
-    const workdir = join(storage.dataDir, 'tmp', `download-${runId}`)
-    job = {
+    const snapshot = {
       running: true,
       runId,
       startedAt: Date.now(),
       finishedAt: null,
       total: items.length,
       done: 0,
+      queued: 0,
       error: null,
-      items: items.map((it) => ({ artist: it.artist, title: it.title, status: 'pending', note: null, trackId: null })),
+      items: items.map(entryOf),
     }
-    const snapshot = job
+    const handle = { sources: new Map(), finishing: false }
+    handle.done = new Promise((resolve) => { handle.resolve = resolve })
+    for (const it of snapshot.items) handle.sources.set(it, items[snapshot.items.indexOf(it)])
+    job = snapshot
+    ctl = handle
+    const workdir = join(storage.dataDir, 'tmp', `download-${runId}`)
     ;(async () => {
+      if (wait) await wait
       const acquired = await lock.acquire()
       if (!acquired) {
         snapshot.running = false
         snapshot.finishedAt = Date.now()
         snapshot.error = '下载管线正在运行（spotify-sync、试听或上一轮下载持有锁），请等上一轮结束后再试'
         for (const it of snapshot.items) { it.status = 'fail'; it.note = '撞锁未执行' }
+        handle.resolve()
         return
       }
       try {
         await mkdir(OUT_DIR, { recursive: true })
         await mkdir(workdir, { recursive: true })
-        for (let i = 0; i < items.length; i++) {
+        for (;;) {
           if (disposed) break
-          const it = snapshot.items[i]
+          const idx = snapshot.items.findIndex((it) => it.status === 'pending')
+          if (idx < 0) break
+          const it = snapshot.items[idx]
           it.status = 'downloading'
           try {
-            const result = await core.processItem(items[i], OUT_DIR, workdir)
+            const result = await core.processItem(handle.sources.get(it), OUT_DIR, workdir)
             it.status = result.status
             it.note = result.note
             if (result.file) it.file = result.file
@@ -78,11 +94,12 @@ export function createDownload({ storage, library, config = {}, logger }) {
           }
           snapshot.done++
         }
+        handle.finishing = true
         // 新文件自动入库，并把产物映射回 trackId（供 Client「下载并播放」直接定位）
         try {
           await library.rescan()
           for (const it of snapshot.items) {
-            if (it.file) {
+            if (it.file && !it.trackId) {
               const rec = library.findByFile(it.file)
               if (rec) it.trackId = rec.id
             }
@@ -93,10 +110,12 @@ export function createDownload({ storage, library, config = {}, logger }) {
       } catch (err) {
         snapshot.error = err.message
       } finally {
+        handle.finishing = true
         await rm(workdir, { recursive: true, force: true }).catch(() => {})
         await lock.release()
         snapshot.running = false
         snapshot.finishedAt = Date.now()
+        handle.resolve()
         await persistRun({
           runId,
           startedAt: snapshot.startedAt,
@@ -107,10 +126,30 @@ export function createDownload({ storage, library, config = {}, logger }) {
       }
     })().catch((err) => {
       snapshot.running = false
+      handle.finishing = true
       snapshot.error = err.message
+      handle.resolve()
       warn(`dsh-music: 下载管线异常: ${err.message}`)
     })
     return snapshot
+  }
+
+  /** 入队（顺序执行，绝不并发）。调用前已完成参数与核实校验。
+   * 空闲 → 立即起新批次；运行中 → 并入当前批次：front=true 插到待处理队首（当前正在下载的那首相让不了），否则排到队尾。
+   * 返回 { snapshot, queued }（queued = 并入运行中批次的条数）。 */
+  function enqueue(items, { front = false } = {}) {
+    if (job && job.running && ctl && !ctl.finishing) {
+      const entries = items.map(entryOf)
+      for (const e of entries) ctl.sources.set(e, items[entries.indexOf(e)])
+      const at = front ? job.items.findIndex((it) => it.status === 'pending') : -1
+      if (at < 0) job.items.push(...entries)
+      else job.items.splice(at, 0, ...entries)
+      job.total = job.items.length
+      job.queued += entries.length
+      return { snapshot: job, queued: entries.length }
+    }
+    const previous = job && job.running && ctl ? ctl.done : null
+    return { snapshot: launch(items, previous), queued: 0 }
   }
 
   return {
@@ -130,10 +169,13 @@ export function createDownload({ storage, library, config = {}, logger }) {
       return null
     },
     isRunning: () => job?.running === true,
-    start,
+    start: (items) => enqueue(items),
+    enqueue,
     status() {
-      if (!job) return { running: false, runId: null, items: [], total: 0, done: 0 }
-      return JSON.parse(JSON.stringify(job))
+      if (!job) return { running: false, runId: null, items: [], total: 0, done: 0, pending: 0 }
+      const copy = JSON.parse(JSON.stringify(job))
+      copy.pending = copy.items.filter((it) => it.status === 'pending').length
+      return copy
     },
     archiveVerification: (item) => core.archiveVerification(item),
     dispose() {
@@ -182,10 +224,10 @@ export function registerDownloadRoutes(webServer, { download, logger }) {
         const items = body?.items
         const verr = await download.validate(items)
         if (verr) return sendJson(res, 400, { error: verr })
-        if (download.isRunning()) return sendJson(res, 409, { error: '已有下载在运行，请等当前批次结束' })
         for (const item of items) await download.archiveVerification(item)
-        const snapshot = download.start(items)
-        return sendJson(res, 202, { runId: snapshot.runId, total: snapshot.total })
+        /* 运行中不再 409：并入当前批次队列；front=true 置顶到待下载列表顶部（用户点了想先听的歌）。 */
+        const { snapshot, queued } = download.enqueue(items, { front: body?.front === true })
+        return sendJson(res, 202, { runId: snapshot.runId, total: snapshot.total, queued })
       } catch (err) {
         warn(`dsh-music: 下载服务错误: ${err.message}`)
         return sendJson(res, 500, { error: '下载服务内部错误' })
