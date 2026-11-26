@@ -396,6 +396,7 @@ groupDefault = 'none';
 /* 4b) row click queues the whole list and jumps to that row */
 const playerSvc = (services['music'] || {}).player;
 const plays = [];
+const realPlayTracks = playerSvc.playTracks.bind(playerSvc); /* 真·playTracks：4c 用来验随机态不劫持点播 */
 playerSvc.playTracks = (list, idx) => plays.push({ len: list.length, idx, first: list[0] && list[0].id, last: list[list.length - 1] && list[list.length - 1].id });
 
 state.view = 'library';
@@ -431,6 +432,30 @@ const beforeOff = plays.length;
 offRows[0].props.onClick();
 check('clicking an unplayable top song does not start playback', plays.length === beforeOff,
   'plays=' + plays.length);
+
+/* 4c) 十三期修复：随机态下点某一首必须从这一首开始（只打乱后面的队列）；
+ * 只有 playAll（shuffleStart）才随机起播；调用方列表里无音频项不能让起点漂移 */
+{
+  const snapP = () => playerSvc.source.getSnapshot();
+  const run = (list, idx, opts) => { realPlayTracks(list, idx, opts); return snapP(); };
+  const ids = (q) => q.map((tr) => tr.id).sort().join(',');
+  const lib4 = [{ id: 't1', title: 'A', audioUrl: '/a' }, { id: 't2', title: 'B', audioUrl: '/b' }, { id: 't3', title: 'C', audioUrl: '/c' }, { id: 't4', title: 'D', audioUrl: '/d' }];
+  playerSvc.source.set({ shuffle: true });
+  let st = run(lib4, 2);
+  check('shuffle ON: clicking row 3 starts with row 3 (queueIndex 0)', st.queue[0].id === 't3' && st.queueIndex === 0, JSON.stringify({ first: st.queue[0] && st.queue[0].id, i: st.queueIndex }));
+  check('shuffle ON: rest of the queue is a permutation of the whole list', st.queue.length === 4 && ids(st.queue) === 't1,t2,t3,t4');
+  st = run(lib4, 0);
+  check('shuffle ON: clicking row 1 starts with row 1', st.queue[0].id === 't1' && st.queueIndex === 0);
+  st = run(lib4, 0, { shuffleStart: true }); /* playAll 的调用形态 */
+  check('shuffle ON: play-all keeps the whole list (random start allowed)', st.queue.length === 4 && ids(st.queue) === 't1,t2,t3,t4' && st.queueIndex >= 0 && st.queueIndex < 4);
+  playerSvc.source.set({ shuffle: false });
+  const mixed = [{ id: 'm1', title: 'no audio' }, { id: 'm2', title: 'M2', audioUrl: '/m2' }, { id: 'm3', title: 'M3', audioUrl: '/m3' }];
+  st = run(mixed, 1);
+  check('rows without audio before the clicked one do not shift the start', st.queue[0].id === 'm2' && st.queue.length === 2 && st.queueIndex === 0, JSON.stringify(ids(st.queue)));
+  st = run(mixed, 2);
+  check('clicking the last playable row starts there', st.queue[st.queueIndex].id === 'm3' && st.queueIndex === 1 && st.queue.length === 2, JSON.stringify(ids(st.queue)));
+  playerSvc.source.set({ shuffle: false, queue: [], queueIndex: 0 });
+}
 
 /* 5) mini player states */
 const miniProps = { t: (k) => k, ...(services['dsh-music.mini-player'] || {}), ...hooks };

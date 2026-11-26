@@ -2839,19 +2839,34 @@ window.__ModuleLoader__.load({
         if (!list.length) return;
         if (snap().track) report(snap().track, true);
         /* D1：播放全部必须跟随当前模式——随机态先打乱队列再随机起播，
-         * 顺序/单曲态从首曲开始（单曲由 repeat=one 循环当前首）。 */
+         * 顺序/单曲态从首曲开始（单曲由 repeat=one 循环当前首）。
+         * 十三期修复：点某一首（行 / 队列 / 歌手页）必须从**这一首**开始——随机态只打乱
+         * 它后面的队列（这首排第一），绝不随机起播；只有 playAll 显式要 shuffleStart 才随机起播。 */
         const wantShuffle = opts && typeof opts.shuffle === 'boolean' ? opts.shuffle : snap().shuffle;
+        const randomStart = !!(opts && opts.shuffleStart);
         let queue = list;
-        let index = Math.min(Math.max(0, startIndex | 0), list.length - 1);
+        /* 行点击的 startIndex 指向调用方给的列表（可能含无音频项），过滤后要用同一首重新定位 */
+        const picked = tracks ? tracks[startIndex | 0] : null;
+        let index = picked ? list.indexOf(picked) : -1;
+        if (index < 0) index = Math.min(Math.max(0, startIndex | 0), list.length - 1);
         if (wantShuffle && queue.length > 1) {
-          queue = [...list];
-          for (let i = queue.length - 1; i > 0; i -= 1) {
-            const j = Math.floor(Math.random() * (i + 1));
-            const tmp = queue[i];
-            queue[i] = queue[j];
-            queue[j] = tmp;
+          const shuffled = (arr) => {
+            const out = [...arr];
+            for (let i = out.length - 1; i > 0; i -= 1) {
+              const j = Math.floor(Math.random() * (i + 1));
+              const tmp = out[i];
+              out[i] = out[j];
+              out[j] = tmp;
+            }
+            return out;
+          };
+          if (randomStart) {
+            queue = shuffled(list);
+            index = Math.floor(Math.random() * queue.length);
+          } else {
+            queue = [list[index], ...shuffled(list.filter((_, i) => i !== index))];
+            index = 0;
           }
-          index = Math.floor(Math.random() * queue.length);
         }
         set({ queue, queueIndex: index, shuffle: wantShuffle });
         if (opts && typeof opts.shuffle === 'boolean') writePrefs({ shuffle: wantShuffle });
@@ -3050,7 +3065,7 @@ window.__ModuleLoader__.load({
         source: store,
         playTracks,
         appendTrack,
-        playAll: (tracks, opts) => playTracks(tracks, 0, opts),
+        playAll: (tracks, opts) => playTracks(tracks, 0, { ...(opts || {}), shuffleStart: true }),
         jumpTo,
         toggle,
         next: () => advance(false),
