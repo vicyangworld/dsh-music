@@ -12,6 +12,7 @@ import { createSync, registerSyncRoutes } from './sync.js'
 import { createManage, registerManageRoutes } from './manage.js'
 import { createSearch, registerSearchRoutes } from './search.js'
 import { createLikes, registerLikesRoutes } from './likes.js'
+import { createSourceScan } from './source-scan.js'
 import { createPreview, registerPreviewRoutes } from './preview.js'
 import { createReco, registerRecoRoutes } from './reco/index.js'
 import { createStarter } from './starter.js'
@@ -39,6 +40,8 @@ export function apply(ctx, config = {}) {
   const search = createSearch({ library, storage, logger })
   const preview = createPreview({ storage, config, logger })
   const likes = createLikes({ storage, library, download, logger, history })
+  // 十三期：导入曲目后台找音源（只搜不下载；命中写回 likes.json 的 source，前端据此换成"可入库"按钮）
+  const sourceScan = createSourceScan({ likes, search, logger })
   const reco = createReco({ history, library, storage, config, logger })
   const starter = createStarter({ storage, library, config, logger })
   const onboarding = createOnboarding({ storage, library, starter, config, logger })
@@ -49,6 +52,8 @@ export function apply(ctx, config = {}) {
     netease: createNetease({}),
     qqmusic: createQQMusic({}),
     qqlogin: createQQLogin({}),
+    // 导入完成后立刻把新 ♥ 排进后台扫描（found 的会跳过，只扫还没结果的）
+    onImported: () => { sourceScan.scheduleMissing().catch((err) => logger.warn?.(`dsh-music: 音源扫描排队失败: ${err.message}`)) },
   })
 
   ctx.effect(() => {
@@ -60,7 +65,7 @@ export function apply(ctx, config = {}) {
       ...registerSyncRoutes(ctx.webServer, { sync, logger }),
       ...registerManageRoutes(ctx.webServer, { manage, logger }),
       ...registerSearchRoutes(ctx.webServer, { search, logger }),
-      ...registerLikesRoutes(ctx.webServer, { likes, logger }),
+      ...registerLikesRoutes(ctx.webServer, { likes, logger, scan: sourceScan }),
       ...registerPreviewRoutes(ctx.webServer, { preview, logger }),
       ...registerRecoRoutes(ctx.webServer, { reco, logger }),
       ...registerOnboardingRoutes(ctx.webServer, { onboarding, logger }),
@@ -69,6 +74,7 @@ export function apply(ctx, config = {}) {
     return () => {
       for (const dispose of disposers) dispose()
       if (likedSync) likedSync.dispose()
+      sourceScan.dispose()
       reco.dispose()
       starter.dispose()
       preview.dispose()
@@ -79,5 +85,9 @@ export function apply(ctx, config = {}) {
   })
 
   // 初次扫描异步进行，不阻塞激活；首个 library 请求会等待扫描完成。
-  library.scan().catch((err) => logger.warn(`dsh-music: 初次扫描失败: ${err?.message ?? err}`))
+  library.scan()
+    .catch((err) => logger.warn(`dsh-music: 初次扫描失败: ${err?.message ?? err}`))
+    // 启动后给还没入库的导入曲目排一次后台音源扫描（found / 近 7 天 none 的会跳过，几乎零成本）
+    .then(() => sourceScan.scheduleMissing())
+    .catch((err) => logger.warn(`dsh-music: 音源后台扫描排队失败: ${err?.message ?? err}`))
 }

@@ -397,6 +397,11 @@ window.__ModuleLoader__.load({
       addMissingNoneBatch: '这些歌暂时都没找到可靠音源',
       addMissingNone: '没找到可靠的音源，去曲库搜「{title}」试试',
       likesMissingCount: '{n} 首还没入库',
+      addReady: '已找到可靠音源，点击入库',
+      addReadyShort: '可入库',
+      addNone: '暂未找到可靠音源，点击再找一次',
+      scanProgress: '查找音源 {done}/{total} · 已找到 {found}',
+      scanHint: '导入后会在后台逐首查找已核实的音源（MusicBrainz）；找到的行会亮起「可入库」，点歌也会直接入库',
       addMissingHint: '这些歌只标记了 ♥、还没下载。点歌后面的入库按钮会先联网核实再下载。',
       importEnabledOff: '主机已关闭喜欢列表导入（配置项 likedSync = false）',
       importCookieEmpty: '请先粘贴 Cookie',
@@ -764,6 +769,11 @@ window.__ModuleLoader__.load({
       addMissingNoneBatch: 'No reliable source found for these songs yet',
       addMissingNone: 'No reliable source found — try searching “{title}” in the library',
       likesMissingCount: '{n} not in library yet',
+      addReady: 'Verified source found — click to add',
+      addReadyShort: 'Ready',
+      addNone: 'No verified source yet — click to search again',
+      scanProgress: 'Finding sources {done}/{total} · {found} found',
+      scanHint: 'Imported tracks are matched against verified sources (MusicBrainz) in the background; rows light up “Ready” and clicking them adds them directly',
       addMissingHint: 'These songs are only marked ♥ and not downloaded yet. The add-to-library button verifies online first, then downloads.',
       importEnabledOff: 'Liked-list import is disabled on this host (config likedSync = false)',
       importCookieEmpty: 'Paste the cookie first',
@@ -1549,6 +1559,11 @@ window.__ModuleLoader__.load({
 .dshm-linkbtn:hover{text-decoration:underline;}
 .dshm-imp-hint-more{font-size:11.5px;padding-top:8px;border-top:1px dashed var(--dsw-alias-border-l1);}
 .dshm-imp-cookie:focus-visible{border-color:var(--dsw-alias-brand-primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--dsw-alias-brand-primary) 18%,transparent);}
+.dshm-row-add-ready{width:auto;height:24px;padding:0 9px 0 7px;gap:3px;border-radius:999px;background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);}
+.dshm-row-add-ready:hover{filter:brightness(1.08);background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);}
+.dshm-row-add-text{font-size:11px;font-weight:600;line-height:1;}
+.dshm-row-add-none{opacity:.6;border:1px dashed var(--dsw-alias-border-l3);}
+.dshm-missing-chip.dshm-scan-chip{display:inline-flex;align-items:center;gap:4px;color:var(--dsw-alias-brand-primary);border-color:color-mix(in srgb,var(--dsw-alias-brand-primary) 35%,transparent);}
 .dshm-missing-chip{font-size:11.5px;color:var(--dsw-alias-state-warn-primary);border:1px solid currentColor;border-radius:99px;padding:2px 9px;white-space:nowrap;}
 .dshm-settings{position:relative;height:100%;overflow:auto;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;animation:dshm-fade-in .28s ease-out;}
 .dshm-settings-inner{max-width:720px;margin:0 auto;padding:28px 24px 96px;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:20px;}
@@ -2328,13 +2343,13 @@ window.__ModuleLoader__.load({
     function createLikesService(api, onAutoDownload) {
       /* keys/dislikes are mutually exclusive on the host: a dislike clears the
        * like and vice versa, so both maps are refreshed after every action. */
-      const store = createStore({ keys: {}, dislikes: {}, items: [], dislikeItems: [], loaded: false, error: null });
+      const store = createStore({ keys: {}, dislikes: {}, items: [], dislikeItems: [], loaded: false, error: null, scan: null });
       async function load() {
         try {
           const data = await api.likes();
           const keys = {};
           for (const it of (data && data.items) || []) if (it.liked !== false) keys[likeKey(it)] = it;
-          store.set({ keys, items: (data && data.items) || [], loaded: true, error: null });
+          store.set({ keys, items: (data && data.items) || [], loaded: true, error: null, scan: (data && data.scan) || null });
         } catch (err) {
           store.set({ loaded: true, error: (err && err.message) || String(err) });
         }
@@ -3540,8 +3555,17 @@ window.__ModuleLoader__.load({
         h('span', { className: 'dshm-row-dur' }, formatTime(track.duration)),
         likes ? h(LikeButton, { t, item: track, likes, useLikes }) : null,
         likes ? h(DislikeButton, { t, item: track, likes, useLikes }) : null,
+        /* 十三期：后台扫描结果决定样式——found → 实心「可入库」药丸；none → 虚线淡色（点了会再找一次）；未扫描 → 普通图标 */
         onAdd && track.inLibrary === false
-          ? h(IconButton, { label: t('addMissing'), onClick: (e) => { e.stopPropagation(); onAdd(track); } }, h(IconDownload, { size: 14 }))
+          ? (() => {
+            const addState = track.source ? (track.source.status === 'found' && track.source.hit ? 'ready' : 'none') : 'unknown';
+            return h(IconButton, {
+              key: 'add',
+              label: t(addState === 'ready' ? 'addReady' : addState === 'none' ? 'addNone' : 'addMissing'),
+              className: cx('dshm-row-add', addState === 'ready' && 'dshm-row-add-ready', addState === 'none' && 'dshm-row-add-none'),
+              onClick: (e) => { e.stopPropagation(); onAdd(track); },
+            }, h(IconDownload, { size: addState === 'ready' ? 12 : 14 }), addState === 'ready' ? h('span', { className: 'dshm-row-add-text' }, t('addReadyShort')) : null);
+          })()
           : null,
         onDelete ? h('span', { className: 'dshm-row-actions', onClick: (e) => e.stopPropagation() },
           h(IconButton, { label: t('revealTrack'), onClick: (e) => { e.stopPropagation(); onReveal(track); } }, h(IconDisc, { size: 14 })),
@@ -3589,7 +3613,19 @@ window.__ModuleLoader__.load({
         inLibrary: it.inLibrary == null ? !!it.audioUrl : !!it.inLibrary,
         /* 来自网易云 / QQ 音乐导入的条目带 sources，行内显示来源小标 */
         sources: it.sources && Object.keys(it.sources).length ? it.sources : null,
+        /* 后台音源扫描结果：{ status: 'found'|'none', hit } */
+        source: it.source && typeof it.source === 'object' ? it.source : null,
       })), [likeItems]);
+      const likesScan = useLikes((st) => st.scan) || null;
+      /* 扫描进行中每 5 s 刷一次列表（本地读，便宜），让「可入库」按钮陆续亮起来 */
+      const scanTimer = useRef(null);
+      const scanRunning = !!(likesScan && likesScan.running);
+      useEffect(() => {
+        if (libTab !== 'likes' || !scanRunning || typeof setTimeout !== 'function') return undefined;
+        const tickScan = () => { scanTimer.current = null; likes.load(); };
+        scanTimer.current = setTimeout(tickScan, 5000);
+        return () => { if (scanTimer.current) clearTimeout(scanTimer.current); scanTimer.current = null; };
+      }, [libTab, scanRunning, likes]);
       const likedPlayable = useMemo(() => likedTracks.filter((tr) => !!tr.audioUrl), [likedTracks]);
       /* 导入但还没入库的数量（行尾给「入库」按钮） */
       const likedMissing = useMemo(() => likedTracks.filter((tr) => !tr.inLibrary).length, [likedTracks]);
@@ -3676,10 +3712,12 @@ window.__ModuleLoader__.load({
         catch (err) { setRowError((err && err.message) || t('deleteFailed')); }
       }
       /* 导入的 ♥ 还没有本地音频：点一下 = 先入库（走核实下载管线），而不是只报「无法播放」 */
+      const knownHit = (item) => (item && item.source && item.source.status === 'found' && item.source.hit ? item.source.hit : null);
       function playLiked(track) {
         if (!track.audioUrl) {
           if (track.inLibrary === false && download) {
-            setPlayNotice(fmt(t('addMissingSearching'), { title: track.title }));
+            /* 后台已找到可靠音源 → 直接置顶入库，不再当场搜（也就不会"没找到"） */
+            if (!knownHit(track)) setPlayNotice(fmt(t('addMissingSearching'), { title: track.title }));
             addMissing(track, { front: true });
             return;
           }
@@ -3712,33 +3750,47 @@ window.__ModuleLoader__.load({
       }
       async function addMissing(item, opts) {
         try {
-          const r = await library.searchRemote((item.artist ? item.artist + ' ' : '') + item.title);
-          const remote = (r && Array.isArray(r.remote) ? r.remote : []);
-          const hit = pickMissingHit(item, remote);
-          if (!hit) { setPlayNotice(fmt(t('addMissingNone'), { title: item.title })); return null; }
-          /* 单首点击 → front：置顶到待下载列表（正在下载的那首相让不了）；批量 → 排队尾 */
-          const ok = await download.start([hit], opts);
-          setPlayNotice(ok
-            ? (opts && opts.front ? fmt(t('addMissingQueuedFront'), { title: item.title }) : t('addMissingQueued'))
-            : (download.source.getSnapshot().error || t('downloadError')));
-          return ok ? hit : null;
+          /* 后台扫描已命中的直接用（不联网）；否则当场搜一次（none/未扫描的条目） */
+          const hit = knownHit(item);
+          if (!hit) {
+            const r = await library.searchRemote((item.artist ? item.artist + ' ' : '') + item.title);
+            const remote = (r && Array.isArray(r.remote) ? r.remote : []);
+            const found = pickMissingHit(item, remote);
+            if (!found) { setPlayNotice(fmt(t('addMissingNone'), { title: item.title })); return null; }
+            return enqueueHit(item, found, opts);
+          }
+          return enqueueHit(item, hit, opts);
         } catch (err) {
           setPlayNotice((err && err.message) || t('downloadError'));
           return null;
         }
       }
-      /* 「入库 N 首」：给所有还没入库的导入条目逐个找核实候选（最多找 30 首），凑一批（≤20）一起交给下载队列 */
+      /* 单首点击 → front：置顶到待下载列表（正在下载的那首相让不了）；批量 → 排队尾 */
+      async function enqueueHit(item, hit, opts) {
+        const ok = await download.start([hit], opts);
+        setPlayNotice(ok
+          ? (opts && opts.front ? fmt(t('addMissingQueuedFront'), { title: item.title }) : t('addMissingQueued'))
+          : (download.source.getSnapshot().error || t('downloadError')));
+        return ok ? hit : null;
+      }
+      /* 「入库 N 首」：后台已命中的直接拿（不联网）；其余逐个找核实候选（最多当场找 30 首），凑一批（≤20）一起交给下载队列 */
       const [adding, setAdding] = useState(false);
       async function addMissingBatch() {
         if (adding) return;
-        const items = likedTracks.filter((tr) => !tr.inLibrary).slice(0, 30);
+        const missing = likedTracks.filter((tr) => !tr.inLibrary);
+        const items = missing.slice(0, 60);
         if (!items.length) return;
         setAdding(true);
         setPlayNotice(t('addMissingSearchingBatch'));
         const hits = [];
+        let searched = 0;
         try {
           for (const item of items) {
             if (hits.length >= 20) break;
+            const known = knownHit(item);
+            if (known) { hits.push(known); continue; }
+            if (searched >= 30) continue;
+            searched += 1;
             const r = await library.searchRemote((item.artist ? item.artist + ' ' : '') + item.title).catch(() => null);
             const hit = pickMissingHit(item, (r && Array.isArray(r.remote) ? r.remote : []));
             if (hit) hits.push(hit);
@@ -3904,6 +3956,12 @@ window.__ModuleLoader__.load({
               h('span', { className: 'dshm-count' }, likeItems.length + ' ' + t('tracksUnit')),
               likedMissing > 0
                 ? h('span', { className: 'dshm-missing-chip', title: t('addMissingHint'), role: 'status' }, fmt(t('likesMissingCount'), { n: likedMissing }))
+                : null,
+              /* 后台找音源进行中：进度 chip（done 已处理 / found 已找到；列表会自动刷新，找到的行会亮起「可入库」） */
+              scanRunning
+                ? h('span', { className: 'dshm-missing-chip dshm-scan-chip', title: t('scanHint'), role: 'status' },
+                    h(IconRefresh, { size: 11, className: 'dshm-spin' }),
+                    fmt(t('scanProgress'), { done: likesScan.done || 0, total: (likesScan.done || 0) + (likesScan.pending || 0), found: likesScan.found || 0 }))
                 : null,
               likedMissing > 0 && download
                 ? h('button', {

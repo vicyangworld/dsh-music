@@ -31,7 +31,7 @@ function normalizeState(saved) {
   }
 }
 
-export function createLikedSync({ likes, accounts, storage, logger, netease, qqmusic, qqlogin }) {
+export function createLikedSync({ likes, accounts, storage, logger, netease, qqmusic, qqlogin, onImported }) {
   const warn = (msg) => logger?.warn?.(msg)
   const stateFile = () => join(storage.dataDir, 'liked-sync.json')
   const busy = { netease: false, qq: false }
@@ -208,6 +208,9 @@ export function createLikedSync({ likes, accounts, storage, logger, netease, qqm
         .map((id) => prev.known[id])
         .filter(Boolean)
       const merged = await likes.importItems(provider, tracks)
+      if (merged.added > 0 && typeof onImported === 'function') {
+        try { onImported({ provider, added: merged.added }) } catch (err) { warn(`dsh-music: 导入后扫描触发失败: ${err.message}`) }
+      }
       const result = {
         provider,
         at: startedAt,

@@ -857,6 +857,39 @@ if (addBtn) {
       JSON.stringify(slice2));
   }
 }
+/* 十三期：后台音源扫描 → 「可入库」药丸（found）/ 淡色虚线（none）/ 普通（未扫描）；命中条目不联网直接进下载队列；扫描进度 chip */
+{
+  const hit = { kind: 'song', id: 'r1', artist: '甲', title: '乙', album: null, durationMs: 1000, verification: { source: 'MusicBrainz', url: 'https://musicbrainz.org/recording/r1', verifiedAt: 1, note: 'search score=99' } };
+  const scanned = (sel) => sel({
+    keys: {}, dislikes: {}, loaded: true, error: null, scan: { running: true, pending: 3, done: 5, found: 2 },
+    items: [
+      { key: 'kA', artist: '甲', title: '乙', audioUrl: null, inLibrary: false, durationMs: 1000, source: { status: 'found', checkedAt: 1, hit } },
+      { key: 'kB', artist: '丙', title: '丁', audioUrl: null, inLibrary: false, durationMs: 1000, source: { status: 'none', checkedAt: 1, hit: null } },
+      { key: 'kC', artist: '戊', title: '己', audioUrl: null, inLibrary: false, durationMs: 1000 },
+    ] });
+  libTabDefault = 'likes';
+  const scanTree = expand(music({ ...realProps, useUi: (sel) => sel({ ...uiStore.getSnapshot(), view: 'library' }), useLikes: scanned }));
+  libTabDefault = 'library';
+  const ready = walk(scanTree).find((n) => cls(n).includes('dshm-row-add-ready'));
+  const noneBtn = walk(scanTree).find((n) => cls(n).includes('dshm-row-add-none'));
+  const unknown = walk(scanTree).find((n) => n.props && n.props['aria-label'] === 'addMissing');
+  check('found source → 「可入库」pill (label addReady + text addReadyShort)', !!ready && ready.props['aria-label'] === 'addReady' && has(ready, (x) => (x.children || []).includes('addReadyShort')));
+  check('none → muted dashed add button (addNone); unscanned → plain addMissing', !!noneBtn && noneBtn.props['aria-label'] === 'addNone' && !!unknown);
+  check('scan running → progress chip in the likes header', has(scanTree, (n) => cls(n) === 'dshm-missing-chip dshm-scan-chip' && has(n, (x) => (x.children || []).includes('scanProgress'))));
+  const b = fetchCalls.length;
+  ready.props.onClick({ stopPropagation: noop });
+  await tick();
+  let slice = fetchCalls.slice(b).filter((u) => u.includes('/library/search') || (u.includes('/dsh-music/api/download') && !u.includes('/status')));
+  check('clicking 「可入库」 uses the stored hit: no search, download POST carries it', !slice.some((u) => u.includes('/library/search')) && slice.some((u) => u.includes('/dsh-music/api/download')), JSON.stringify(slice));
+  const body = [...fetchBodies].reverse().find((x) => x.url.includes('/dsh-music/api/download'));
+  check('…and the POST body contains the verified hit + front:true', !!body && body.body.includes('"r1"') && body.body.includes('"front":true'), body && body.body.slice(0, 120));
+  const mutedReady = walk(scanTree).find((n) => cls(n) === 'dshm-row dshm-row-off');
+  const c = fetchCalls.length;
+  mutedReady.props.onClick({ stopPropagation: noop });
+  await tick();
+  slice = fetchCalls.slice(c);
+  check('clicking a scanned-ready row adds it without searching', !slice.some((u) => u.includes('/library/search')) && slice.some((u) => u.includes('/dsh-music/api/download') && !u.includes('/status')), JSON.stringify(slice));
+}
 /* 文案必须走真实字典键（曾出现 t('src' + p) 拼出 srcqq 这种不存在的键 → 界面裸露键名） */
 const chipText = (name) => { const n = walk(srcTree2).find((x) => cls(x) === 'dshm-src-chip dshm-src-' + name); return n ? String(n.children[0]) : ''; };
 const zhKeys = new Set([...src.slice(src.indexOf('    const zh = {'), src.indexOf('    const en = {')).matchAll(/^      (\w+): '/gm)].map((m) => m[1]));

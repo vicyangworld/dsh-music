@@ -249,7 +249,38 @@ export function createLikes({ storage, library, download, logger, history }) {
       audioUrl: local ? local.audioUrl : null,
       coverUrl: local ? local.coverUrl : null,
       inLibrary: Boolean(local),
+      /* 十三期：后台音源扫描结果（source-scan.js 写入）——found 带 hit（含 MusicBrainz 核实留档），none 为暂未找到 */
+      source: entry.source && typeof entry.source === 'object' ? entry.source : null,
     }
+  }
+
+  /** 原始条目（不走 decorate）。 */
+  async function get(key) {
+    const data = await load()
+    return data.items[key] || null
+  }
+
+  /** 十三期：写入后台音源扫描结果（status: 'found' | 'none'；found 带 hit）。 */
+  async function setSource(key, source) {
+    const data = await load()
+    const entry = data.items[key]
+    if (!entry) return false
+    entry.source = source && typeof source === 'object' ? source : null
+    await persist()
+    return true
+  }
+
+  /** 还不在曲库里的喜欢条目 key（后台扫描 / 「入库 N 首」的候选）。 */
+  async function missingKeys() {
+    await library.ensureScanned()
+    const data = await load()
+    return Object.keys(data.items).filter((key) => !findInLibrary(key))
+  }
+
+  /** 某 key 是否已在曲库（宽松匹配同 decorate）。 */
+  async function inLibrary(key) {
+    await library.ensureScanned()
+    return Boolean(findInLibrary(key))
   }
 
   /** 喜欢列表：曲库内条目实时解析 trackId/audioUrl/coverUrl（前端可直接播）。 */
@@ -313,10 +344,10 @@ export function createLikes({ storage, library, download, logger, history }) {
     }
   }
 
-  return { set, setDislike, importItems, list, listDislikes, summary, statusOf, tasteOf, file }
+  return { set, setDislike, importItems, list, listDislikes, summary, statusOf, tasteOf, file, get, setSource, missingKeys, inLibrary }
 }
 
-export function registerLikesRoutes(webServer, { likes, logger }) {
+export function registerLikesRoutes(webServer, { likes, logger, scan }) {
   const warn = (msg) => logger?.warn?.(msg)
   const sendJson = (res, status, value) => {
     const body = JSON.stringify(value)
@@ -377,7 +408,7 @@ export function registerLikesRoutes(webServer, { likes, logger }) {
     path: '/dsh-music/api/library/likes',
     handler: async (req, res) => {
       if (req.method !== 'GET') return sendJson(res, 405, { error: '方法不允许' })
-      return handle(res, () => likes.list(), '喜欢列表')
+      return handle(res, async () => ({ ...(await likes.list()), scan: scan ? scan.status() : null }), '喜欢列表')
     },
   }))
   disposers.push(webServer.register({
