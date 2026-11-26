@@ -241,8 +241,19 @@ export function createLikes({ storage, library, download, logger, history }) {
     return { source, added, existed, skippedDisliked }
   }
 
+  function findForEntry(entry) {
+    if (!entry) return null
+    const direct = findInLibrary(entry.key)
+    if (direct) return direct
+    const hit = entry.source && entry.source.hit
+    if (hit && hit.artist && hit.title) {
+      return findInLibrary(likeKey(hit.artist, hit.title))
+    }
+    return null
+  }
+
   function decorate(entry) {
-    const local = findInLibrary(entry.key)
+    const local = findForEntry(entry)
     return {
       ...entry,
       trackId: local ? local.id : null,
@@ -274,13 +285,15 @@ export function createLikes({ storage, library, download, logger, history }) {
   async function missingKeys() {
     await library.ensureScanned()
     const data = await load()
-    return Object.keys(data.items).filter((key) => !findInLibrary(key))
+    return Object.keys(data.items).filter((key) => !findForEntry(data.items[key]))
   }
 
   /** 某 key 是否已在曲库（宽松匹配同 decorate）。 */
   async function inLibrary(key) {
     await library.ensureScanned()
-    return Boolean(findInLibrary(key))
+    if (findInLibrary(key)) return true
+    const data = await load()
+    return Boolean(data.items[key] && findForEntry(data.items[key]))
   }
 
   /** 喜欢列表：曲库内条目实时解析 trackId/audioUrl/coverUrl（前端可直接播）。 */

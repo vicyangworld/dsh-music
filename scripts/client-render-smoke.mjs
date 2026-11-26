@@ -977,13 +977,20 @@ uiStore.set({ view: 'library', settingsSection: null });
   const firstPass = expand(floatComp(fp(runningState)));            // 首帧 panel 为空 → null，副作用把面板设为 open
   const opened = uiStore.getSnapshot().downloadFloat;
   const runTree = expand(floatComp(fp(runningState)));
-  const runRows = walk(runTree).filter((n) => cls(n) === 'dshm-dl-row');
+  const runRows = walk(runTree).filter((n) => cls(n).split(' ').includes('dshm-dl-row'));
   check('download float opens itself when a batch is running and shows progress + per-song status',
     (!firstPass || firstPass.length === 0) && opened === 'open' && has(runTree, (n) => cls(n) === 'dshm-dl-float' && n.props.role === 'region')
     && has(runTree, (n) => cls(n) === 'dshm-count' && (n.children || []).includes('1 / 3'))
     && runRows.length === 3 && says(runRows[1], 'downloading') && says(runRows[2], 'downloadQueued')
     && !has(runTree, (n) => cls(n) === 'dshm-dl-foot'),
     JSON.stringify({ opened, rows: runRows.length }));
+  check('completed row in a running download queue is already directly clickable to play',
+    runRows[0] && runRows[0].type === 'button' && runRows[0].props['aria-label'] === 'downloadPlayOne'
+    && runRows[1] && runRows[1].type === 'div' && runRows[2] && runRows[2].type === 'div');
+  if (runRows[0]) runRows[0].props.onClick();
+  check('clicking a completed row while queue is still running plays the track immediately',
+    played.length === 1 && played[0][0][0].id === 'a'.repeat(16));
+  played.length = 0;
   const barNode = walk(runTree).find((n) => cls(n) === 'dshm-dl-bar' && n.children && n.children[0] && n.children[0].props);
   check('progress bar reflects done/total while running', !!barNode && barNode.children[0].props.style.width === '33%');
   const doneState = { running: false, total: 4, done: 4, error: null, items: [
@@ -992,16 +999,19 @@ uiStore.set({ view: 'library', settingsSection: null });
     { artist: '壬', title: '癸', status: 'fail', note: '搜索无结果', trackId: null },
     { artist: '子', title: '丑', status: 'fail', note: '下载失败: 超时', trackId: null }] };
   const doneTree = expand(floatComp(fp(doneState)));
-  const doneRows = walk(doneTree).filter((n) => cls(n) === 'dshm-dl-row');
+  const doneRows = walk(doneTree).filter((n) => cls(n).split(' ').includes('dshm-dl-row'));
   const sumNode = walk(doneTree).find((n) => cls(n).split(' ').includes('dshm-dl-sum'));
   const playBtns = walk(doneTree).filter((n) => n.type === 'button' && n.props['aria-label'] === 'downloadPlayOne');
   check('finished batch lists ok/skip/fail with notes and a summary line',
     doneRows.length === 4 && says(doneRows[1], 'downloadSkip') && says(doneRows[2], 'downloadFail')
     && says(doneRows[2], '搜索无结果') && !!sumNode && (sumNode.children || []).includes('downloadSummary') && sumNode.props.className.includes('dshm-dl-sum-warn'),
     JSON.stringify({ rows: doneRows.length, skip: says(doneRows[1] || {}, 'downloadSkip'), fail: says(doneRows[2] || {}, 'downloadFail'), sum: !!sumNode }));
-  check('only in-library items get a play button; play resolves the trackId through the library', playBtns.length === 2 && played.length === 0, 'playBtns=' + playBtns.length + ' labels=' + JSON.stringify(walk(doneTree).filter((n) => n.type === 'button').map((n) => n.props['aria-label'])));
+  check('only in-library items get a clickable play row; play resolves the trackId through the library', playBtns.length === 2 && played.length === 0, 'playBtns=' + playBtns.length + ' labels=' + JSON.stringify(walk(doneTree).filter((n) => n.type === 'button').map((n) => n.props['aria-label'])));
   if (playBtns[0]) playBtns[0].props.onClick();
-  check('play button plays the resolved library track', played.length === 1 && Array.isArray(played[0] && played[0][0]) && played[0][0].length === 1 && played[0][0][0].id === 'a'.repeat(16), JSON.stringify(played.map((a) => (a[0] || []).map((x) => x && x.id))));
+  check('clicking finished row plays the resolved library track', played.length === 1 && Array.isArray(played[0] && played[0][0]) && played[0][0].length === 1 && played[0][0][0].id === 'a'.repeat(16), JSON.stringify(played.map((a) => (a[0] || []).map((x) => x && x.id))));
+  if (playBtns[1]) playBtns[1].props.onClick();
+  check('clicking finished row falls back to direct /dsh-music/audio/<trackId> when library snapshot is still refreshing',
+    played.length === 2 && played[1][0][0].id === 'b'.repeat(16) && played[1][0][0].audioUrl === '/dsh-music/audio/' + 'b'.repeat(16));
   uiStore.set({ downloadFloat: 'collapsed', view: 'reco' });
   const pillTree = expand(floatComp(fp(doneState)));
   const pill = walk(pillTree).find((n) => cls(n) === 'dshm-dl-pill');

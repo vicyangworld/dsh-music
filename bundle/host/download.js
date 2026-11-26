@@ -87,7 +87,18 @@ export function createDownload({ storage, library, config = {}, logger }) {
             const result = await core.processItem(handle.sources.get(it), OUT_DIR, workdir)
             it.status = result.status
             it.note = result.note
-            if (result.file) it.file = result.file
+            if (result.file) {
+              it.file = result.file
+              if (result.status === 'ok' || result.status === 'skip') {
+                try {
+                  await library.rescan()
+                  const rec = library.findByFile(it.file)
+                  if (rec) it.trackId = rec.id
+                } catch (err) {
+                  warn(`dsh-music: 单曲入库重扫失败: ${err.message}`)
+                }
+              }
+            }
           } catch (err) {
             it.status = 'fail'
             it.note = err.message.slice(0, 160)
@@ -95,9 +106,10 @@ export function createDownload({ storage, library, config = {}, logger }) {
           snapshot.done++
         }
         handle.finishing = true
-        // 新文件自动入库，并把产物映射回 trackId（供 Client「下载并播放」直接定位）
+        // 兜底重扫：确保所有已落盘产物都已入库并映射回 trackId（供 Client 直接点击播放）
         try {
-          await library.rescan()
+          const needFinalScan = snapshot.items.some((it) => it.file && !it.trackId)
+          if (needFinalScan) await library.rescan()
           for (const it of snapshot.items) {
             if (it.file && !it.trackId) {
               const rec = library.findByFile(it.file)

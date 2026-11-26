@@ -13,17 +13,23 @@ const V = { source: 'MusicBrainz', url: 'https://musicbrainz.org/recording/q', v
 const tmp = await mkdtemp(join(tmpdir(), 'dshm-dlq-'))
 const storage = createStorage({ dataDir: join(tmp, 'data') })
 const logger = { warn: () => {} }
-const library = { rescan: async () => {}, findByFile: () => null }
+const scannedFiles = new Map()
+let rescanCount = 0
+const library = {
+  rescan: async () => { rescanCount++ },
+  findByFile: (f) => scannedFiles.get(f) || null,
+}
 const download = createDownload({ storage, library, config: { pipelineLockPath: join(tmp, 'q.lock'), outDirOverride: join(tmp, 'out') }, logger })
 
 /* 可控的假管线：每首歌一个闸门，release(title) 放行 */
 const gates = new Map()
 const order = []
+const fileByTitle = new Map()
 download.core.processItem = async (item) => {
   order.push(item.title)
   const g = gates.get(item.title)
   if (g && !g.open) await g.promise
-  return { status: 'ok', note: null, file: null }
+  return { status: 'ok', note: null, file: fileByTitle.get(item.title) || null }
 }
 const gate = (title) => {
   const g = { open: false, promise: null, resolve: null }
@@ -113,7 +119,23 @@ try {
   const r5 = await call({ items: [{ artist: 'x', title: 'y' }], front: true })
   assert.equal(r5.code, 400, '无核实仍然 400')
 
-  console.log('全部通过（下载队列：front 置顶 / 队尾 / 收尾期新批次 / 路由 202）')
+  // ---- 单曲落盘即入库：队列仍在跑第 2 首时，第 1 首已经带 trackId 可直接点击播放 ----
+  gates.clear(); order.length = 0; rescanCount = 0
+  fileByTitle.set('A', '/tmp/fake/A.m4a')
+  scannedFiles.set('/tmp/fake/A.m4a', { id: 'a'.repeat(16) })
+  gate('B')
+  download.enqueue([item('A'), item('B')])
+  for (let i = 0; i < 40 && download.status().done < 1; i++) await tick(10)
+  const mid = download.status()
+  assert.equal(mid.running, true, 'B 仍在下载中')
+  assert.equal(mid.items[0].status, 'ok', 'A 已落盘')
+  assert.equal(mid.items[0].trackId, 'a'.repeat(16), 'A 落盘后立即重扫并写入 trackId，无需等整批结束')
+  assert.ok(rescanCount >= 1, '已触发单曲入库重扫')
+  gates.get('B').open = true; gates.get('B').resolve()
+  for (let i = 0; i < 40 && download.isRunning(); i++) await tick(10)
+  assert.equal(download.isRunning(), false)
+
+  console.log('全部通过（下载队列：front 置顶 / 队尾 / 收尾期新批次 / 路由 202 / 单曲落盘即入库）')
 } finally {
   download.dispose()
   await tick(30)

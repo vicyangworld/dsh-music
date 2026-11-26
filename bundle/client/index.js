@@ -1573,7 +1573,12 @@ window.__ModuleLoader__.load({
 .dshm-reco-reason{font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary);}
 .dshm-reco-foot{margin-top:auto;display:flex;align-items:center;gap:8px;padding-top:4px;}
 .dshm-dl{background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;}
-.dshm-dl-row{display:flex;align-items:center;gap:8px;font-size:12.5px;min-width:0;}
+.dshm-dl-row{display:flex;align-items:center;gap:8px;font-size:12.5px;min-width:0;padding:4px 6px;border-radius:8px;}
+.dshm-dl-row-play{width:100%;border:none;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background .14s ease;}
+.dshm-dl-row-play:hover{background:var(--dsw-alias-bg-layer-2);}
+.dshm-dl-row-play:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px;}
+.dshm-dl-playico{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;color:var(--dsw-alias-brand-primary);flex:none;opacity:.8;transition:opacity .14s ease,background .14s ease;}
+.dshm-dl-row-play:hover .dshm-dl-playico{opacity:1;background:var(--dsw-alias-bg-layer-3);}
 .dshm-dl-dot{width:8px;height:8px;border-radius:50%;background:var(--dsw-alias-label-tertiary);flex:none;}
 .dshm-dl-ok{background:var(--dsw-alias-state-success-primary);}
 .dshm-dl-fail{background:var(--dsw-alias-state-error-primary);}
@@ -2395,13 +2400,27 @@ window.__ModuleLoader__.load({
       return { source: store, generate, load, refresh, searchStyle: (q) => api.recoStyle(q), artistPage: (name) => api.recoArtist(name) };
     }
 
-    function createDownloadService(api) {
+    function createDownloadService(api, onSynced) {
       const store = createStore({ running: false, total: 0, done: 0, items: [], error: null, finishedAt: 0 });
       let timer = null;
+      let lastSyncedSig = '';
+      function notifySynced(s, force) {
+        if (typeof onSynced !== 'function' || !s) return;
+        const items = Array.isArray(s.items) ? s.items : [];
+        const okSig = (s.runId || '') + '|' + items
+          .filter((it) => it && (it.status === 'ok' || it.status === 'skip'))
+          .map((it) => (it.trackId || (it.artist + '::' + it.title)))
+          .join(',');
+        if (force || (okSig !== lastSyncedSig && items.some((it) => it && (it.status === 'ok' || it.status === 'skip')))) {
+          lastSyncedSig = okSig;
+          onSynced(s);
+        }
+      }
       async function refresh() {
         try {
           const s = await api.downloadStatus();
           store.set({ running: !!s.running, total: s.total || 0, done: s.done || 0, items: s.items || [] });
+          notifySynced(s, false);
           return s;
         } catch { return null; }
       }
@@ -2411,7 +2430,10 @@ window.__ModuleLoader__.load({
           const s = await refresh();
           if (s && !s.running) {
             timer = null;
-            if (s.total > 0) store.set({ finishedAt: Date.now() });
+            if (s.total > 0) {
+              store.set({ finishedAt: Date.now() });
+              notifySynced(s, true);
+            }
             return;
           }
           timer = setTimeout(tick, 1500);
@@ -3850,20 +3872,44 @@ window.__ModuleLoader__.load({
       const syncState = useSync ? useSync((st) => st.phase) : 'idle';
       const likeItems = useLikes((st) => st.items || []);
       /* Liked rows reuse the library row layout; host resolves trackId/audioUrl
-       * for everything inside the library, so those rows are directly playable. */
-      const likedTracks = useMemo(() => likeItems.map((it) => ({
-        id: it.trackId || ('liked::' + it.key),
-        key: it.key,
-        title: it.title, artist: it.artist, album: it.album,
-        duration: it.durationMs ? Math.round(it.durationMs / 1000) : (it.duration || 0),
-        audioUrl: it.audioUrl || null, coverUrl: it.coverUrl || null,
-        muted: !it.audioUrl,
-        inLibrary: it.inLibrary == null ? !!it.audioUrl : !!it.inLibrary,
-        /* 来自网易云 / QQ 音乐导入的条目带 sources，行内显示来源小标 */
-        sources: it.sources && Object.keys(it.sources).length ? it.sources : null,
-        /* 后台音源扫描结果：{ status: 'found'|'none', hit } */
-        source: it.source && typeof it.source === 'object' ? it.source : null,
-      })), [likeItems]);
+       * for everything inside the library, and we also cross-match live library
+       * tracks so freshly downloaded songs become playable immediately. */
+      const likedTracks = useMemo(() => {
+        const byId = new Map();
+        const byKey = new Map();
+        for (const tr of tracks) {
+          if (tr.id) byId.set(tr.id, tr);
+          const k = likeKey(tr);
+          if (k && k !== '::' && !byKey.has(k)) byKey.set(k, tr);
+        }
+        return likeItems.map((it) => {
+          const src = it.source && typeof it.source === 'object' ? it.source : null;
+          let local = null;
+          if (!it.audioUrl) {
+            local = (it.trackId && byId.get(it.trackId))
+              || byKey.get(likeKey(it))
+              || (src && src.hit ? byKey.get(likeKey(src.hit)) : null)
+              || null;
+          }
+          const audioUrl = it.audioUrl || (local ? local.audioUrl : null);
+          const coverUrl = it.coverUrl || (local ? local.coverUrl : null);
+          const resolvedId = it.trackId || (local ? local.id : null);
+          const inLib = !!audioUrl || (it.inLibrary == null ? false : !!it.inLibrary);
+          return {
+            id: resolvedId || ('liked::' + it.key),
+            key: it.key,
+            title: it.title, artist: it.artist, album: it.album || (local ? local.album : ''),
+            duration: (local && local.duration) || (it.durationMs ? Math.round(it.durationMs / 1000) : (it.duration || 0)),
+            audioUrl, coverUrl,
+            muted: !audioUrl,
+            inLibrary: inLib,
+            /* 来自网易云 / QQ 音乐导入的条目带 sources，行内显示来源小标 */
+            sources: it.sources && Object.keys(it.sources).length ? it.sources : null,
+            /* 后台音源扫描结果：{ status: 'found'|'none', hit } */
+            source: src,
+          };
+        });
+      }, [likeItems, tracks]);
       const likesScan = useLikes((st) => st.scan) || null;
       /* 扫描进行中每 5 s 刷一次列表（本地读，便宜），让「可入库」按钮陆续亮起来 */
       const scanTimer = useRef(null);
@@ -6167,10 +6213,13 @@ const DRAG_THRESHOLD = 4;
      *     入库/下载进度悬浮面板：运行中自动弹出；结束后可收成胶囊或关闭；
      *     每行可播放已入库曲目；「打开曲库」跳回曲库。
      * ================================================================ */
-    function DownloadFloat({ t, download, library, player, ui, useUi, useDownload, openLibrary }) {
+    function DownloadFloat({ t, download, library, player, ui, useUi, useDownload, useLibrary, openLibrary }) {
       const s = useDownload((st) => st);
       const panel = useUi((st) => st.downloadFloat);
       const miniRect = useUi((st) => st.miniRect);
+      const tracks = useLibrary
+        ? useLibrary((st) => st.tracks || [])
+        : (library && library.source ? (library.source.getSnapshot().tracks || []) : []);
       /* 固定右下角；迷你播放条（或圆标）也在右侧时叠到它上方，两者互不遮挡 */
       const floatStyle = (() => {
         if (typeof window === 'undefined') return undefined;
@@ -6191,10 +6240,36 @@ const DRAG_THRESHOLD = 4;
       const okN = s.items.filter((it) => it.status === 'ok' || it.status === 'skip').length;
       const failN = s.items.filter((it) => it.status === 'fail').length;
       const pct = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
-      const tracks = library && library.source ? (library.source.getSnapshot().tracks || []) : [];
+      const resolveTrack = (it) => {
+        if (!it || (it.status !== 'ok' && it.status !== 'skip')) return null;
+        if (it.trackId) {
+          const byId = tracks.find((x) => x.id === it.trackId);
+          if (byId) return byId;
+        }
+        const wantKey = likeKey(it);
+        if (wantKey && wantKey !== '::') {
+          const byMeta = tracks.find((x) => likeKey(x) === wantKey);
+          if (byMeta) return byMeta;
+        }
+        if (it.trackId) {
+          return {
+            id: it.trackId,
+            title: it.title || '',
+            artist: it.artist || '',
+            album: it.album || '',
+            duration: 0,
+            audioUrl: '/dsh-music/audio/' + it.trackId,
+            coverUrl: null,
+          };
+        }
+        return null;
+      };
       const playOne = (it) => {
-        const tr = tracks.find((x) => x.id === it.trackId);
-        if (tr && player) player.playTracks([tr], 0);
+        const tr = resolveTrack(it);
+        if (tr && player) {
+          player.playTracks([tr], 0);
+          if (!tracks.some((x) => x.id === tr.id) && library && typeof library.load === 'function') library.load();
+        }
       };
       const close = () => ui.set({ downloadFloat: null });
       const statusText = (st) => (st === 'ok' ? t('downloadDone')
@@ -6225,16 +6300,30 @@ const DRAG_THRESHOLD = 4;
           ? h('div', { className: 'dshm-errorline', role: 'alert' }, h(IconAlert, { size: 14 }), t('downloadError') + '：' + s.error)
           : null,
         h('div', { className: 'dshm-dl-list' },
-          s.items.map((it, i) => h('div', { className: 'dshm-dl-row', key: i, title: it.note || '' },
-            h('span', { className: cx('dshm-dl-dot', (it.status === 'ok' || it.status === 'skip') && 'dshm-dl-ok', it.status === 'fail' && 'dshm-dl-fail', (it.status === 'pending' || it.status === 'downloading') && 'dshm-dl-wait') }),
-            h('span', { className: 'dshm-ellipsis', style: { flex: 1 } }, (it.artist || '') + ' - ' + (it.title || '')),
-            it.note && it.status !== 'ok' && it.status !== 'skip'
-              ? h('span', { className: 'dshm-dl-note dshm-ellipsis', title: it.note }, it.note)
-              : null,
-            h('span', { className: 'dshm-dl-status' }, statusText(it.status)),
-            (it.status === 'ok' || it.status === 'skip') && it.trackId && !running
-              ? h(IconButton, { label: t('downloadPlayOne'), onClick: () => playOne(it) }, h(IconPlay, { size: 12 }))
-              : null))),
+          s.items.map((it, i) => {
+            const playable = !!resolveTrack(it);
+            const rowInner = [
+              h('span', { key: 'dot', className: cx('dshm-dl-dot', (it.status === 'ok' || it.status === 'skip') && 'dshm-dl-ok', it.status === 'fail' && 'dshm-dl-fail', (it.status === 'pending' || it.status === 'downloading') && 'dshm-dl-wait') }),
+              h('span', { key: 'name', className: 'dshm-ellipsis', style: { flex: 1 } }, (it.artist || '') + ' - ' + (it.title || '')),
+              it.note && it.status !== 'ok' && it.status !== 'skip'
+                ? h('span', { key: 'note', className: 'dshm-dl-note dshm-ellipsis', title: it.note }, it.note)
+                : null,
+              h('span', { key: 'st', className: 'dshm-dl-status' }, statusText(it.status)),
+              playable
+                ? h('span', { key: 'play', className: 'dshm-dl-playico', 'aria-hidden': true }, h(IconPlay, { size: 12 }))
+                : null,
+            ];
+            return playable
+              ? h('button', {
+                  type: 'button',
+                  className: 'dshm-dl-row dshm-dl-row-play',
+                  key: i,
+                  title: t('downloadPlayOne'),
+                  'aria-label': t('downloadPlayOne'),
+                  onClick: () => playOne(it),
+                }, rowInner)
+              : h('div', { className: 'dshm-dl-row', key: i, title: it.note || '' }, rowInner);
+          })),
         !running
           ? h('div', { className: 'dshm-dl-foot' },
             h('span', { className: cx('dshm-dl-sum', failN ? 'dshm-dl-sum-warn' : 'dshm-dl-sum-ok') },
@@ -6260,13 +6349,21 @@ const DRAG_THRESHOLD = 4;
       const artistImageService = createArtistImageService(api);
       const onboardingService = createOnboardingService(api);
       const recoService = createRecoService(api);
-      const downloadService = createDownloadService(api);
+      let syncAfterDownload = null;
+      const downloadService = createDownloadService(api, () => {
+        if (syncAfterDownload) syncAfterDownload();
+      });
       const syncService = createSyncService(api);
       const historyService = createHistoryService(api);
       const player = createPlayer(t, api);
       const previewService = createPreviewService(api);
       const warmService = createWarmService(previewService, player);
       const likesService = createLikesService(api, () => downloadService.warm());
+      /* 曲目入库完成（单曲落盘或整批结束）→ 同步刷新曲库与「我喜欢」，无需切页即可直接播放 */
+      syncAfterDownload = () => {
+        library.load();
+        likesService.load();
+      };
       /* 喜欢列表导入（网易云 / QQ 音乐）：导入完成后刷新 ♥ 列表 */
       const likedSyncService = createLikedSyncService(api, () => likesService.load());
       ctx.effect(() => () => {
