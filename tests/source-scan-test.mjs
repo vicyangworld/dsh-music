@@ -24,10 +24,16 @@ await test('评分：歌名完全一致优先；去括号/feat 后一致次之�
     { kind: 'song', artist: '周杰伦', title: '千里之外' },
   ]
   assert.equal(pickHit(item, remote).id, 'r1')
-  assert.equal(pickHit({ artist: 'x', title: '千里之外' }, [remote[0]]).title, '千里之外 (Live)')
+  assert.equal(pickHit({ artist: '费玉清', title: '千里之外' }, [remote[0]]).title, '千里之外 (Live)')
   assert.equal(pickHit({ artist: 'x', title: '不存在' }, remote), null)
   assert.equal(cleanTitle('千里之外 (Live) [2020] feat. Someone'), '千里之外')
   assert.equal(normText('伍佰 & China Blue'), '伍佰chinablue')
+  assert.equal(normText('費玉清'), normText('费玉清')); assert.equal(normText('陳潔麗'), '陈洁丽')
+  // 精度优先：歌手一个都对不上（翻唱 / 同名歌）不要；长短悬殊的"包含"不算同名；歌手未知时只看歌名
+  assert.equal(pickHit({ artist: '邓丽君', title: '我只在乎你' }, [{ kind: 'song', artist: '陳潔麗', title: '我只在乎你', verification: v(99) }]), null)
+  assert.equal(pickHit({ artist: 'Max Daniel', title: '-Ramin Djawadi-《权力的游戏》冰与火之歌（重制版）' }, [{ kind: 'song', artist: '青蛙乐队', title: '权力', verification: v(99) }]), null)
+  assert.ok(pickHit({ artist: '未知歌手', title: '因为爱情' }, [{ kind: 'song', artist: '王菲, 陈奕迅', title: '因为爱情', verification: v(50) }]))
+  assert.ok(pickHit({ artist: 'The Score', title: 'The Fear' }, [{ kind: 'song', artist: 'The Score', title: 'The Fear (Acoustic)', verification: v(50) }]))
 })
 
 await test('hit 只保留入库需要的字段', () => {
@@ -100,6 +106,15 @@ await test('hit 只保留入库需要的字段', () => {
     assert.ok(calls.some((c) => c.q === '无名氏 查无此歌'))
     assert.equal(scan.status().pending, 0)
     assert.equal((await likes.get('无名氏::查无此歌')).source.status, 'none')
+  })
+  await test('评分规则升级（SCAN_VERSION）后，旧的 found 结果会被自动重扫', async () => {
+    const found = await likes.get('伍佰 & china blue::痛哭的人')
+    await likes.setSource('伍佰 & china blue::痛哭的人', { ...found.source, v: 1 })
+    calls.length = 0
+    scan.scheduleMissing()
+    await drain()
+    assert.deepEqual(calls.map((c) => c.q), ['伍佰 & China Blue 痛哭的人'])
+    assert.equal((await likes.get('伍佰 & china blue::痛哭的人')).source.v, 2)
   })
   await test('dispose 清空队列；扫描结束后 likes.list() 带 source，入库后 missingKeys 不再包含', async () => {
     scan.dispose()

@@ -6,6 +6,9 @@
  * 约束：串行、跟随 reco/mb.js 的全局限速（≤1 req/s）；found 不再扫；none 7 天内不重扫（可 force）。
  * 评分：歌名归一后完全一致 ≫ 去括号/feat 后一致 ≫ 包含；歌手覆盖加分；MusicBrainz score 微调。 */
 import { normalizeZh } from './t2s.js'
+import { T2S_EXTRA } from './t2s-extra.js'
+
+const CJK = /[\u3400-\u9fff\uf900-\ufaff]/g
 
 const NONE_TTL_MS = 7 * 24 * 3600 * 1000
 const GAP_MS = 400
@@ -15,7 +18,10 @@ const PUNCT = /[\s·・,，、;；&+!-/:-@[-`{-~\u2000-\u206f\u3000-\u303f\uff00
 
 /** 比较用归一：简繁 → 小写 → 去空白与标点。 */
 export function normText(value) {
-  return normalizeZh(String(value ?? '')).toLowerCase().replace(PUNCT, '')
+  return normalizeZh(String(value ?? ''))
+    .replace(CJK, (c) => T2S_EXTRA[c] || c)
+    .toLowerCase()
+    .replace(PUNCT, '')
 }
 
 /** 去掉括号补充、feat./ft. 尾巴，用于第二次匹配与兜底查询。 */
@@ -32,11 +38,17 @@ function artistsOf(artist) {
   return String(artist ?? '').split(/\s*(?:\/|、|,|，|;|；|&|\+|feat\.?|ft\.?)\s*/i).map((a) => normText(a)).filter(Boolean)
 }
 
-/** 从联网候选里挑最像的一首；没有歌名对得上的就返回 null。 */
+/** 匹配规则版本：改了评分就 +1，旧的 found 结果会在下一轮后台扫描里自动重扫（避免错配一直留着）。 */
+export const SCAN_VERSION = 2
+const UNKNOWN_ARTIST = /^\s*(未知歌手|未知|unknown( artist)?|artist|群星|暂无|无|-)?\s*$/i
+
+/** 从联网候选里挑最像的一首；歌名对不上、或歌手一个都对不上（翻唱 / 同名歌）就不要。 */
 export function pickHit(item, remote = []) {
   const wantT = normText(item.title)
   const wantC = normText(cleanTitle(item.title))
   const wantA = artistsOf(item.artist)
+  const unknownArtist = wantA.length === 0 || UNKNOWN_ARTIST.test(String(item.artist ?? ''))
+  const near = (a, b) => a && b && a.length >= b.length * 0.8 && b.length >= a.length * 0.8
   let best = null
   for (const x of remote) {
     if (!x || x.kind === 'artist' || !x.verification || !x.title) continue
@@ -44,12 +56,13 @@ export function pickHit(item, remote = []) {
     let score = 0
     if (xt === wantT) score += 30
     else if (wantC && normText(cleanTitle(x.title)) === wantC) score += 24
-    else if (xt && wantT && (xt.includes(wantT) || wantT.includes(xt))) score += 10
+    else if (near(xt, wantT) && (xt.includes(wantT) || wantT.includes(xt))) score += 10
     else continue
     const xa = normText(x.artist)
     let cover = 0
     for (const a of wantA) if (a && xa.includes(a)) cover++
-    if (wantA.length) score += cover * 6 - (cover === 0 ? 4 : 0)
+    if (!unknownArtist && cover === 0) continue
+    score += unknownArtist ? 1 : cover * 6 + (cover === wantA.length ? 2 : 0)
     const mbScore = Number((String((x.verification.note || '')).match(/score=(\d+)/) || [])[1])
     if (Number.isFinite(mbScore)) score += Math.min(3, Math.floor(mbScore / 30))
     if (!best || score > best.score) best = { x, score }
@@ -110,7 +123,7 @@ export function createSourceScan({ likes, search, logger, now = () => Date.now()
     if (!item) return true
     if (await likes.inLibrary(key)) return true
     const prev = item.source
-    if (prev && prev.status === 'found' && prev.hit) return true
+    if (prev && prev.status === 'found' && prev.hit && prev.v === SCAN_VERSION) return true
     if (!state.force && prev && prev.status === 'none' && now() - (Number(prev.checkedAt) || 0) < NONE_TTL_MS) return true
     const queries = [...new Set([`${item.artist || ''} ${item.title || ''}`.trim(), item.title, cleanTitle(item.title)].filter((q) => q && q.length >= 2))]
     let hit = null
@@ -131,7 +144,7 @@ export function createSourceScan({ likes, search, logger, now = () => Date.now()
       if (disposed) return false
     }
     if (disposed) return false
-    await likes.setSource(key, { status: hit ? 'found' : 'none', checkedAt: now(), query: used, hit: sanitizeHit(hit) })
+    await likes.setSource(key, { status: hit ? 'found' : 'none', checkedAt: now(), query: used, hit: sanitizeHit(hit), v: SCAN_VERSION })
     state.done += 1
     if (hit) state.found += 1
     return true

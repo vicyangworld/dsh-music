@@ -3730,20 +3730,27 @@ window.__ModuleLoader__.load({
       }
       /* 「入库」：导入的喜欢条目还不在本地 → 曲库搜索找带核实记录的候选，交给既有下载管线
        * （每批 ≤20、串行、先核实再下载，只写 ~/Music/dsh-music）。歌名对不上就不下载。 */
-      const normKey = (x) => normalizeZh(String(x || '')).toLowerCase().replace(/\s+/g, '');
+      /* 匹配用繁→简补充（MusicBrainz 中文条目常是港台繁体；t2s.js 的常用表缺 費/麗/華 之类）——只用于打分，不改展示 */
+      const T2S_MATCH = { '傑':'杰','劉':'刘','吳':'吴','嚴':'严','場':'场','塗':'涂','孫':'孙','島':'岛','嶼':'屿','帥':'帅','師':'师','擊':'击','東':'东','楊':'杨','橋':'桥','歐':'欧','湯':'汤','溫':'温','滅':'灭','澤':'泽','無':'无','獨':'独','盧':'卢','竇':'窦','簡':'简','練':'练','縉':'缙','繆':'缪','華':'华','萬':'万','葉':'叶','蔣':'蒋','蕭':'萧','蘇':'苏','蘭':'兰','衛':'卫','訓':'训','許':'许','諸':'诸','譚':'谭','費':'费','賀':'贺','賈':'贾','賴':'赖','趙':'赵','軍':'军','連':'连','進':'进','達':'达','遲':'迟','鄒':'邹','鄧':'邓','鄭':'郑','錢':'钱','鍾':'钟','閔':'闵','閻':'阎','陰':'阴','陸':'陆','陽':'阳','雲':'云','霑':'沾','鞏':'巩','韓':'韩','響':'响','頔':'𬱖','顏':'颜','顧':'顾','風':'风','馬':'马','馮':'冯','麗':'丽','黃':'黄','龍':'龙','龐':'庞','龔':'龚' };
+      const normKey = (x) => normalizeZh(String(x || '')).replace(/[\u3400-\u9fff]/g, (c) => T2S_MATCH[c] || c).toLowerCase().replace(/\s+/g, '');
       /* 候选打分：歌名完全一致 > 包含；同分看歌手覆盖数（导入条目的歌手出现在候选歌手里的个数）。
        * 搜索结果里翻唱/同名曲很多（「千里之外」会混着 費玉清 单曲、刘芳 翻唱），不按歌手挑会入错。 */
+      /* 当场找音源（后台没扫到的）：歌名一致 + 歌手至少对上一个才要（与主机 source-scan.js 同一规则）——翻唱 / 同名歌不算 */
       function pickMissingHit(item, remote) {
         const want = normKey(item.title);
         const artists = String(item.artist || '').split(/\s*(?:\/|、|,|，|;|；|&|\+|feat\.?|ft\.?)\s*/i).map(normKey).filter((x) => x.length > 0);
+        const unknownArtist = artists.length === 0 || /^(未知歌手|未知|unknown( artist)?|artist|群星|暂无|无|-)?$/i.test(String(item.artist || '').trim());
         const covers = (x) => artists.reduce((n, a) => n + (a && normKey(x.artist).includes(a) ? 1 : 0), 0);
+        const near = (a, b) => a && b && a.length >= b.length * 0.8 && b.length >= a.length * 0.8;
         let best = null;
         for (const x of remote) {
           if (!x || !x.verification || x.kind === 'artist' || !x.title) continue;
           const nt = normKey(x.title);
-          const titleScore = nt === want ? 3 : (nt.includes(want) || want.includes(nt)) ? 1 : 0;
+          const titleScore = nt === want ? 3 : (near(nt, want) && (nt.includes(want) || want.includes(nt))) ? 1 : 0;
           if (!titleScore) continue;
-          const score = titleScore * 10 + covers(x);
+          const c = covers(x);
+          if (!unknownArtist && c === 0) continue;
+          const score = titleScore * 10 + (unknownArtist ? 1 : c + (c === artists.length ? 1 : 0));
           if (!best || score > best.score) best = { x, score };
         }
         return best ? best.x : null;
