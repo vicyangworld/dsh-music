@@ -220,4 +220,5 @@ Release 说明至少写：七期变更（悬浮标/应用内顶层与跨应用�
 | 发布前门禁 | ✅ | `packaging-check` 14/14、`import-smoke` 34 模块、`client-render-smoke` 187/187、`liked-sync-client-test` / `source-scan-test` / `icon-route-test` / `download-queue-test` 全绿、`cold-install-smoke` 20/20（65 文件，516.7 kB） |
 | GitHub tag | ✅ | `v0.8.0` 指向 `ae963df`（`https://github.com/vicyangworld/dsh-music/releases/tag/v0.8.0`） |
 | GitHub Release | ✅ | 资产 `vicyangorg-dsh-music-0.8.0.tgz`（516693B） |
-| npm | ✅ | `@vicyangorg/dsh-music@0.8.0`（`latest`，shasum `5d1fa9a3a2b96687f25faea30e59e5d2fe2af4d8`） |
+| npm | ✅ | `@vicyangorg/dsh-music@0.8.0` 已入库上线（`latest`，shasum `5d1fa9a3a2b96687f25faea30e59e5d2fe2af4d8`） |
+| 目录 PR | ✅ 已更新 | 原未合并 PR https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/18923 已更新至 `Update dsh-music to 0.8.0`（commit `d08b924`，tarball → `v0.8.0`），OPEN / MERGEABLE，候维护者审核 |
