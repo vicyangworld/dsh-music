@@ -60,7 +60,6 @@ window.__ModuleLoader__.load({
       bgTitle: '面板背景',
       bgSub: '点选立即生效，迷你播放条与悬浮球同步更新',
       bgLogo: '小蓝鱼',
-      bgPlain: '素净',
       bgMist: '晨雾',
       bgDune: '暖沙',
       bgVinyl: '唱片',
@@ -458,7 +457,6 @@ window.__ModuleLoader__.load({
       bgTitle: 'Panel background',
       bgSub: 'Applies instantly; mini bar and floating ball stay in sync',
       bgLogo: 'Blue fish',
-      bgPlain: 'Plain',
       bgMist: 'Mist',
       bgDune: 'Dune',
       bgVinyl: 'Vinyl',
@@ -1719,6 +1717,8 @@ window.__ModuleLoader__.load({
 /* 背景层：铺满容器但不接事件；内容抬到 z-index:1（panel 是 flex，子项静态也吃 z-index） */
 .dshm-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;border-radius:inherit;}
 .dshm-panel > .dshm-header,.dshm-panel > .dshm-body{z-index:1;}
+/* 设置页也在 .dshm-panel 里（和主面板共用 BgLayer）：settings 自身 height:100%+overflow:auto 改走 flex 填满，并抬到背景之上 */
+.dshm-panel > .dshm-settings{flex:1 1 0;min-height:0;height:auto;z-index:1;}
 .dshm-mini-inner,.dshm-mini-seek,.dshm-mini-lyrics{position:relative;z-index:1;}
 .dshm-mini-fab > :not(.dshm-bg){z-index:1;}
 .dshm-panel,.dshm-mini,.dshm-mini-fab,.dshm-bg-tile,.dshm-bg-tilebtn{--dshm-brand:#1a5bf6;}
@@ -1727,10 +1727,17 @@ window.__ModuleLoader__.load({
 .dshm-bg[data-dshm-bg-kind="panel"] .dshm-bg-logo{right:-24px;bottom:-28px;width:clamp(200px,40cqw,460px);height:auto;}
 .dshm-bg[data-dshm-bg-kind="mini"] .dshm-bg-logo{right:6px;bottom:-9px;height:56px;width:auto;}
 .dshm-bg[data-dshm-bg-kind="tile"] .dshm-bg-logo{right:-5px;bottom:-6px;width:36px;height:auto;opacity:.4;}
-.dshm-bg[data-dshm-bg="plain"]{background:radial-gradient(circle,color-mix(in srgb,var(--dsw-alias-label-primary) 7%,transparent) 1px,transparent 1.4px);background-size:22px 22px;}
-.dshm-bg[data-dshm-bg="mist"]{background:radial-gradient(120% 26% at 50% 12%,color-mix(in srgb,var(--dshm-brand) 14%,transparent),transparent 70%),radial-gradient(140% 30% at 30% 46%,color-mix(in srgb,var(--dsw-alias-label-tertiary) 16%,transparent),transparent 72%),radial-gradient(120% 26% at 70% 82%,color-mix(in srgb,var(--dshm-brand) 10%,transparent),transparent 70%);}
-.dshm-bg[data-dshm-bg="dune"]{background:radial-gradient(90% 70% at 12% 118%,color-mix(in srgb,#b98a5e 20%,transparent),transparent 62%),radial-gradient(110% 80% at 88% 124%,color-mix(in srgb,#7d8fa6 16%,transparent),transparent 66%),linear-gradient(180deg,color-mix(in srgb,#b98a5e 6%,transparent),transparent 40%);}
-.dshm-bg[data-dshm-bg="vinyl"]{background:repeating-radial-gradient(circle at 92% 116%,color-mix(in srgb,var(--dsw-alias-label-primary) 6%,transparent) 0 1px,transparent 1px 16px);}
+/* 三套非 logo 预设全部重做：色彩浓度从 6–20% 提到 40–60%，色块位置从「藏在角外」改成铺进画面，
+   暗色（宿主 body[data-ds-dark-theme]）单独再提一档，不然深底会把颜色吸掉。 */
+/* 晨雾：三团横向雾带（左上青 / 右中薄荷 / 底部晨曦橘），横向拉长互相叠透 */
+.dshm-bg[data-dshm-bg="mist"]{background-image:radial-gradient(110% 55% at 8% -8%,color-mix(in srgb,#4fb6b0 44%,transparent),transparent 70%),radial-gradient(120% 60% at 96% 38%,color-mix(in srgb,#8fd0c9 48%,transparent),transparent 68%),radial-gradient(130% 55% at 40% 108%,color-mix(in srgb,#f3b98f 42%,transparent),transparent 70%);}
+[data-ds-dark-theme] .dshm-bg[data-dshm-bg="mist"]{background-image:radial-gradient(110% 55% at 8% -8%,color-mix(in srgb,#4fb6b0 56%,transparent),transparent 72%),radial-gradient(120% 60% at 96% 38%,color-mix(in srgb,#8fd0c9 40%,transparent),transparent 70%),radial-gradient(130% 55% at 40% 108%,color-mix(in srgb,#f3b98f 46%,transparent),transparent 72%);}
+/* 暖沙：右下亮沙丘 + 左下暗沙丘 + 顶部一线天光 */
+.dshm-bg[data-dshm-bg="dune"]{background-image:radial-gradient(95% 80% at 100% 112%,color-mix(in srgb,#e9a962 60%,transparent),transparent 70%),radial-gradient(90% 70% at -8% 110%,color-mix(in srgb,#c6783f 46%,transparent),transparent 68%),radial-gradient(120% 36% at 50% -12%,color-mix(in srgb,#9db3cf 30%,transparent),transparent 72%),linear-gradient(180deg,transparent 42%,color-mix(in srgb,#e9a962 22%,transparent) 100%);}
+[data-ds-dark-theme] .dshm-bg[data-dshm-bg="dune"]{background-image:radial-gradient(95% 80% at 100% 112%,color-mix(in srgb,#e9a962 50%,transparent),transparent 72%),radial-gradient(90% 70% at -8% 110%,color-mix(in srgb,#c6783f 42%,transparent),transparent 70%),radial-gradient(120% 30% at 50% -12%,color-mix(in srgb,#9db3cf 32%,transparent),transparent 74%),linear-gradient(180deg,transparent 42%,color-mix(in srgb,#e9a962 18%,transparent) 100%);}
+/* 唱片：右下角为轴心的密纹（12px 一道）+ 每 52px 一道分隔纹 + 紫色标签芯 */
+.dshm-bg[data-dshm-bg="vinyl"]{background-image:radial-gradient(45% 32% at 94% 112%,color-mix(in srgb,#8b5cf6 46%,transparent) 0%,color-mix(in srgb,#8b5cf6 16%,transparent) 55%,transparent 100%),repeating-radial-gradient(circle at 94% 112%,transparent 0 51px,color-mix(in srgb,var(--dsw-alias-label-primary) 14%,transparent) 51px 52px),repeating-radial-gradient(circle at 94% 112%,color-mix(in srgb,var(--dsw-alias-label-primary) 17%,transparent) 0 1px,transparent 1px 12px);}
+[data-ds-dark-theme] .dshm-bg[data-dshm-bg="vinyl"]{background-image:radial-gradient(45% 32% at 94% 112%,color-mix(in srgb,#a78bfa 48%,transparent) 0%,color-mix(in srgb,#a78bfa 16%,transparent) 55%,transparent 100%),repeating-radial-gradient(circle at 94% 112%,transparent 0 51px,color-mix(in srgb,var(--dsw-alias-label-primary) 18%,transparent) 51px 52px),repeating-radial-gradient(circle at 94% 112%,color-mix(in srgb,var(--dsw-alias-label-primary) 24%,transparent) 0 1px,transparent 1px 12px);}
 .dshm-bg-tiles{display:flex;gap:10px;flex-wrap:wrap;}
 .dshm-bg-tilebtn{appearance:none;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);border-radius:12px;padding:8px 8px 7px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:var(--dsw-alias-label-secondary);font-size:12px;}
 .dshm-bg-tilebtn[aria-checked="true"]{border-color:var(--dshm-brand);color:var(--dsw-alias-label-primary);box-shadow:0 0 0 1px var(--dshm-brand);}
@@ -1995,8 +2002,12 @@ window.__ModuleLoader__.load({
    reads as one continuous field instead of being chopped by opaque white cards;
    sticky heads frost instead of going solid. Floating UI (toast/menu/modal/drawer)
    stays opaque on purpose. */
-.dshm-hist-hero,.dshm-top-col,.dshm-dislikes,.dshm-reco-card,.dshm-acard,.dshm-prv,.dshm-sync,.dshm-dl{background:color-mix(in srgb,var(--dsw-alias-bg-layer-1) 66%,transparent);}
-.dshm-hgroup-label,.dshm-group-head,.dshm-set-foot{background:color-mix(in srgb,var(--dsw-alias-bg-base) 82%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
+.dshm-reco-card,.dshm-acard,.dshm-prv,.dshm-sync,.dshm-dl,.dshm-wcard{background:color-mix(in srgb,var(--dsw-alias-bg-layer-1) 66%,transparent);}
+/* 历史页：统计卡 / 常听卡 / 不喜欢卡全部只留描边不铺底，背景整片透出来；
+   sticky 日期头不能全透明（滚动时行会透进文字），改成 46% 底色 + 12px 磨砂。 */
+.dshm-hist-hero,.dshm-top-col,.dshm-dislikes{background:transparent;}
+.dshm-hgroup-label{background:color-mix(in srgb,var(--dsw-alias-bg-base) 46%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+.dshm-group-head,.dshm-set-foot{background:color-mix(in srgb,var(--dsw-alias-bg-base) 82%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
 @media (prefers-reduced-motion:reduce){
   .dshm-eq-on i,.dshm-tab-dot,.dshm-skel-box,.dshm-spin,.dshm-state-spin,.dshm-mini,.dshm-mini-fab,.dshm-drawer,.dshm-welcome-fish,.dshm-settings,.dshm-logo,.dshm-toast,.dshm-dl-float,.dshm-dl-pill,.dshm-modal,.dshm-modal-mask{animation:none;}
   .dshm-row,.dshm-iconbtn,.dshm-chipbtn,.dshm-playbtn,.dshm-slider-thumb,.dshm-mini-progress>div,.dshm-reco-card,.dshm-dl-bar>div,.dshm-dl-pill-bar>span,.dshm-like-btn,.dshm-playround,.dshm-artcard,.dshm-mode-btn,.dshm-prv,.dshm-prv-chev,.dshm-lyric-line,.dshm-row-actions,.dshm-srow-tail,.dshm-playcover::after,.dshm-playcover-ico{transition:none;}
@@ -3560,7 +3571,6 @@ window.__ModuleLoader__.load({
      * 单一 ui.bg 存储 + prefs 持久化 → 面板、迷你条、悬浮球天然同步。 */
     const BG_PRESETS = [
       { id: 'logo', nameKey: 'bgLogo' },
-      { id: 'plain', nameKey: 'bgPlain' },
       { id: 'mist', nameKey: 'bgMist' },
       { id: 'dune', nameKey: 'bgDune' },
       { id: 'vinyl', nameKey: 'bgVinyl' },
@@ -5922,23 +5932,27 @@ window.__ModuleLoader__.load({
       }, [view, player, goBack, onboarding]);
 
       if (view === 'settings') {
-        return h(SettingsView, {
-          t, onboarding, useOnboarding, sync, useSync, likedSync, useLikedSync,
-          useUi, onBg: (id) => { ui.set({ bg: id }); writePrefs({ bg: id }); },
-          section: settingsSection,
-          /* 导入结果里的「查看我喜欢」：回曲库并直接打开「我喜欢」子页 */
-          onViewLikes: () => { ui.set({ view: 'library', settingsSection: null, libTabWish: 'likes', navStack: [] }); },
-          /* 退出设置 = 回到进设置之前的那一页（首启除外：首启没有上一页，回曲库） */
-          onExit: exitSettings,
-          onRoute: (target) => {
-            ui.set({ settingsSection: null, navStack: [] });
-            if (target === 'library') {
-              library.load();
-              setTimeout(() => library.load(), 1500);
-            }
-            ui.set({ view: target === 'library' ? 'library' : 'reco' });
-          },
-        });
+        /* 设置页也铺面板背景：和主面板同一个 BgLayer（ui.bg 单一来源），点选预设立刻在本页生效，不用回主面板看。
+           之前这里直接 return SettingsView，没包 .dshm-panel 也没挂背景层，所以设置页一直是空白底。 */
+        return h('div', { className: 'dshm-panel', 'data-dshm-view': 'settings' },
+          h(BgLayer, { bg, kind: 'panel' }),
+          h(SettingsView, {
+            t, onboarding, useOnboarding, sync, useSync, likedSync, useLikedSync,
+            useUi, onBg: (id) => { ui.set({ bg: id }); writePrefs({ bg: id }); },
+            section: settingsSection,
+            /* 导入结果里的「查看我喜欢」：回曲库并直接打开「我喜欢」子页 */
+            onViewLikes: () => { ui.set({ view: 'library', settingsSection: null, libTabWish: 'likes', navStack: [] }); },
+            /* 退出设置 = 回到进设置之前的那一页（首启除外：首启没有上一页，回曲库） */
+            onExit: exitSettings,
+            onRoute: (target) => {
+              ui.set({ settingsSection: null, navStack: [] });
+              if (target === 'library') {
+                library.load();
+                setTimeout(() => library.load(), 1500);
+              }
+              ui.set({ view: target === 'library' ? 'library' : 'reco' });
+            },
+          }));
       }
 
       const tabs = [

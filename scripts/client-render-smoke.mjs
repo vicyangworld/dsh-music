@@ -687,13 +687,27 @@ check('floating badge hides the bar controls', !has(collapsedTree, (n) => cls(n)
     /\.dshm-panel\{--dshm-axis:1160px;--dshm-pad:clamp\(16px,2\.4vw,32px\);--dshm-love:#e5485b;position:relative;container-type:inline-size;/.test(src)
     && /data-dshm-bg-kind="panel"\] \.dshm-bg-logo\{right:-24px;bottom:-28px;width:clamp\(200px,40cqw,460px\);/.test(src));
   check('content lifted above background layer', /\.dshm-panel > \.dshm-header,\.dshm-panel > \.dshm-body\{z-index:1;\}/.test(src) && /\.dshm-mini-inner,\.dshm-mini-seek,\.dshm-mini-lyrics\{position:relative;z-index:1;\}/.test(src));
-  check('plain/mist/dune presets carry distinct motifs (dot grid / fog banks / dune ridges)',
-    /\.dshm-bg\[data-dshm-bg="plain"\]\{background:radial-gradient\(circle,color-mix\(in srgb,var\(--dsw-alias-label-primary\) 7%,transparent\) 1px,transparent 1\.4px\);background-size:22px 22px;\}/.test(src)
-    && /data-dshm-bg="mist"\]\{background:radial-gradient\(120% 26% at 50% 12%,color-mix\(in srgb,var\(--dshm-brand\) 14%,transparent\),transparent 70%\),radial-gradient\(140% 30% at 30% 46%,color-mix\(in srgb,var\(--dsw-alias-label-tertiary\) 16%,transparent\),transparent 72%\),radial-gradient\(120% 26% at 70% 82%,color-mix\(in srgb,var\(--dshm-brand\) 10%,transparent\),transparent 70%\);\}/.test(src)
-    && /data-dshm-bg="dune"\]\{background:radial-gradient\(90% 70% at 12% 118%,color-mix\(in srgb,#b98a5e 20%,transparent\),transparent 62%\),radial-gradient\(110% 80% at 88% 124%,color-mix\(in srgb,#7d8fa6 16%,transparent\),transparent 66%\),linear-gradient\(180deg,color-mix\(in srgb,#b98a5e 6%,transparent\),transparent 40%\);\}/.test(src));
-  check('content surfaces translucent + sticky heads frosted (wash not chopped)',
-    /\.dshm-hist-hero,\.dshm-top-col,\.dshm-dislikes,\.dshm-reco-card,\.dshm-acard,\.dshm-prv,\.dshm-sync,\.dshm-dl\{background:color-mix\(in srgb,var\(--dsw-alias-bg-layer-1\) 66%,transparent\);\}/.test(src)
-    && /\.dshm-hgroup-label,\.dshm-group-head,\.dshm-set-foot\{background:color-mix\(in srgb,var\(--dsw-alias-bg-base\) 82%,transparent\);backdrop-filter:blur\(10px\);-webkit-backdrop-filter:blur\(10px\);\}/.test(src));
+  check('mist/dune/vinyl presets carry distinct motifs (teal-mint-peach fog / sand ridges+sky / grooves+violet label)',
+    /data-dshm-bg="mist"\]\{background-image:radial-gradient\(110% 55% at 8% -8%,color-mix\(in srgb,#4fb6b0 44%,transparent\),transparent 70%\),/.test(src)
+    && /data-dshm-bg="dune"\]\{background-image:radial-gradient\(95% 80% at 100% 112%,color-mix\(in srgb,#e9a962 60%,transparent\),transparent 70%\),/.test(src)
+    && /data-dshm-bg="vinyl"\]\{background-image:radial-gradient\(45% 32% at 94% 112%,color-mix\(in srgb,#8b5cf6 46%,transparent\) 0%,/.test(src)
+    && /repeating-radial-gradient\(circle at 94% 112%,color-mix\(in srgb,var\(--dsw-alias-label-primary\) 17%,transparent\) 0 1px,transparent 1px 12px\);\}/.test(src));
+  check('every redone preset has a dark-theme variant (host body[data-ds-dark-theme]) that is stronger, not weaker',
+    ['mist', 'dune', 'vinyl'].every((id) => new RegExp('\\[data-ds-dark-theme\\] \\.dshm-bg\\[data-dshm-bg="' + id + '"\\]\\{background-image:').test(src))
+    && /\[data-ds-dark-theme\] \.dshm-bg\[data-dshm-bg="mist"\]\{background-image:radial-gradient\(110% 55% at 8% -8%,color-mix\(in srgb,#4fb6b0 56%,transparent\)/.test(src)
+    && /\[data-ds-dark-theme\] \.dshm-bg\[data-dshm-bg="vinyl"\]\{background-image:[^}]*var\(--dsw-alias-label-primary\) 24%,transparent\) 0 1px/.test(src)
+    && !/\[data-ds-dark-theme\] \.dshm-bg\[data-dshm-bg="logo"\]/.test(src));
+  check('dot-matrix (plain) preset is fully removed: no CSS rule, no preset entry, no locale key',
+    !/data-dshm-bg="plain"\]/.test(src) && !/id: 'plain'/.test(src) && !/bgPlain/.test(src)
+    && /const BG_PRESETS = \[\s*\{ id: 'logo', nameKey: 'bgLogo' \},\s*\{ id: 'mist', nameKey: 'bgMist' \},\s*\{ id: 'dune', nameKey: 'bgDune' \},\s*\{ id: 'vinyl', nameKey: 'bgVinyl' \},\s*\];/.test(src));
+  check('history cards transparent (border only) so the wash runs through; other big surfaces 66%; sticky heads frosted',
+    /\.dshm-hist-hero,\.dshm-top-col,\.dshm-dislikes\{background:transparent;\}/.test(src)
+    && /\.dshm-reco-card,\.dshm-acard,\.dshm-prv,\.dshm-sync,\.dshm-dl,\.dshm-wcard\{background:color-mix\(in srgb,var\(--dsw-alias-bg-layer-1\) 66%,transparent\);\}/.test(src)
+    && /\.dshm-hgroup-label\{background:color-mix\(in srgb,var\(--dsw-alias-bg-base\) 46%,transparent\);backdrop-filter:blur\(12px\);-webkit-backdrop-filter:blur\(12px\);\}/.test(src)
+    && /\.dshm-group-head,\.dshm-set-foot\{background:color-mix\(in srgb,var\(--dsw-alias-bg-base\) 82%,transparent\);backdrop-filter:blur\(10px\);-webkit-backdrop-filter:blur\(10px\);\}/.test(src));
+  check('settings page sits inside the panel shell above its own background layer',
+    /\.dshm-panel > \.dshm-settings\{flex:1 1 0;min-height:0;height:auto;z-index:1;\}/.test(src)
+    && /if \(view === 'settings'\) \{[\s\S]{0,400}return h\('div', \{ className: 'dshm-panel', 'data-dshm-view': 'settings' \},\s*h\(BgLayer, \{ bg, kind: 'panel' \}\),\s*h\(SettingsView,/.test(src));
 }
 
 state.miniHidden = true;
@@ -796,17 +810,32 @@ check('returning settings view renders the title row (no first-run hero) + three
 const backBtn = walk(realSettingsTree).find((n) => cls(n) === 'dshm-wbtn' && (n.children || []).includes('settingsBack'));
 check('returning foot has back + save', !!backBtn && has(realSettingsTree, (n) => cls(n) === 'dshm-wbtn dshm-wbtn-primary' && (n.children || []).includes('settingsSave')));
 
-/* 5a3b) 设置页背景选择：五个 radio，点选立即写 ui store + prefs（面板/迷你条同步） */
+/* 5a3b) 设置页背景选择：四个 radio（小蓝鱼/晨雾/暖沙/唱片，点阵版已删），点选立即写 ui store + prefs（面板/迷你条同步） */
 {
   const tiles = walk(realSettingsTree).filter((n) => cls(n) === 'dshm-bg-tilebtn');
-  check('settings offers five background presets with logo checked', tiles.length === 5 && tiles[0].props['aria-checked'] === true
-    && tiles.slice(1).every((n) => n.props['aria-checked'] === false));
+  const tileIds = tiles.map((n) => walk(n).map((x) => (x.props || {})['data-dshm-bg']).find(Boolean));
+  check('settings offers four background presets in order (logo/mist/dune/vinyl) with logo checked', tiles.length === 4
+    && tileIds.join(',') === 'logo,mist,dune,vinyl' && tiles[0].props['aria-checked'] === true
+    && tiles.slice(1).every((n) => n.props['aria-checked'] === false), 'ids=' + tileIds.join(','));
   const beforeBg = uiStore.getSnapshot().bg;
-  tiles[3].props.onClick();
+  tiles[2].props.onClick();
   check('background pick writes ui store and prefs immediately', uiStore.getSnapshot().bg === 'dune' && beforeBg === 'logo'
     && JSON.parse(localStorage.getItem('dsh-music.prefs') || '{}').bg === 'dune');
   const dunePanel = expand(music(realProps));
   check('picked background reaches panel without reload', walk(dunePanel).some((n) => cls(n) === 'dshm-bg' && (n.props || {})['data-dshm-bg'] === 'dune'));
+  /* 设置页本身也铺背景：根是 .dshm-panel，第一个子节点是 panel 级 BgLayer（跟随刚点选的预设），第二个是 .dshm-settings */
+  const root = dunePanel;
+  const kids = (root && root.children) || [];
+  check('settings page is wrapped in the panel shell with its own panel-kind background layer (live)',
+    !!root && cls(root) === 'dshm-panel' && root.props['data-dshm-view'] === 'settings'
+    && kids.length === 2 && cls(kids[0]) === 'dshm-bg' && kids[0].props['data-dshm-bg'] === 'dune' && kids[0].props['data-dshm-bg-kind'] === 'panel'
+    && cls(kids[1]) === 'dshm-settings',
+    'root=' + (root && cls(root)) + ' kids=' + kids.map((k) => (k && typeof k === 'object' ? cls(k) + ':' + ((k.props || {})['data-dshm-bg'] || '') : typeof k)).join('|'));
+  const mistState = { ...uiStore.getSnapshot(), bg: 'mist' };
+  uiStore.set({ bg: 'mist' });
+  const mistSettings = expand(music(realProps));
+  check('switching preset re-renders the settings page background immediately (same ui.bg source as the main panel)',
+    cls(mistSettings) === 'dshm-panel' && mistSettings.children[0].props['data-dshm-bg'] === 'mist' && mistState.bg === 'mist');
   uiStore.set({ bg: 'logo' });
   localStorage.setItem('dsh-music.prefs', JSON.stringify({ ...JSON.parse(localStorage.getItem('dsh-music.prefs') || '{}'), bg: 'logo' }));
 }
