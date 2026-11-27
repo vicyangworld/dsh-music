@@ -153,21 +153,48 @@ function trimLightBorder(size, modules) {
   return { size: n, modules: Array.from(out) }
 }
 
-/** 简易 cookie 罐：按名字记值（域名/路径属性按 qq.com 全量回传，仅用于这条固定跳转链） */
-/** 会话 cookie 罐（内存）。按浏览器的规则做事：带 Domain 属性的按域匹配，没带的是 host-only；
- *  Max-Age=0 / Expires 已过期 / 空值带过期属性 = 删除。真实抓包对照：check_sig 会用删除语义清掉
- *  p_skey_forbid，如果把它当成普通 cookie 带到 authorize，服务端直接判成未登录（踢回 show 页）。 */
+/** 会话 cookie 罐（内存）。按浏览器（RFC 6265）规则做事：
+ *  - 按 (name, domain, path) 隔离存储：真实抓包中 check_sig 会在同一响应里先为 .graph.qq.com 下发有效
+ *    p_uin / p_skey / pt4_token，再对另一域用 Expires=1970 清旧 cookie（ptqrlogin 的 ptcz 同理）；
+ *    若只按 name 建表，后一条过期删除会把刚拿到的有效登录态整条抹掉。
+ *  - 带 Domain 属性的按域匹配（且响应主机必须能域匹配该 Domain），没带的是 host-only；按 path 前缀匹配。
+ *  - Max-Age=0 / Expires 已过期 / 空值带过期属性 = 仅删除对应 (name, domain, path) 的条目（例如 check_sig 清掉 p_skey_forbid）。 */
 function createJar() {
-  const map = new Map() /* name → { value, domain, hostOnly }；domain '' = 来路不明（seed 进来的），所有主机都带 */
-  const hostnameOf = (url) => { try { return new URL(String(url)).hostname } catch { return '' } }
-  const matches = (c, host) => {
-    if (!c.domain) return true /* seed 进来的（来路不明）cookie：所有主机都带 */
-    if (!host) return false
-    return c.hostOnly ? host === c.domain : host === c.domain || host.endsWith('.' + c.domain)
+  const map = new Map() /* `${name}\0${domain}\0${path}` → { name, value, domain, path, hostOnly }；domain '' = seed 进来的通配 cookie */
+  const parseUrl = (url) => {
+    if (!url) return { host: '', path: '/' }
+    try {
+      const u = new URL(String(url))
+      return { host: u.hostname.toLowerCase(), path: u.pathname || '/' }
+    } catch {
+      return { host: String(url).toLowerCase(), path: '/' }
+    }
   }
+  const domainMatches = (host, domain, hostOnly) => {
+    if (!domain) return true /* seed 进来的（来路不明）cookie：所有主机都带 */
+    if (!host) return false
+    return hostOnly ? host === domain : host === domain || host.endsWith('.' + domain)
+  }
+  const pathMatches = (reqPath, cookiePath) => {
+    if (!cookiePath || cookiePath === '/') return true
+    if (reqPath === cookiePath) return true
+    return reqPath.startsWith(cookiePath.endsWith('/') ? cookiePath : cookiePath + '/')
+  }
+  const matching = (url) => {
+    const { host, path } = parseUrl(url)
+    const out = []
+    for (const c of map.values()) {
+      if (host && (!domainMatches(host, c.domain, c.hostOnly) || !pathMatches(path, c.path))) continue
+      out.push(c)
+    }
+    /* RFC 6265 §5.4：更具体的 path / domain 排在前面（如 graph.qq.com 优先于 qq.com） */
+    out.sort((a, b) => (b.path.length - a.path.length) || (b.domain.length - a.domain.length) || (Number(b.hostOnly) - Number(a.hostOnly)))
+    return out
+  }
+  const keyOf = (name, domain, path) => `${name}\0${domain}\0${path}`
   return {
     absorb(res, requestUrl) {
-      const host = hostnameOf(requestUrl || (res && res.url) || '')
+      const { host } = parseUrl(requestUrl || (res && res.url) || '')
       const list = typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : []
       for (const line of list) {
         const parts = String(line).split(';')
@@ -181,39 +208,57 @@ function createJar() {
           const j = a.indexOf('=')
           if (j > 0) attrs[a.slice(0, j).trim().toLowerCase()] = a.slice(j + 1).trim()
         }
+        const rawDomain = String(attrs.domain || '').replace(/^\./, '').toLowerCase()
+        const hostOnly = !rawDomain
+        const domain = rawDomain || host
+        if (!domain) continue
+        /* RFC 6265 §5.3：响应主机只能为自身或父域设 cookie（如 xui.ptlogin2.qq.com 不能为 ui.ptlogin2.qq.com 设） */
+        if (host && rawDomain && !domainMatches(host, rawDomain, false)) continue
+        const rawPath = String(attrs.path || '')
+        const path = rawPath.startsWith('/') ? rawPath : '/'
+        const key = keyOf(name, domain, path)
         let expired = attrs['max-age'] != null && Number(attrs['max-age']) <= 0
         if (attrs.expires) {
           const t = Date.parse(attrs.expires)
           if (Number.isFinite(t) && t <= Date.now()) expired = true
         }
         if (value === '' && (attrs.expires != null || attrs['max-age'] != null)) expired = true
-        if (expired) { map.delete(name); continue }
-        const domain = String(attrs.domain || '').replace(/^\./, '').toLowerCase() || host
-        if (!domain) continue
-        map.set(name, { value, domain, hostOnly: !attrs.domain })
+        if (expired) { map.delete(key); continue }
+        map.set(key, { name, value, domain, path, hostOnly })
       }
     },
     /** 某个 URL（或主机名）会带上的 cookie；不传 = 全部 */
     header(url) {
-      const host = url ? (hostnameOf(url) || String(url)) : ''
-      return [...map.entries()]
-        .filter(([, c]) => !host || matches(c, host))
-        .map(([k, c]) => `${k}=${c.value}`).join('; ')
+      return matching(url).map((c) => `${c.name}=${c.value}`).join('; ')
     },
     /** 某个 URL 会带上的 cookie 名（诊断用） */
-    namesFor: (url) => [...map.entries()].filter(([, c]) => matches(c, hostnameOf(url) || String(url || ''))).map(([k]) => k),
-    get: (name) => (map.get(name) || {}).value || '',
-    names: () => [...map.keys()],
-    set(name, value, domain = '') { if (name && value != null && value !== '') map.set(name, { value: String(value), domain, hostOnly: false }) },
-    drop: (name) => { map.delete(name) },
+    namesFor: (url) => matching(url).map((c) => c.name),
+    get(name, url) {
+      const hit = matching(url).find((c) => c.name === name)
+      return (hit && hit.value) || ''
+    },
+    names: () => [...new Set([...map.values()].map((c) => c.name))],
+    set(name, value, domain = '', path = '/') {
+      if (!name || value == null || value === '') return
+      const d = String(domain || '').replace(/^\./, '').toLowerCase()
+      const p = String(path || '/').startsWith('/') ? String(path) : '/'
+      map.set(keyOf(name, d, p), { name, value: String(value), domain: d, path: p, hostOnly: false })
+    },
+    drop(name) {
+      for (const [k, c] of map.entries()) if (c.name === name) map.delete(k)
+    },
     seed(header, domain = '') {
+      const d = String(domain || '').replace(/^\./, '').toLowerCase()
       for (const pair of String(header || '').split(';')) {
         const i = pair.indexOf('=')
-        if (i > 0) map.set(pair.slice(0, i).trim(), { value: pair.slice(i + 1).trim(), domain, hostOnly: false })
+        if (i <= 0) continue
+        const name = pair.slice(0, i).trim()
+        const value = pair.slice(i + 1).trim()
+        if (name) map.set(keyOf(name, d, '/'), { name, value, domain: d, path: '/', hostOnly: false })
       }
     },
     copyFrom(other) {
-      for (const [name, c] of other.entries()) map.set(name, { ...c })
+      for (const [k, c] of other.entries()) map.set(k, { ...c })
     },
     entries: () => [...map.entries()],
   }
@@ -345,9 +390,9 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
     return pick ? { url: pick } : null
   }
 
-  /** g_tk：QQ 互联的防 CSRF 值 = hash33 变体（种子 5381）作用于 p_skey cookie */
+  /** g_tk：QQ 互联的防 CSRF 值 = hash33 变体（种子 5381）作用于 graph.qq.com 对应的 p_skey cookie */
   function gtkOf(jar) {
-    const str = jar.get('p_skey') || ''
+    const str = jar.get('p_skey', AUTHORIZE_URL) || ''
     let hash = 5381
     for (let i = 0; i < str.length; i++) hash += (hash << 5) + str.charCodeAt(i)
     return hash & 0x7fffffff
@@ -380,7 +425,7 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
     f.set('g_tk', String(gtkOf(jar)))
     f.set('auth_time', String(Date.now()))
     /* 官方页 getUuid()：有 ui cookie 用它，否则生成一个并写回 cookie —— 表单里的 ui 和 cookie 必须一致 */
-    const ui = jar.get('ui') || uuid()
+    const ui = jar.get('ui', AUTHORIZE_URL) || uuid()
     jar.set('ui', ui, 'graph.qq.com')
     f.set('ui', ui)
     return { url: AUTHORIZE_URL, method: 'POST', body: f.toString(), headers: { ...NAV_HEADERS, Referer: AUTHORIZE_PAGE, Origin: 'https://graph.qq.com' } }
@@ -421,11 +466,9 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
     const hops = []
     const seen = []
     for (let hop = 0; hop < 10 && url; hop++) {
-      if (seen.includes(url)) {
-        lastText = text || lastText
-        break
-      }
+      if (seen.includes(url)) break
       seen.push(url)
+      const sentNames = jar.namesFor(url)
       const init = { headers: { 'User-Agent': QQ_UA, Accept: 'text/html,application/json,*/*', Referer: referer, Cookie: jar.header(url) } }
       if (post) {
         init.method = 'POST'
@@ -438,14 +481,21 @@ export function createQQLogin({ fetchImpl, timeoutMs = 15000 } = {}) {
       jar.absorb(res, url)
       lastStatus = res.status
       const text = await res.text().catch(() => '')
+      lastText = text
       const u = new URL(url)
       hops.push(`${u.hostname}${u.pathname}→${res.status}`)
       /* 授权表单这一跳最关键：被踢回 show = 服务端没认登录态。记下它带了哪些 cookie（只记名字）和跳去了哪 */
       if (/\/oauth2\.0\/authorize/.test(u.pathname)) {
         const to = res.headers.get('location')
         let toShown = '无跳转'
-        if (to) { try { const t = new URL(to, url); toShown = t.hostname + t.pathname } catch { toShown = '？' } }
-        hops[hops.length - 1] += `→${toShown}（cookie 名：${jar.namesFor(url).join(',') || '无'}）`
+        if (to) {
+          try {
+            const t = new URL(to, url)
+            const errCode = t.searchParams.get('error')
+            toShown = t.hostname + t.pathname + (errCode ? `?error=${errCode}` : '')
+          } catch { toShown = '？' }
+        }
+        hops[hops.length - 1] += `→${toShown}（cookie 名：${sentNames.join(',') || '无'}）`
       }
       /* 到达落点（wx_redirect.html?…code=…）：授权码就在 URL 里，页面本身不用再解析 */
       if (url.includes('/portal/wx_redirect.html')) {

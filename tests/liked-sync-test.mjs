@@ -388,7 +388,7 @@ await test('QQ 扫码：xlogin → ptqrshow（qrsig）→ 轮询 66/67/0 → che
   const fn = mockFetch(async (call) => {
     const u = String(call.url.href || call.url)
     if (u.startsWith('https://xui.ptlogin2.qq.com/cgi-bin/xlogin?')) {
-      return new Response('<html><script>var jsPath = \'https://qq-web.cdn-go.cn/monorepo/526f1ebd/ptlogin/js/c_login_2.js\'</script></html>', { headers: [['set-cookie', 'pt_login_sig=LS1; Path=/; Domain=ptlogin2.qq.com'], ['set-cookie', 'pt_clientip=1.2.3.4; Path=/'], ['content-type', 'text/html']] })
+      return new Response('<html><script>var jsPath = \'https://qq-web.cdn-go.cn/monorepo/526f1ebd/ptlogin/js/c_login_2.js\'</script></html>', { headers: [['set-cookie', 'pt_login_sig=LS1; Path=/; Domain=ptlogin2.qq.com'], ['set-cookie', 'pt_clientip=1.2.3.4; Path=/'], ['set-cookie', 'pt_user_id=BAD_DOM; Path=/; Domain=ui.ptlogin2.qq.com'], ['content-type', 'text/html']] })
     }
     if (u.startsWith('https://xui.ptlogin2.qq.com/ssl/ptqrshow?')) {
       return new Response(QQ_QR_PNG, { headers: [['set-cookie', 'qrsig=QRSIG1; Path=/; Domain=ptlogin2.qq.com; HttpOnly'], ['content-type', 'image/png']] })
@@ -625,6 +625,70 @@ try {
   const c2 = await bad.qrCreate()
   await assert.rejects(bad.qrPoll(c2), (err) => Boolean(err) && err.status === 502 && /跳转地址异常（evil\.example\.com\/check_sig/.test(err.message))
 })
+  await test('QQ 扫码：同响应跨域同名删除不误删 .graph.qq.com 登录态（p_uin/p_skey/pt4_token/ptcz）', async () => {
+    const fn = mockFetch(async (call) => {
+      const u = String(call.url.href || call.url)
+      if (u.startsWith('https://xui.ptlogin2.qq.com/cgi-bin/xlogin?')) {
+        return new Response('<html></html>', { headers: [['set-cookie', 'pt_login_sig=LS_D; Path=/; Domain=ptlogin2.qq.com'], ['set-cookie', 'pt_user_id=IGNORE; Path=/; Domain=ui.ptlogin2.qq.com']] })
+      }
+      if (u.startsWith('https://xui.ptlogin2.qq.com/ssl/ptqrshow?')) {
+        return new Response(QQ_QR_PNG, { headers: [['set-cookie', 'qrsig=QRSIG_D; Path=/; Domain=ptlogin2.qq.com']] })
+      }
+      if (u.startsWith('https://xui.ptlogin2.qq.com/ssl/ptqrlogin?')) {
+        assert.doesNotMatch(String(call.headers.Cookie), /pt_user_id=IGNORE/, '跨无关域的 Set-Cookie 不入罐')
+        /* 真实抓包：ptqrlogin 同响应为 qq.com 下发 RK/ptcz，同时清另一域的 ptcz */
+        return new Response("ptuiCB('0','0','https://ssl.ptlogin2.graph.qq.com/check_sig?pttype=1&uin=529301432&service=ptqrlogin&ptsigx=zz','0','登录成功！', '阿强')", {
+          headers: [
+            ['set-cookie', 'RK=RK1; Path=/; Domain=qq.com'],
+            ['set-cookie', 'ptcz=PTCZ1; Path=/; Domain=qq.com'],
+            ['set-cookie', 'ptcz=; Expires=Fri, 02-Jan-1970 00:00:00 GMT; Path=/; Domain=ptlogin2.qq.com'],
+            ['content-type', 'application/javascript'],
+          ],
+        })
+      }
+      if (u.startsWith('https://ssl.ptlogin2.graph.qq.com/check_sig?')) {
+        /* 真实抓包顺序：先在 graph.qq.com 下发 p_uin/pt4_token/p_skey/pt_oauth_token，再对另一域用 Expires=1970 清同名旧 cookie */
+        return new Response(null, {
+          status: 302,
+          headers: [
+            ['location', 'https://graph.qq.com/oauth2.0/login_jump'],
+            ['set-cookie', 'p_uin=o0529301432; Path=/; Domain=graph.qq.com'],
+            ['set-cookie', 'pt4_token=PT4_G; Path=/; Domain=graph.qq.com'],
+            ['set-cookie', 'p_skey_forbid=deleted; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=graph.qq.com'],
+            ['set-cookie', 'p_skey=PS_GRAPH; Path=/; Domain=graph.qq.com'],
+            ['set-cookie', 'pt_oauth_token=OT1; Path=/; Domain=graph.qq.com'],
+            ['set-cookie', 'p_uin=; Expires=Fri, 02-Jan-1970 00:00:00 GMT; Path=/; Domain=qq.com'],
+            ['set-cookie', 'p_skey=; Expires=Fri, 02-Jan-1970 00:00:00 GMT; Path=/; Domain=qq.com'],
+            ['set-cookie', 'pt4_token=; Expires=Fri, 02-Jan-1970 00:00:00 GMT; Path=/; Domain=qq.com'],
+            ['set-cookie', 'pt_login_type=3; Path=/; Domain=graph.qq.com; HttpOnly'],
+          ],
+        })
+      }
+      if (u === 'https://graph.qq.com/oauth2.0/login_jump') {
+        return new Response('<script>window.parent.postMessage("{\\"action\\":\\"qclogin_success\\"}", "https://graph.qq.com")</script>')
+      }
+      if (u === 'https://graph.qq.com/oauth2.0/authorize' && call.method === 'POST') {
+        const cookie = String(call.headers.Cookie || '')
+        for (const expected of [/RK=RK1/, /ptcz=PTCZ1/, /p_uin=o0529301432/, /pt4_token=PT4_G/, /p_skey=PS_GRAPH/, /pt_oauth_token=OT1/, /pt_login_type=3/, /ui=/]) {
+          assert.match(cookie, expected, `authorize 必须保留有效登录态 cookie: ${expected}`)
+        }
+        assert.doesNotMatch(cookie, /p_skey_forbid/)
+        const f = new URLSearchParams(call.body)
+        const expectedGtk = String((() => { let h = 5381; for (const ch of 'PS_GRAPH') h += (h << 5) + ch.charCodeAt(0); return h & 0x7fffffff })())
+        assert.equal(f.get('g_tk'), expectedGtk, 'g_tk 必须用 graph.qq.com 对应的有效 p_skey 计算，不能退化成 5381')
+        return new Response(null, { status: 302, headers: { location: 'https://y.qq.com/portal/wx_redirect.html?login_type=1&code=CODE_GRAPH&state=state' } })
+      }
+      if (u === 'https://u.y.qq.com/cgi-bin/musicu.fcg' && call.method === 'POST') {
+        assert.equal(JSON.parse(call.body).req.param.code, 'CODE_GRAPH')
+        return new Response(JSON.stringify({ code: 0, req: { code: 0, data: { musickey: 'QK_G', musicid: '529301432' } } }), { headers: [['content-type', 'application/json']] })
+      }
+      return undefined
+    })
+    const login = createQQLogin({ fetchImpl: fn })
+    const done = await login.qrPoll(await login.qrCreate())
+    assert.equal(done.code, 803)
+    assert.equal(done.cookie, 'qqmusic_key=QK_G; qm_keyst=QK_G; uin=529301432; qqmusic_uin=529301432')
+  })
   await test('QQ 扫码：中转页是授权确认表单 → 自动提交拿 code；JSON 转义 URL 也能识别；拿不到 code 时错误文案带跳转链和末页摘要', async () => {
     const mk = (loginJumpBody) => mockFetch(async (call) => {
       const u = String(call.url.href || call.url)
