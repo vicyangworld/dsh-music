@@ -40,7 +40,7 @@ export function apply(ctx, config = {}) {
   const search = createSearch({ library, storage, logger })
   const preview = createPreview({ storage, config, logger })
   const likes = createLikes({ storage, library, download, logger, history })
-  // 十三期：导入曲目后台找音源（只搜不下载；命中写回 likes.json 的 source，前端据此换成"可入库"按钮）
+  // 十三期：导入曲目后台找音源（只搜不下载；命中写回 likes.json 的 source，前端据此换成实心入库图标）
   const sourceScan = createSourceScan({ likes, search, logger })
   const reco = createReco({ history, library, storage, config, logger })
   const starter = createStarter({ storage, library, config, logger })

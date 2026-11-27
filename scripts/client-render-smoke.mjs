@@ -79,6 +79,18 @@ const windowMock = {
 };
 const fetchCalls = [];
 const fetchBodies = [];
+/* 5z3：可变历史 mock —— POST 追加事件并同步更新统计，验证「播放事件落库 → 统计/排行实时刷新」 */
+let histEventsMock = [];
+let histStatsMock = { totalPlays: 0, totalSeconds: 0, uniqueSongs: 0, uniqueArtists: 0, topSongs: [], topArtists: [], daily: [], skippedCount: 0, avgCompletion: 0 };
+const histAppendMock = (ev) => {
+  const entry = { trackId: ev.trackId, title: '测试歌曲', artist: '测试歌手', timestamp: Date.now(), completion: ev.completion, skipped: !!ev.skipped };
+  histEventsMock = [entry, ...histEventsMock];
+  const plays = histStatsMock.totalPlays + 1;
+  histStatsMock = { ...histStatsMock, totalPlays: plays, skippedCount: histStatsMock.skippedCount + (ev.skipped ? 1 : 0), topSongs: [{ title: '测试歌曲', artist: '测试歌手', trackId: ev.trackId, plays }], topArtists: [{ name: '测试歌手', plays }] };
+  return entry;
+};
+/* HistoryView 驻留轮询用 setInterval 登记（mock useEffect 不跑 cleanup，记录即可断言） */
+const intervalCalls = [];
 let qqConnected = false; /* 5w：新用户先未连接（三步引导），粘贴后变已连接 */
 const fetchMock = async (url, init) => {
   fetchCalls.push(url);
@@ -116,12 +128,48 @@ const fetchMock = async (url, init) => {
               ? { provider: 'qq', at: 1, durationMs: 5, total: 10, unavailable: 1, playlistName: '我喜欢', added: 3, existed: 5, skippedDisliked: 1, removed: 2, removedItems: [{ title: '旧歌', artist: '某人' }] }
               : url.includes('/library/preview')
                 ? { status: 'ready', audioUrl: '/dsh-music/preview/abc.m4a' }
-                : { imageUrl: 'http://img/orig.jpg', thumbnailUrl: 'http://img/thumb.jpg' };
+                : url.includes('/dsh-music/api/history/stats')
+                  ? histStatsMock
+                  : url.includes('/dsh-music/api/history')
+                    ? (init && init.method === 'POST'
+                      ? histAppendMock(JSON.parse(String(init.body)))
+                      : { events: histEventsMock, total: histEventsMock.length })
+                    : { imageUrl: 'http://img/orig.jpg', thumbnailUrl: 'http://img/thumb.jpg' };
   return { ok: true, json: async () => body };
 };
+/* ---- minimal HTMLAudioElement mock: lets the real player engine load/seek ----
+ * Mirrors the browser contract the player relies on: setting currentTime moves
+ * the playhead and fires timeupdate (position follows the audio, not the wish);
+ * load() surfaces metadata; play()/pause() fire their events. */
+const audioInstances = [];
+class AudioMock {
+  constructor() {
+    this._ls = {}; this._time = 0; this.duration = NaN; this.paused = true;
+    this.src = ''; this.preload = ''; this.volume = 1; this.muted = false; this.readyState = 0;
+    audioInstances.push(this);
+  }
+  addEventListener(n, f) { (this._ls[n] = this._ls[n] || []).push(f); }
+  removeEventListener(n, f) { this._ls[n] = (this._ls[n] || []).filter((x) => x !== f); }
+  _emit(n) { for (const f of [...(this._ls[n] || [])]) f({ type: n }); }
+  load() {
+    if (!this.src) return;
+    this.readyState = 4; this.duration = 200;
+    this._emit('loadedmetadata'); this._emit('durationchange'); this._emit('canplay');
+  }
+  play() { this.paused = false; this._emit('play'); this._emit('playing'); return Promise.resolve(); }
+  pause() { this.paused = true; this._emit('pause'); }
+  removeAttribute(n) { if (n === 'src') { this.src = ''; this.readyState = 0; this.duration = NaN; } }
+  get currentTime() { return this._time; }
+  set currentTime(v) {
+    if (this.readyState === 0) throw new Error('InvalidStateError: no media loaded');
+    this._time = Math.max(0, Math.min(v, isFinite(this.duration) ? this.duration : v));
+    this._emit('seeking'); this._emit('timeupdate'); this._emit('seeked');
+  }
+}
 const sandbox = { window: windowMock, localStorage, console, setTimeout, clearTimeout, fetch: fetchMock,
-  document: { createElement: () => ({ setAttribute: noop, textContent: '', remove: noop }), head: { appendChild: noop }, addEventListener: noop, removeEventListener: noop },
-  TextEncoder };
+  setInterval: (fn, ms) => { intervalCalls.push({ fn, ms }); return intervalCalls.length; }, clearInterval: noop,
+  document: { baseURI: 'dsh-app://app/', createElement: () => ({ setAttribute: noop, textContent: '', remove: noop }), head: { appendChild: noop }, addEventListener: noop, removeEventListener: noop },
+  Audio: AudioMock, TextEncoder, URL };
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
 vm.runInContext(src, sandbox, { filename: 'client/index.js' });
@@ -136,6 +184,7 @@ const mod = captured.factory(requireMock);
 
 const comps = {};
 const services = {};
+const registrations = [];
 const ctx = {
   effect: (fn) => { const r = fn(); return typeof r === 'function' ? r : noop; },
   locale: { register: noop, bind: () => (k) => k },
@@ -145,6 +194,7 @@ const ctx = {
     register: (def, comp) => {
       const key = def.id || def.key || def.name;
       comps[key] = comp;
+      registrations.push({ def, comp });
       if (def.inject) services[key] = def.inject();
       return { dispose: noop };
     },
@@ -233,6 +283,9 @@ check('history renders', !!hisTree);
 check('history has play-list button', has(hisTree, (n) => cls(n).includes('dshm-col-play') && typeof n.props.onClick === 'function'), 'nodes=' + walk(hisTree).filter((n) => cls(n).includes('chipbtn')).length);
 check('history row is clickable', has(hisTree, (n) => /dshm-hrow-click/.test(cls(n)) && typeof n.props.onClick === 'function'));
 check('history row artist clickable', has(hisTree, (n) => /dshm-row-sub-btn/.test(cls(n))));
+/* 历史页必须自己是滚动容器：.dshm-body 不滚动，缺 flex:1;min-height:0;overflow-y:auto 长历史会被裁掉滚不动 */
+check('history page is its own scroll container (flex:1;min-height:0;overflow-y:auto)', /\.dshm-history-page\{flex:1;min-height:0;overflow-y:auto;/.test(src));
+check('history page root rendered with scroll class', has(hisTree, (n) => cls(n) === 'dshm-history-page'));
 
 /* 4) reco view: song artist clickable */
 state.view = 'reco';
@@ -586,6 +639,63 @@ check('floating badge is draggable', has(collapsedTree, (n) => cls(n) === 'dshm-
 check('floating badge restores on activate', has(collapsedTree, (n) => cls(n) === 'dshm-mini-fab' && typeof n.props.onKeyDown === 'function'));
 check('floating badge hides the bar controls', !has(collapsedTree, (n) => cls(n).includes('dshm-slider')));
 
+/* 5a2) logo 落点（P0+P1）：侧栏入口 / 面板报头 / 四个空状态冷启动 / FAB 无封面兜底 */
+{
+  const logoImg = (n) => n.type === 'img' && cls(n) === 'dshm-logo';
+  check('logo css is size-driven (no fixed 56px)', /\.dshm-logo\{display:block;object-fit:contain;user-select:none;margin:0;\}/.test(src));
+  check('panel header carries logo wordmark', has(libTree, (n) => cls(n) === 'dshm-title-logo' && has(n, logoImg)));
+  const sidebarReg = registrations.find((r) => r.def.name === 'sidebar.panellist');
+  const sideOn = expand(sidebarReg.comp({ size: 18, active: true }));
+  const sideOff = expand(sidebarReg.comp({ size: 18, active: false }));
+  check('sidebar entry renders real logo', has(sideOn, (n) => cls(n).split(' ').includes('dshm-panel-icon') && has(n, logoImg)));
+  check('sidebar active state is tinted box not recolor',
+    cls(walk(sideOn).find((n) => cls(n).includes('dshm-panel-icon'))).includes('dshm-panel-icon-on')
+    && !cls(walk(sideOff).find((n) => cls(n).includes('dshm-panel-icon'))).includes('dshm-panel-icon-on'));
+  check('empty library icon is logo', has(emptyTree, (n) => cls(n) === 'dshm-state-icon' && has(n, logoImg)));
+  check('reco cold-start icon is logo', has(coldTree, (n) => cls(n) === 'dshm-state-icon' && has(n, logoImg)));
+  const hisEmptyTree = expand(music({ ...baseProps, useUi: (sel) => sel({ ...state, view: 'history' }), useHistory: (sel) => sel({ status: 'ready', events: [] }) }));
+  check('empty history icon is logo', has(hisEmptyTree, (n) => cls(n) === 'dshm-state-icon' && has(n, logoImg)));
+  const nowIdleTree = expand(music({ ...baseProps, useUi: (sel) => sel({ ...state, view: 'now' }), usePlayer: (sel) => sel({ ...playerState, track: null, queue: [], queueIndex: 0 }) }));
+  check('now-playing idle icon is logo', has(nowIdleTree, (n) => cls(n) === 'dshm-state-icon' && has(n, logoImg)));
+  check('mini FAB without cover shows logo', has(collapsedTree, (n) => cls(n) === 'dshm-mini-fab-logo' && has(n, logoImg)));
+  const fabCover = expand(mini({ ...miniProps, usePlayer: (sel) => sel({ ...playerState, track: { ...playerState.track, coverUrl: 'http://img/c.jpg' } }) }));
+  check('mini FAB with cover keeps the cover', has(fabCover, (n) => cls(n).includes('dshm-tile')) && !has(fabCover, (n) => cls(n) === 'dshm-mini-fab-logo'));
+  check('small logos drop shadow, big logos keep it',
+    walk(sideOn).filter(logoImg).every((n) => n.props.style.filter === 'none')
+    && walk(libTree).filter((n) => cls(n) === 'dshm-title-logo').flatMap((n) => walk(n).filter(logoImg)).every((n) => n.props.style.filter === 'none')
+    && walk(emptyTree).filter((n) => cls(n) === 'dshm-state-icon').flatMap((n) => walk(n).filter(logoImg)).every((n) => String(n.props.style.filter).includes('drop-shadow')));
+}
+
+/* 5a3) 背景预设：面板 / 迷你条 / 悬浮球共用 ui.bg，默认小蓝鱼水印 */
+{
+  const bgOf = (tree) => { const n = walk(tree).find((x) => cls(x) === 'dshm-bg'); return n ? (n.props || {})['data-dshm-bg'] : null; };
+  check('panel default background is logo watermark', bgOf(libTree) === 'logo' && has(libTree, (n) => cls(n) === 'dshm-bg-logo'));
+  check('mini bar background syncs with panel', bgOf(expanded) === 'logo' && has(expanded, (n) => cls(n) === 'dshm-bg-logo'));
+  check('FAB carries preset but no watermark (too small)', bgOf(collapsedTree) === 'logo' && !has(collapsedTree, (n) => cls(n) === 'dshm-bg-logo'));
+  const bgState = { ...state, bg: 'vinyl' };
+  const vinylPanel = expand(music({ ...baseProps, useUi: (sel) => sel(bgState) }));
+  const vinylMini = expand(mini({ ...miniProps, useUi: (sel) => sel(bgState) }));
+  check('one bg switch updates panel and mini together', bgOf(vinylPanel) === 'vinyl' && bgOf(vinylMini) === 'vinyl'
+    && !has(vinylPanel, (n) => cls(n) === 'dshm-bg-logo') && !has(vinylMini, (n) => cls(n) === 'dshm-bg-logo'));
+  check('watermark readable (18% opacity) and layer never eats clicks',
+    /\.dshm-bg-logo\{position:absolute;opacity:\.18;user-select:none;\}/.test(src)
+    && /\.dshm-bg\{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;/.test(src));
+  check('logo preset carries a translucent blue wash (plugin blue 26→12→8%)',
+    /\.dshm-panel,\.dshm-mini,\.dshm-mini-fab,\.dshm-bg-tile,\.dshm-bg-tilebtn\{--dshm-brand:#1a5bf6;\}/.test(src)
+    && /\.dshm-bg\[data-dshm-bg="logo"\]\{background:radial-gradient\(120% 95% at 88% 104%,color-mix\(in srgb,var\(--dshm-brand\) 26%,transparent\) 0%,color-mix\(in srgb,var\(--dshm-brand\) 12%,transparent\) 52%,color-mix\(in srgb,var\(--dshm-brand\) 8%,transparent\) 100%\);\}/.test(src));
+  check('panel watermark scales with panel width (cqw), not viewport',
+    /\.dshm-panel\{--dshm-axis:1160px;--dshm-pad:clamp\(16px,2\.4vw,32px\);--dshm-love:#e5485b;position:relative;container-type:inline-size;/.test(src)
+    && /data-dshm-bg-kind="panel"\] \.dshm-bg-logo\{right:-24px;bottom:-28px;width:clamp\(200px,40cqw,460px\);/.test(src));
+  check('content lifted above background layer', /\.dshm-panel > \.dshm-header,\.dshm-panel > \.dshm-body\{z-index:1;\}/.test(src) && /\.dshm-mini-inner,\.dshm-mini-seek,\.dshm-mini-lyrics\{position:relative;z-index:1;\}/.test(src));
+  check('plain/mist/dune presets carry distinct motifs (dot grid / fog banks / dune ridges)',
+    /\.dshm-bg\[data-dshm-bg="plain"\]\{background:radial-gradient\(circle,color-mix\(in srgb,var\(--dsw-alias-label-primary\) 7%,transparent\) 1px,transparent 1\.4px\);background-size:22px 22px;\}/.test(src)
+    && /data-dshm-bg="mist"\]\{background:radial-gradient\(120% 26% at 50% 12%,color-mix\(in srgb,var\(--dshm-brand\) 14%,transparent\),transparent 70%\),radial-gradient\(140% 30% at 30% 46%,color-mix\(in srgb,var\(--dsw-alias-label-tertiary\) 16%,transparent\),transparent 72%\),radial-gradient\(120% 26% at 70% 82%,color-mix\(in srgb,var\(--dshm-brand\) 10%,transparent\),transparent 70%\);\}/.test(src)
+    && /data-dshm-bg="dune"\]\{background:radial-gradient\(90% 70% at 12% 118%,color-mix\(in srgb,#b98a5e 20%,transparent\),transparent 62%\),radial-gradient\(110% 80% at 88% 124%,color-mix\(in srgb,#7d8fa6 16%,transparent\),transparent 66%\),linear-gradient\(180deg,color-mix\(in srgb,#b98a5e 6%,transparent\),transparent 40%\);\}/.test(src));
+  check('content surfaces translucent + sticky heads frosted (wash not chopped)',
+    /\.dshm-hist-hero,\.dshm-top-col,\.dshm-dislikes,\.dshm-reco-card,\.dshm-acard,\.dshm-prv,\.dshm-sync,\.dshm-dl\{background:color-mix\(in srgb,var\(--dsw-alias-bg-layer-1\) 66%,transparent\);\}/.test(src)
+    && /\.dshm-hgroup-label,\.dshm-group-head,\.dshm-set-foot\{background:color-mix\(in srgb,var\(--dsw-alias-bg-base\) 82%,transparent\);backdrop-filter:blur\(10px\);-webkit-backdrop-filter:blur\(10px\);\}/.test(src));
+}
+
 state.miniHidden = true;
 check('mini hidden renders nothing', mini(miniProps) === null);
 
@@ -685,6 +795,21 @@ check('returning settings view renders the title row (no first-run hero) + three
   && !has(realSettingsTree, (n) => cls(n) === 'dshm-logo') && walk(realSettingsTree).filter(isCard).length === 3);
 const backBtn = walk(realSettingsTree).find((n) => cls(n) === 'dshm-wbtn' && (n.children || []).includes('settingsBack'));
 check('returning foot has back + save', !!backBtn && has(realSettingsTree, (n) => cls(n) === 'dshm-wbtn dshm-wbtn-primary' && (n.children || []).includes('settingsSave')));
+
+/* 5a3b) 设置页背景选择：五个 radio，点选立即写 ui store + prefs（面板/迷你条同步） */
+{
+  const tiles = walk(realSettingsTree).filter((n) => cls(n) === 'dshm-bg-tilebtn');
+  check('settings offers five background presets with logo checked', tiles.length === 5 && tiles[0].props['aria-checked'] === true
+    && tiles.slice(1).every((n) => n.props['aria-checked'] === false));
+  const beforeBg = uiStore.getSnapshot().bg;
+  tiles[3].props.onClick();
+  check('background pick writes ui store and prefs immediately', uiStore.getSnapshot().bg === 'dune' && beforeBg === 'logo'
+    && JSON.parse(localStorage.getItem('dsh-music.prefs') || '{}').bg === 'dune');
+  const dunePanel = expand(music(realProps));
+  check('picked background reaches panel without reload', walk(dunePanel).some((n) => cls(n) === 'dshm-bg' && (n.props || {})['data-dshm-bg'] === 'dune'));
+  uiStore.set({ bg: 'logo' });
+  localStorage.setItem('dsh-music.prefs', JSON.stringify({ ...JSON.parse(localStorage.getItem('dsh-music.prefs') || '{}'), bg: 'logo' }));
+}
 if (backBtn) backBtn.props.onClick();
 const afterBack = uiStore.getSnapshot();
 check('back returns to the library view', afterBack.view === 'library' && afterBack.settingsSection === null, 'view=' + afterBack.view);
@@ -913,7 +1038,7 @@ if (addBtn) {
       JSON.stringify(slice2));
   }
 }
-/* 十三期：后台音源扫描 → 「可入库」药丸（found）/ 淡色虚线（none）/ 普通（未扫描）；命中条目不联网直接进下载队列；扫描进度 chip */
+/* 十三期：后台音源扫描 → 实心圆图标钮（found）/ 淡色虚线（none）/ 普通（未扫描），三态同宽、行尾各列垂直对齐；命中条目不联网直接进下载队列；扫描进度 chip */
 {
   const hit = { kind: 'song', id: 'r1', artist: '甲', title: '乙', album: null, durationMs: 1000, verification: { source: 'MusicBrainz', url: 'https://musicbrainz.org/recording/r1', verifiedAt: 1, note: 'search score=99' } };
   const scanned = (sel) => sel({
@@ -922,6 +1047,7 @@ if (addBtn) {
       { key: 'kA', artist: '甲', title: '乙', audioUrl: null, inLibrary: false, durationMs: 1000, source: { status: 'found', checkedAt: 1, hit } },
       { key: 'kB', artist: '丙', title: '丁', audioUrl: null, inLibrary: false, durationMs: 1000, source: { status: 'none', checkedAt: 1, hit: null } },
       { key: 'kC', artist: '戊', title: '己', audioUrl: null, inLibrary: false, durationMs: 1000 },
+      { key: 'kD', artist: '庚', title: '辛', audioUrl: 'http://local/a.mp3', inLibrary: true, durationMs: 1000 },
     ] });
   libTabDefault = 'likes';
   const scanTree = expand(music({ ...realProps, useUi: (sel) => sel({ ...uiStore.getSnapshot(), view: 'library' }), useLikes: scanned }));
@@ -929,14 +1055,19 @@ if (addBtn) {
   const ready = walk(scanTree).find((n) => cls(n).includes('dshm-row-add-ready'));
   const noneBtn = walk(scanTree).find((n) => cls(n).includes('dshm-row-add-none'));
   const unknown = walk(scanTree).find((n) => n.props && n.props['aria-label'] === 'addMissing');
-  check('found source → 「可入库」pill (label addReady + text addReadyShort)', !!ready && ready.props['aria-label'] === 'addReady' && has(ready, (x) => (x.children || []).includes('addReadyShort')));
+  check('found source → solid icon-only add button (label addReady, no text)', !!ready && ready.props['aria-label'] === 'addReady' && !has(ready, (x) => cls(x) === 'dshm-row-add-text') && (ready.children || []).length === 1);
   check('none → muted dashed add button (addNone); unscanned → plain addMissing', !!noneBtn && noneBtn.props['aria-label'] === 'addNone' && !!unknown);
+  check('add button keeps one 32px footprint in every state (no text pill)', /\.dshm-row-add-ready\{width:32px;height:32px;padding:0;/.test(src) && !src.includes('dshm-row-add-text'));
+  const slots = walk(scanTree).filter((n) => cls(n) === 'dshm-row-add-slot');
+  check('already-in-library likes row reserves the same-width empty slot', slots.length === 1);
+  const likeTails = walk(scanTree).filter((n) => cls(n) === 'dshm-row-tail' && has(n, (x) => cls(x).includes('dshm-like-btn')));
+  check('every likes row tail holds the same 4 slots (♥ 👎 add/empty play) → columns align', likeTails.length === 4 && likeTails.every((tn) => (tn.children || []).length === 4));
   check('scan running → progress chip in the likes header', has(scanTree, (n) => cls(n) === 'dshm-missing-chip dshm-scan-chip' && has(n, (x) => (x.children || []).includes('scanProgress'))));
   const b = fetchCalls.length;
   ready.props.onClick({ stopPropagation: noop });
   await tick();
   let slice = fetchCalls.slice(b).filter((u) => u.includes('/library/search') || (u.includes('/dsh-music/api/download') && !u.includes('/status')));
-  check('clicking 「可入库」 uses the stored hit: no search, download POST carries it', !slice.some((u) => u.includes('/library/search')) && slice.some((u) => u.includes('/dsh-music/api/download')), JSON.stringify(slice));
+  check('clicking the solid add icon uses the stored hit: no search, download POST carries it', !slice.some((u) => u.includes('/library/search')) && slice.some((u) => u.includes('/dsh-music/api/download')), JSON.stringify(slice));
   const body = [...fetchBodies].reverse().find((x) => x.url.includes('/dsh-music/api/download'));
   check('…and the POST body contains the verified hit + front:true', !!body && body.body.includes('"r1"') && body.body.includes('"front":true'), body && body.body.slice(0, 120));
   const mutedReady = walk(scanTree).find((n) => cls(n) === 'dshm-row dshm-row-off');
@@ -1029,6 +1160,134 @@ uiStore.set({ view: 'library', settingsSection: null });
   check('close button hides the float', !!closeBtn && uiStore.getSnapshot().downloadFloat === null);
   { const idleTree = expand(floatComp(fp({ running: false, total: 0, done: 0, items: [], error: null }))); check('nothing renders when idle and closed', !idleTree || idleTree.length === 0); }
   uiStore.set({ downloadFloat: null, view: 'library' });
+}
+
+/* 5z) 歌词点击跳转回归：真实 player 引擎 + Audio mock。
+ * 点正在播放页任意一句 → audio.currentTime 与 position 都必须落到那句的时间；
+ * 这是「点击歌词跳转」的完整链路（LyricsPanel.seekTo → player.seek → audio）。 */
+{
+  const store = playerSvc.source;
+  const audio = audioInstances[0];
+  check('player engine owns exactly one audio element', audioInstances.length === 1 && !!audio, 'instances=' + audioInstances.length);
+  const track = { id: 't1', title: '测试歌曲', artist: '测试歌手', album: '测试专辑', duration: 200, audioUrl: '/dsh-music/audio/t1', source: 'dsh-music' };
+  realPlayTracks([track], 0);
+  check('playTracks loads the track into the audio element', !!store.getSnapshot().track && store.getSnapshot().track.id === 't1' && String(audio.src).includes('/dsh-music/audio/t1'),
+    JSON.stringify({ src: audio.src, track: store.getSnapshot().track && store.getSnapshot().track.id }));
+  state.view = 'now';
+  const nowProps = { ...baseProps, usePlayer: (sel) => sel(store.getSnapshot()), useLyrics: (sel) => sel(lyricsState) };
+  const lyricTree = expand(music(nowProps));
+  const lyricBtns = walk(lyricTree).filter((n) => cls(n).split(' ').includes('dshm-lyric-line'));
+  check('now-playing renders 4 timed lyric lines as enabled buttons',
+    lyricBtns.length === 4 && lyricBtns.every((b) => b.type === 'button' && !b.props.disabled && typeof b.props.onClick === 'function'),
+    'count=' + lyricBtns.length);
+  if (lyricBtns.length === 4) {
+    lyricBtns[2].props.onClick(); /* 第三句 time=10 */
+    check('clicking lyric line 3 seeks the audio playhead to 10s', audio.currentTime === 10, 'currentTime=' + audio.currentTime);
+    check('clicking lyric line 3 moves player position to 10s', store.getSnapshot().position === 10, 'position=' + store.getSnapshot().position);
+    lyricBtns[0].props.onClick(); /* 第一句 time=0 */
+    check('clicking lyric line 1 seeks back to 0s', audio.currentTime === 0 && store.getSnapshot().position === 0,
+      JSON.stringify({ currentTime: audio.currentTime, position: store.getSnapshot().position }));
+    lyricBtns[3].props.onClick(); /* 第四句 time=15 */
+    check('clicking lyric line 4 seeks to 15s', audio.currentTime === 15 && store.getSnapshot().position === 15,
+      JSON.stringify({ currentTime: audio.currentTime, position: store.getSnapshot().position }));
+  }
+  playerSvc.seek(9999);
+  check('seek beyond duration clamps to the track end', audio.currentTime === 200 && store.getSnapshot().position === 200,
+    JSON.stringify({ currentTime: audio.currentTime, position: store.getSnapshot().position }));
+  playerSvc.seek(-5);
+  check('negative seek clamps to 0', audio.currentTime === 0 && store.getSnapshot().position === 0);
+  /* 进度条与歌词共用同一 seek：Slider 键盘步进（→ +5%）也必须走通 */
+  const slider = walk(lyricTree).find((n) => cls(n).split(' ').includes('dshm-slider') && typeof n.props.onKeyDown === 'function');
+  if (slider) {
+    slider.props.onKeyDown({ key: 'ArrowRight', preventDefault: noop }); /* frac 0 → 0.05 → 10s */
+    check('progress slider seek lands at frac*duration (same path as lyric click)', audio.currentTime === 10 && store.getSnapshot().position === 10,
+      JSON.stringify({ currentTime: audio.currentTime, position: store.getSnapshot().position }));
+  } else {
+    check('progress slider seek lands at frac*duration (same path as lyric click)', false, 'slider not found');
+  }
+  store.set({ track: null, queue: [], queueIndex: -1, position: 0, duration: 0 });
+}
+
+/* 5z2) 桌面媒体 URL 回归：桌面壳 document base 是 dsh-app://，其请求代理会剥掉
+ * Content-Length 并重流 body，Chromium 媒体管线无法 byte-range seek（歌词/进度
+ * 跳转弹回）。修复=audio 改走 boot 注入的 __DSH_TRANSPORT__.streamBaseUrl（loopback
+ * HTTP origin，音频路由免鉴权、<audio> 跨源无需 CORS）。这里验证：有 transport →
+ * audio.src 落到 HTTP origin；无 transport（web）→ 回落 document base，不误用 HTTP。 */
+{
+  const store = playerSvc.source;
+  const audio = audioInstances[0];
+  const track = { id: 't1', title: '测试歌曲', artist: '测试歌手', album: '测试专辑', duration: 200, audioUrl: '/dsh-music/audio/t1', source: 'dsh-music' };
+  const prevBaseURI = sandbox.document.baseURI;
+  /* 模拟桌面：document base 为 dsh-app://，boot 注入 loopback HTTP origin。 */
+  sandbox.document.baseURI = 'dsh-app://app/';
+  sandbox.__DSH_TRANSPORT__ = { ownsHost: true, streamBaseUrl: 'http://127.0.0.1:60244' };
+  realPlayTracks([track], 0);
+  check('desktop: audio loads over the loopback HTTP origin (seekable), not dsh-app://',
+    audio.src === 'http://127.0.0.1:60244/dsh-music/audio/t1', 'src=' + audio.src);
+  state.view = 'now';
+  const nowProps = { ...baseProps, usePlayer: (sel) => sel(store.getSnapshot()), useLyrics: (sel) => sel(lyricsState) };
+  const lyricBtns = walk(expand(music(nowProps))).filter((n) => cls(n).split(' ').includes('dshm-lyric-line'));
+  if (lyricBtns.length === 4) {
+    lyricBtns[2].props.onClick(); /* 第三句 time=10 */
+    check('desktop: lyric click still seeks the playhead to 10s over HTTP media', audio.currentTime === 10 && store.getSnapshot().position === 10,
+      JSON.stringify({ currentTime: audio.currentTime, position: store.getSnapshot().position }));
+  } else {
+    check('desktop: lyric click still seeks the playhead to 10s over HTTP media', false, 'lyric buttons=' + lyricBtns.length);
+  }
+  /* 无 transport（web，或 boot 未注入）→ 回落 document base。沙箱 base 是 dsh-app://，
+   * 故此处正好复现「未修复时桌面会走的不可 seek 代理路径」，与上面的 HTTP origin 形成对照。 */
+  delete sandbox.__DSH_TRANSPORT__;
+  realPlayTracks([track], 0);
+  check('fallback: without transport the audio resolves against the document base (dsh-app proxy path)',
+    audio.src === 'dsh-app://app/dsh-music/audio/t1', 'src=' + audio.src);
+  if (prevBaseURI === undefined) delete sandbox.document.baseURI; else sandbox.document.baseURI = prevBaseURI;
+  store.set({ track: null, queue: [], queueIndex: -1, position: 0, duration: 0 });
+}
+
+/* 5z3) 历史统计/排行实时更新：播放事件落库（自然播完 / 手动切歌）→ report POST 成功
+ * → historyService.refreshSoon（300ms 防抖）→ 不切页即刷新 totalPlays/topSongs/时间线；
+ * 历史页驻留还注册 15s 轮询兜底；载荷不变时不通知订阅者（避免无意义整页重渲染）。 */
+{
+  const histSvc = (services['music'] || {}).history;
+  const store = playerSvc.source;
+  const audio = audioInstances[0];
+  histEventsMock = [];
+  histStatsMock = { totalPlays: 5, totalSeconds: 500, uniqueSongs: 1, uniqueArtists: 1, topSongs: [{ title: '测试歌曲', artist: '测试歌手', trackId: 'abcd1234ef', plays: 5 }], topArtists: [{ name: '测试歌手', plays: 5 }], daily: [], skippedCount: 0, avgCompletion: 0.9 };
+  await histSvc.load(50);
+  check('history baseline loaded (totalPlays=5)', histSvc.source.getSnapshot().stats.totalPlays === 5,
+    'totalPlays=' + (histSvc.source.getSnapshot().stats && histSvc.source.getSnapshot().stats.totalPlays));
+  /* 驻留历史页：注册 15s 轮询兜底 */
+  const intervalsBefore = intervalCalls.length;
+  state.view = 'history';
+  const histProps = { ...baseProps, useHistory: (sel) => sel(histSvc.source.getSnapshot()), usePlayer: (sel) => sel(store.getSnapshot()) };
+  expand(music(histProps));
+  check('history view registers a 15s live-refresh poll', intervalCalls.slice(intervalsBefore).some((c) => c.ms === 15000),
+    JSON.stringify(intervalCalls.slice(intervalsBefore).map((c) => c.ms)));
+  /* 自然播完 → report(skipped=false) → 统计 +1、排行 +1、时间线新增（无需切页） */
+  const track = { id: 'abcd1234ef', title: '测试歌曲', artist: '测试歌手', duration: 200, audioUrl: '/dsh-music/audio/abcd1234ef', source: 'dsh-music' };
+  realPlayTracks([track], 0);
+  audio._emit('ended');
+  await new Promise((r) => setTimeout(r, 450)); /* report POST + 300ms 防抖 + 重新拉取 */
+  const snap1 = histSvc.source.getSnapshot();
+  check('natural end refreshes stats live (totalPlays 5→6)', snap1.stats && snap1.stats.totalPlays === 6,
+    'totalPlays=' + (snap1.stats && snap1.stats.totalPlays));
+  check('leaderboard refreshes live (topSongs plays 5→6)', snap1.stats && snap1.stats.topSongs[0] && snap1.stats.topSongs[0].plays === 6,
+    JSON.stringify(snap1.stats && snap1.stats.topSongs));
+  check('timeline gains the new event without re-entering the view', snap1.events.length === 1 && snap1.total === 1, 'events=' + snap1.events.length);
+  /* 手动切歌 → 上一首按 skipped 上报 → skippedCount 也实时 +1 */
+  realPlayTracks([{ ...track, id: 'bcd1234ef0' }], 0);
+  await new Promise((r) => setTimeout(r, 450));
+  const snap2 = histSvc.source.getSnapshot();
+  check('manual switch reports a skip and refreshes stats live', snap2.stats.totalPlays === 7 && snap2.stats.skippedCount === 1,
+    JSON.stringify({ plays: snap2.stats.totalPlays, skipped: snap2.stats.skippedCount }));
+  /* 载荷不变 → 不通知订阅者（轮询/重复刷新不触发整页重渲染） */
+  let notified = 0;
+  const un = histSvc.source.subscribe(() => { notified++; });
+  await histSvc.load(50);
+  check('unchanged payload does not notify subscribers', notified === 0, 'notified=' + notified);
+  un();
+  store.set({ track: null, queue: [], queueIndex: -1, position: 0, duration: 0 });
+  state.view = 'library';
 }
 
 /* 6) report */

@@ -13,10 +13,10 @@ DeepSeek Harness Desktop 的音乐插件：播放本地曲库、同步歌词与�
 | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/library-shelf.webp" width="280" alt="曲库卡片架"> | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/reco-columns.webp" width="280" alt="推荐三栏"> | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/artist-page.webp" width="280" alt="歌手页"> |
 | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/liked-full.webp" width="280" alt="我喜欢完整列表"> | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/shelf-synced.webp" width="280" alt="跨页喜欢同步"> | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/library-toolbar.webp" width="280" alt="曲库工具栏"> |
 
-- npm 包名：`@vicyangorg/dsh-music`（v0.8.1）；品牌名与 GitHub 仓库仍为 `dsh-music`（原名 `dsh-music` 在 npm 被占位包占用，故用 scoped 名，见 `docs/publishing.md`）
+- npm 包名：`@vicyangorg/dsh-music`（v0.8.2）；品牌名与 GitHub 仓库仍为 `dsh-music`（原名 `dsh-music` 在 npm 被占位包占用，故用 scoped 名，见 `docs/publishing.md`）
 - 形态：DSH bundle（Host 服务 + Web 客户端面板）
-- 验证状态：一期～十四期均已验收通过（验收证据为内部文档，含本机数据，不随公开仓库发布）；十四期视觉与交互整套焕新及 `v0.8.1` 入库即同步播放修复均通过全套自动化测试，详见 `docs/publishing.md` §12–§13
-- 分发状态：`@vicyangorg/dsh-music@0.8.1` 已发布 GitHub Release + npm（MIT/engines.dsh/8 语 meta/DETAIL+截图/README，打包守门+冷装冒烟通过）
+- 验证状态：一期～十四期均已验收通过（验收证据为内部文档，含本机数据，不随公开仓库发布）；`v0.8.2` 的面板背景预设、历史实时刷新与桌面歌词跳转修复均通过全套自动化测试（歌词跳转经真实桌面端复验），详见 `docs/publishing.md` §12–§14
+- 分发状态：`@vicyangorg/dsh-music@0.8.2` 已发布 GitHub Release + npm（MIT/engines.dsh/8 语 meta/DETAIL+截图/README，打包守门+冷装冒烟通过）
 
 ## 功能
 | 模块 | 说明 |
@@ -94,7 +94,8 @@ DeepSeek Harness Desktop 的音乐插件：播放本地曲库、同步歌词与�
 | 我喜欢列表 | 曲库「曲库 / 我喜欢(N)」双 Tab，喜欢的歌独立成列，行点击立即切播，不在库行置灰 |
 | 不喜欢 | 每首歌（曲库/推荐/新歌/歌手页）可「不喜欢」👎；与喜欢互斥（二值口味信号）；不喜欢不下载、不删文件；推荐避开不喜欢的歌与歌手 |
 | 不喜欢进统计 | 不喜欢计入收听统计历史（独立口味事件，默认不污染播放画像）；历史页统计卡新增不喜欢计数 +「不喜欢的歌」列表（可取消不喜欢） |
-| 品牌 logo | 用户提供的蓝肥鱼戴耳机图设为插件 logo（Plugin Manager 清单页 / 插件目录 / README） |
+| 品牌 logo | 用户提供的蓝肥鱼戴耳机图设为插件 logo（Plugin Manager 清单页 / 插件目录 / README）；日常界面落点：侧栏全局入口（18px，选中加圆角底色）、面板报头 wordmark（22px）、空曲库/空历史/推荐冷启动/现在播放空闲（44px）、迷你 FAB 无封面兜底（34px）；尺寸内联驱动，≥40px 才加投影，取不到图退回内嵌 FishLogo |
+| 面板背景 | 默认整面板铺半透明蓝底（插件品牌蓝 #1a5bf6、与小鱼同色，26→12→8% 径向渐变，右下角最浓）+ 小蓝鱼水印（18% 透明度、锚右下角、随面板宽度 40cqw 缩放），迷你播放条同铺蓝底小鱼、悬浮球只上蓝底；设置页「面板背景」五套预设（小蓝鱼/素净/晨雾/暖沙/唱片；素净=7% 点阵纸纹、晨雾=三层横向雾带 14/16/10%、暖沙=底部双沙丘拱+暖天光 20/16/6%，各有可识别母题）点选立即生效；历史统计卡/常听卡/推荐卡/设置 provider 卡等大面内容改 66% 半透明、sticky 表头 82%+磨砂，背景不被白卡割裂，单一 ui.bg + prefs 持久化保证面板/迷你条/悬浮球同步；背景层 pointer-events:none 不接事件，内容抬到其上 |
 
 ## 九期新增（卡片架/跨页同步/后台加载与双层缓存）
 | 模块 | 说明 |
@@ -142,7 +143,7 @@ DeepSeek Harness Desktop 的音乐插件：播放本地曲库、同步歌词与�
 | 正在播放页 ♥ / 👎 | 歌手行下方一枚圆角「喜欢 / 不喜欢」药丸组，点红即喜欢（会在后台走核实入库） |
 | 缩放位置同步 | 迷你条「缩小」后悬浮标落在**条子的右下角**（而不是跳回屏幕角落），点开也在原位展开；拖动后两套坐标各自记住，首尾衔接 |
 | 点播修复 | 播放器处于「随机」模式时，点曲库 / 喜欢 / 队列 / 歌手页里的某一首会被随机起播成另一首——现在点哪首就从哪首开始，随机只作用于它后面的队列；「播放全部」仍按模式随机起播 |
-| 后台找音源 → 「可入库」 | 导入完成后主机在**后台**逐首用 MusicBrainz 找已核实的音源（跟随全局限速，串行，不打扰前台），命中写回 `likes.json` 的 `source`；「我喜欢」里这些行的「入库」按钮换成实心**「可入库」**药丸——点它、或直接点这首歌，不再当场搜索、直接置顶进下载队列；没找到的显示淡色虚线按钮（点了会再找一次，7 天内不重复扫）。页头有「查找音源 已处理/总数 · 已找到」进度 chip，列表每 5 s 自动刷新，按钮陆续亮起 |
+| 后台找音源 → 入库图标亮起 | 导入完成后主机在**后台**逐首用 MusicBrainz 找已核实的音源（跟随全局限速，串行，不打扰前台），命中写回 `likes.json` 的 `source`；「我喜欢」里这些行的「入库」按钮换成实心圆**入库图标**（纯图标不带文字，与行尾其它图标同占 32px，时长 / ♥ / 👎 各列逐行垂直对齐）——点它、或直接点这首歌，不再当场搜索、直接置顶进下载队列；没找到的显示淡色虚线按钮（点了会再找一次，7 天内不重复扫）；已在曲库的行留同宽空位，列不跳动。页头有「查找音源 已处理/总数 · 已找到」进度 chip，列表每 5 s 自动刷新，按钮陆续亮起 |
 
 ## 十四期新增（视觉与体验整套焕新）
 | 模块 | 说明 |
@@ -154,10 +155,19 @@ DeepSeek Harness Desktop 的音乐插件：播放本地曲库、同步歌词与�
 | 导航与快捷键 | 新增导航返回栈（歌手页/设置页动态显示「返回曲库/推荐/历史」）；补齐 `⌘/Ctrl+K` 搜歌、`Space` 播放/暂停、`←/→` ±5 秒快进、`Esc` 返回/清搜索；修复 `:focus-visible`、`prefers-reduced-motion` 与嵌套按钮无障碍问题 |
 | 设置页与确认弹窗 | 首启页改左对齐杂志式报头；老用户进入设置默认收起三家平台卡片（按需展开扫码）；用自研 `ConfirmDialog` 取代原生 `window.confirm` |
 
+## 0.8.2 新增（面板背景预设 / 历史实时刷新 / 播放体验修复）
+| 模块 | 说明 |
+|---|---|
+| 面板背景预设 | 整面板默认铺半透明品牌蓝底 + 小蓝鱼水印，设置页五套预设（小蓝鱼/素净/晨雾/暖沙/唱片）点选立即生效，迷你条与悬浮球同步；大面卡片改半透明让背景贯通整页（详见八期表「品牌 logo / 面板背景」条） |
+| 历史实时刷新 | 播放事件（自然播完 / 手动切歌）落库即刷新历史页统计卡、排行榜与时间线，**不用切页**；驻留历史页每 15 秒自动刷新兜底；不喜欢 / 取消不喜欢也同步进统计；数据无变化不触发重渲染 |
+| 歌词跳转修复（桌面端） | 修复桌面应用里点歌词行 / 拖进度条「跳一下又弹回原位」：音频原经桌面壳协议代理转发，响应被剥掉 Content-Length，媒体管线无法按字节区间 seek；现音频直连宿主本机 HTTP 源（该路由无需鉴权），歌词跳转与进度拖动即时生效；web 版行为不变 |
+| 历史页滚动修复 | 历史页改为自滚动容器：长历史不再被裁掉、可正常滚动，日期分组标签正确吸顶 |
+| 入库图标对齐 | 「我喜欢」行「入库」按钮改纯图标实心圆（32px，与行尾时长 / ♥ / 👎 各列逐行垂直对齐），已在曲库的行留同宽空位、列不跳动（详见十三期表） |
+
 ## 安装
 插件以 bundle 形式安装在 desktop profile，**只用 `plugin_manager install_bundle`**（不手写 profile 配置）：
 ```
-plugin_manager install_bundle  target=@vicyangorg/dsh-music@0.8.1
+plugin_manager install_bundle  target=@vicyangorg/dsh-music@0.8.2
 # 或本地源码：target=<项目>/bundle
 ```
 以返回 `application: applied` 为准。安装后刷新现有 GUI 页面，左侧栏出现「音乐」面板。

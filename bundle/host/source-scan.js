@@ -2,7 +2,7 @@
  * 导入只标 ♥（不下载）。这里在后台逐首用 MusicBrainz 搜（复用 search.js：命中即核实 + 留档），
  * 把最佳已核实候选写进 likes.json 条目的 source 字段：
  *   source: { status: 'found' | 'none', checkedAt, query, hit: { artist, title, album, durationMs, verification } }
- * 前端据此把行尾「入库」换成"可入库"样式；点歌 / 点入库直接用 hit，不再当场搜索（也就不会"没找到"）。
+ * 前端据此把行尾「入库」换成实心圆入库图标（纯图标、同宽对齐）；点歌 / 点入库直接用 hit，不再当场搜索（也就不会"没找到"）。
  * 约束：串行、跟随 reco/mb.js 的全局限速（≤1 req/s）；found 不再扫；none 7 天内不重扫（可 force）。
  * 评分：歌名归一后完全一致 ≫ 去括号/feat 后一致 ≫ 包含；歌手覆盖加分；MusicBrainz score 微调。 */
 import { normalizeZh } from './t2s.js'

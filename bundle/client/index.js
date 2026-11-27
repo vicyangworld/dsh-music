@@ -57,6 +57,13 @@ window.__ModuleLoader__.load({
       setLikedTitle: '喜欢列表同步',
       setTasteTitle: '推荐口味',
       setLibTitle: '音乐库',
+      bgTitle: '面板背景',
+      bgSub: '点选立即生效，迷你播放条与悬浮球同步更新',
+      bgLogo: '小蓝鱼',
+      bgPlain: '素净',
+      bgMist: '晨雾',
+      bgDune: '暖沙',
+      bgVinyl: '唱片',
       setLibSubReturning: '已经配置好了；要换目录或改用 starter 曲库就在这里改，保存后生效。',
       settingsFinishHint: '完成后随时能从右上角「设置」回来修改',
       welcomeSkip: '先随便看看',
@@ -397,10 +404,9 @@ window.__ModuleLoader__.load({
       addMissingNone: '没找到可靠的音源，去曲库搜「{title}」试试',
       likesMissingCount: '{n} 首还没入库',
       addReady: '已找到可靠音源，点击入库',
-      addReadyShort: '可入库',
       addNone: '暂未找到可靠音源，点击再找一次',
       scanProgress: '查找音源 {done}/{total} · 已找到 {found}',
-      scanHint: '导入后会在后台逐首查找已核实的音源（MusicBrainz）；找到的行会亮起「可入库」，点歌也会直接入库',
+      scanHint: '导入后会在后台逐首查找已核实的音源（MusicBrainz）；找到的行会亮起实心入库图标，点歌也会直接入库',
       addMissingHint: '这些歌只标记了 ♥、还没下载。点歌后面的入库按钮会先联网核实再下载。',
       importEnabledOff: '主机已关闭喜欢列表导入（配置项 likedSync = false）',
       importCookieEmpty: '请先粘贴 Cookie',
@@ -449,6 +455,13 @@ window.__ModuleLoader__.load({
       setLikedTitle: 'Liked-list sync',
       setTasteTitle: 'Taste',
       setLibTitle: 'Library',
+      bgTitle: 'Panel background',
+      bgSub: 'Applies instantly; mini bar and floating ball stay in sync',
+      bgLogo: 'Blue fish',
+      bgPlain: 'Plain',
+      bgMist: 'Mist',
+      bgDune: 'Dune',
+      bgVinyl: 'Vinyl',
       setLibSubReturning: 'Already set up. Change the folder or switch to the starter library here; takes effect after saving.',
       settingsFinishHint: 'You can come back any time via “Settings” in the top-right corner',
       welcomeSkip: 'Just browse',
@@ -789,10 +802,9 @@ window.__ModuleLoader__.load({
       addMissingNone: 'No reliable source found — try searching “{title}” in the library',
       likesMissingCount: '{n} not in library yet',
       addReady: 'Verified source found — click to add',
-      addReadyShort: 'Ready',
       addNone: 'No verified source yet — click to search again',
       scanProgress: 'Finding sources {done}/{total} · {found} found',
-      scanHint: 'Imported tracks are matched against verified sources (MusicBrainz) in the background; rows light up “Ready” and clicking them adds them directly',
+      scanHint: 'Imported tracks are matched against verified sources (MusicBrainz) in the background; rows light up with a solid add icon and clicking them adds them directly',
       addMissingHint: 'These songs are only marked ♥ and not downloaded yet. The add-to-library button verifies online first, then downloads.',
       importEnabledOff: 'Liked-list import is disabled on this host (config likedSync = false)',
       importCookieEmpty: 'Paste the cookie first',
@@ -852,6 +864,26 @@ window.__ModuleLoader__.load({
         const rel = String(path).replace(/^\/+/, '');
         return new URL(rel, baseUrl).href;
       } catch { return path; }
+    };
+
+    /* Audio must load over the Host's real HTTP origin, not the document base.
+     * In the desktop app the document is served from the dsh-app:// shell
+     * protocol, whose request proxy re-streams the body and drops Content-Length
+     * — a response shape the Chromium media pipeline cannot byte-range seek, so
+     * lyric/progress jumps snap back to the old position. The desktop boot
+     * exposes the loopback HTTP origin as __DSH_TRANSPORT__.streamBaseUrl; the
+     * audio route needs no auth and <audio> loads cross-origin without CORS, so
+     * pointing it straight at that origin restores seeking. In the web app
+     * streamBaseUrl is absent and the document base is already HTTP. Read lazily
+     * (per load) because the transport global is installed during boot. */
+    const resolveMediaUrl = (path) => {
+      try {
+        const transport = typeof globalThis !== 'undefined' ? globalThis.__DSH_TRANSPORT__ : null;
+        const base = transport && typeof transport.streamBaseUrl === 'string' && transport.streamBaseUrl
+          ? transport.streamBaseUrl : baseUrl;
+        const rel = String(path).replace(/^\/+/, '');
+        return new URL(rel, base).href;
+      } catch { return resolveUrl(path); }
     };
 
     /* Traditional→simplified map (S1-002): covers the characters occurring in
@@ -1269,7 +1301,7 @@ window.__ModuleLoader__.load({
      * 4. Styles — every color is a host theme token (--dsw-alias-*)
      * ================================================================ */
     const CSS = `
-.dshm-panel{--dshm-axis:1160px;--dshm-pad:clamp(16px,2.4vw,32px);--dshm-love:#e5485b;position:relative;display:flex;flex-direction:column;height:100%;min-height:0;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;}
+.dshm-panel{--dshm-axis:1160px;--dshm-pad:clamp(16px,2.4vw,32px);--dshm-love:#e5485b;position:relative;container-type:inline-size;display:flex;flex-direction:column;height:100%;min-height:0;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;}
 .dshm-panel :is(button,[role="button"],a,[tabindex]):focus{outline:none;}
 .dshm-panel :is(button,[role="button"],a,[tabindex]):focus-visible,.dshm-mini :is(button,[role="button"]):focus-visible,.dshm-mini-fab:focus-visible,.dshm-modal :is(button,[tabindex]):focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px;}
 .dshm-panel :is(input,select):focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px;}
@@ -1669,17 +1701,40 @@ window.__ModuleLoader__.load({
 .dshm-linkbtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px;}
 .dshm-imp-hint-more{font-size:12px;padding-top:8px;border-top:1px dashed var(--dsw-alias-border-l1);}
 .dshm-imp-cookie:focus-visible{border-color:var(--dsw-alias-brand-primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--dsw-alias-brand-primary) 18%,transparent);}
-.dshm-row-add-ready{width:auto;height:24px;padding:0 9px 0 7px;gap:3px;border-radius:999px;background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);}
+.dshm-row-add-ready{width:32px;height:32px;padding:0;border-radius:999px;background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);}
 .dshm-row-add-ready:hover{filter:brightness(1.08);background:var(--dsw-alias-button-primary-fill);color:var(--dsw-alias-label-primary-inverted);}
-.dshm-row-add-text{font-size:11px;font-weight:600;line-height:1;}
+.dshm-row-add-slot{width:32px;height:32px;flex:none;}
 .dshm-row-add-none{opacity:.6;border:1px dashed var(--dsw-alias-border-l3);}
 .dshm-missing-chip.dshm-scan-chip{display:inline-flex;align-items:center;gap:4px;color:var(--dsw-alias-brand-primary);border-color:color-mix(in srgb,var(--dsw-alias-brand-primary) 35%,transparent);}
 .dshm-missing-chip{font-size:12px;color:var(--dsw-alias-state-warn-primary);border:1px solid currentColor;border-radius:99px;padding:2px 9px;white-space:nowrap;}
-.dshm-settings{position:relative;height:100%;overflow:auto;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;animation:dshm-fade-in .28s ease-out;}
+.dshm-settings{position:relative;height:100%;overflow:auto;background:transparent;color:var(--dsw-alias-label-primary);font-size:13px;animation:dshm-fade-in .28s ease-out;}
 .dshm-settings-inner{max-width:760px;margin:0 auto;padding:28px 24px 150px;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:20px;}
 .dshm-settings-narrow{max-width:540px;}
 .dshm-set-hero{margin:4px 0 4px;text-align:left;}
-.dshm-logo{display:block;width:56px;height:56px;object-fit:contain;filter:drop-shadow(0 4px 10px var(--dsw-alias-bg-mask-2));user-select:none;margin:0;}
+.dshm-logo{display:block;object-fit:contain;user-select:none;margin:0;}
+.dshm-panel-icon{display:flex;align-items:center;justify-content:center;border-radius:6px;flex:none;}
+.dshm-panel-icon-on{background:var(--dsw-alias-interactive-bg-active);}
+.dshm-title-logo{display:flex;align-items:center;flex:none;margin-right:-4px;}
+.dshm-mini-fab-logo{width:48px;height:48px;display:flex;align-items:center;justify-content:center;}
+/* 背景层：铺满容器但不接事件；内容抬到 z-index:1（panel 是 flex，子项静态也吃 z-index） */
+.dshm-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;border-radius:inherit;}
+.dshm-panel > .dshm-header,.dshm-panel > .dshm-body{z-index:1;}
+.dshm-mini-inner,.dshm-mini-seek,.dshm-mini-lyrics{position:relative;z-index:1;}
+.dshm-mini-fab > :not(.dshm-bg){z-index:1;}
+.dshm-panel,.dshm-mini,.dshm-mini-fab,.dshm-bg-tile,.dshm-bg-tilebtn{--dshm-brand:#1a5bf6;}
+.dshm-bg[data-dshm-bg="logo"]{background:radial-gradient(120% 95% at 88% 104%,color-mix(in srgb,var(--dshm-brand) 26%,transparent) 0%,color-mix(in srgb,var(--dshm-brand) 12%,transparent) 52%,color-mix(in srgb,var(--dshm-brand) 8%,transparent) 100%);}
+.dshm-bg-logo{position:absolute;opacity:.18;user-select:none;}
+.dshm-bg[data-dshm-bg-kind="panel"] .dshm-bg-logo{right:-24px;bottom:-28px;width:clamp(200px,40cqw,460px);height:auto;}
+.dshm-bg[data-dshm-bg-kind="mini"] .dshm-bg-logo{right:6px;bottom:-9px;height:56px;width:auto;}
+.dshm-bg[data-dshm-bg-kind="tile"] .dshm-bg-logo{right:-5px;bottom:-6px;width:36px;height:auto;opacity:.4;}
+.dshm-bg[data-dshm-bg="plain"]{background:radial-gradient(circle,color-mix(in srgb,var(--dsw-alias-label-primary) 7%,transparent) 1px,transparent 1.4px);background-size:22px 22px;}
+.dshm-bg[data-dshm-bg="mist"]{background:radial-gradient(120% 26% at 50% 12%,color-mix(in srgb,var(--dshm-brand) 14%,transparent),transparent 70%),radial-gradient(140% 30% at 30% 46%,color-mix(in srgb,var(--dsw-alias-label-tertiary) 16%,transparent),transparent 72%),radial-gradient(120% 26% at 70% 82%,color-mix(in srgb,var(--dshm-brand) 10%,transparent),transparent 70%);}
+.dshm-bg[data-dshm-bg="dune"]{background:radial-gradient(90% 70% at 12% 118%,color-mix(in srgb,#b98a5e 20%,transparent),transparent 62%),radial-gradient(110% 80% at 88% 124%,color-mix(in srgb,#7d8fa6 16%,transparent),transparent 66%),linear-gradient(180deg,color-mix(in srgb,#b98a5e 6%,transparent),transparent 40%);}
+.dshm-bg[data-dshm-bg="vinyl"]{background:repeating-radial-gradient(circle at 92% 116%,color-mix(in srgb,var(--dsw-alias-label-primary) 6%,transparent) 0 1px,transparent 1px 16px);}
+.dshm-bg-tiles{display:flex;gap:10px;flex-wrap:wrap;}
+.dshm-bg-tilebtn{appearance:none;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);border-radius:12px;padding:8px 8px 7px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:var(--dsw-alias-label-secondary);font-size:12px;}
+.dshm-bg-tilebtn[aria-checked="true"]{border-color:var(--dshm-brand);color:var(--dsw-alias-label-primary);box-shadow:0 0 0 1px var(--dshm-brand);}
+.dshm-bg-tile{position:relative;width:76px;height:46px;border-radius:8px;overflow:hidden;background:var(--dsw-alias-bg-base);border:1px solid var(--dsw-alias-border-l1);}
 .dshm-set-first-note{margin:4px 0 0;font-size:12.5px;line-height:1.7;color:var(--dsw-alias-label-tertiary);text-align:left;}
 .dshm-set-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--dsw-alias-border-l1);}
 .dshm-set-top-title{display:flex;align-items:center;gap:8px;color:var(--dsw-alias-label-primary);}
@@ -1818,8 +1873,12 @@ window.__ModuleLoader__.load({
   .dshm-now{padding:0 12px;}
   .dshm-column{border-right:0;border-bottom:1px solid var(--dsw-alias-border-l1);max-height:46vh;}
 }
-.dshm-history-page{width:100%;max-width:var(--dshm-axis);margin:0 auto;padding:16px 0 28px;}
-.dshm-hist-hero{display:grid;grid-template-columns:minmax(260px,1fr) minmax(300px,420px);gap:20px 32px;align-items:stretch;padding:20px 24px;border-radius:14px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);}
+/* 历史页自己就是滚动容器（同 reco/apage）：.dshm-body 不滚动，缺了这条长历史会被裁掉且滚不动；
+   日期分组标签的 position:sticky 也依赖这个容器才能吸顶 */
+.dshm-history-page{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-scrollbar-bg-l2) transparent;width:100%;max-width:var(--dshm-axis);margin:0 auto;padding:0 0 28px;}
+/* 顶部留白放在 hero 的 margin 上而不是滚动容器 padding-top：否则吸顶的日期标签会停在
+   padding 下缘、上方露出一条滚动中的行 */
+.dshm-hist-hero{display:grid;grid-template-columns:minmax(260px,1fr) minmax(300px,420px);gap:20px 32px;align-items:stretch;margin:16px 0 0;padding:20px 24px;border-radius:14px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);}
 .dshm-hist-hero-solo{grid-template-columns:1fr;}
 .dshm-hist-overview{display:flex;flex-direction:column;justify-content:space-between;min-width:0;}
 .dshm-hist-main{display:flex;align-items:flex-end;gap:36px;flex-wrap:wrap;}
@@ -1932,6 +1991,12 @@ window.__ModuleLoader__.load({
 .dshm-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px;}
 .dshm-wbtn-danger{background:var(--dsw-alias-state-error-primary);border-color:transparent;color:var(--dsw-alias-label-primary-inverted);}
 .dshm-wbtn-danger:hover{background:var(--dsw-alias-state-error-primary);filter:brightness(1.08);color:var(--dsw-alias-label-primary-inverted);}
+/* Background continuity: large content surfaces go translucent so the panel wash
+   reads as one continuous field instead of being chopped by opaque white cards;
+   sticky heads frost instead of going solid. Floating UI (toast/menu/modal/drawer)
+   stays opaque on purpose. */
+.dshm-hist-hero,.dshm-top-col,.dshm-dislikes,.dshm-reco-card,.dshm-acard,.dshm-prv,.dshm-sync,.dshm-dl{background:color-mix(in srgb,var(--dsw-alias-bg-layer-1) 66%,transparent);}
+.dshm-hgroup-label,.dshm-group-head,.dshm-set-foot{background:color-mix(in srgb,var(--dsw-alias-bg-base) 82%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
 @media (prefers-reduced-motion:reduce){
   .dshm-eq-on i,.dshm-tab-dot,.dshm-skel-box,.dshm-spin,.dshm-state-spin,.dshm-mini,.dshm-mini-fab,.dshm-drawer,.dshm-welcome-fish,.dshm-settings,.dshm-logo,.dshm-toast,.dshm-dl-float,.dshm-dl-pill,.dshm-modal,.dshm-modal-mask{animation:none;}
   .dshm-row,.dshm-iconbtn,.dshm-chipbtn,.dshm-playbtn,.dshm-slider-thumb,.dshm-mini-progress>div,.dshm-reco-card,.dshm-dl-bar>div,.dshm-dl-pill-bar>span,.dshm-like-btn,.dshm-playround,.dshm-artcard,.dshm-mode-btn,.dshm-prv,.dshm-prv-chev,.dshm-lyric-line,.dshm-row-actions,.dshm-srow-tail,.dshm-playcover::after,.dshm-playcover-ico{transition:none;}
@@ -2514,25 +2579,44 @@ window.__ModuleLoader__.load({
 
     function createHistoryService(api) {
       const store = createStore({ status: 'idle', events: [], total: 0, stats: null, error: null });
+      /* 实时刷新：播放事件落库后 player 调 refreshSoon（300ms 防抖合并连跳），
+       * 历史页驻留时另有低频轮询兜底（覆盖其它窗口写入的事件）。
+       * 载荷未变化时不通知 store，避免无意义的整页重渲染。 */
+      let lastLimit = 50;
+      let lastSig = '';
+      let refreshTimer = null;
       async function load(limit) {
-        store.set({ status: store.getSnapshot().events.length ? 'ready' : 'loading', error: null });
+        lastLimit = limit || lastLimit;
+        const cur = store.getSnapshot();
+        const wantStatus = cur.events.length ? 'ready' : 'loading';
+        if (cur.status !== wantStatus || cur.error != null) store.set({ status: wantStatus, error: null });
         const statsPromise = api.historyStats
           ? api.historyStats().catch(() => null)
           : Promise.resolve(null);
         try {
-          const data = await api.history(limit || 50);
+          const data = await api.history(lastLimit);
           const stats = await statsPromise;
-          store.set({
-            status: 'ready',
+          const payload = {
             events: (data && data.events) || [],
             total: (data && data.total) || 0,
             stats,
-          });
+          };
+          const sig = JSON.stringify(payload);
+          if (sig !== lastSig || store.getSnapshot().status !== 'ready') {
+            lastSig = sig;
+            store.set({ status: 'ready', ...payload });
+          }
         } catch (err) {
+          lastSig = '';
           store.set({ status: 'error', error: (err && err.message) || String(err) });
         }
       }
-      return { source: store, load };
+      function refreshSoon() {
+        if (refreshTimer) return;
+        refreshTimer = setTimeout(() => { refreshTimer = null; load(lastLimit); }, 300);
+      }
+      function dispose() { if (refreshTimer) { clearTimeout(refreshTimer); refreshTimer = null; } }
+      return { source: store, load, refreshSoon, dispose };
     }
 
     /* ================================================================
@@ -2542,7 +2626,7 @@ window.__ModuleLoader__.load({
       return normalizeZh(o.artist) + '::' + normalizeZh(o.title);
     }
 
-    function createLikesService(api, onAutoDownload) {
+    function createLikesService(api, onAutoDownload, onTasteChange) {
       /* keys/dislikes are mutually exclusive on the host: a dislike clears the
        * like and vice versa, so both maps are refreshed after every action. */
       const store = createStore({ keys: {}, dislikes: {}, items: [], dislikeItems: [], loaded: false, error: null, scan: null });
@@ -2580,6 +2664,8 @@ window.__ModuleLoader__.load({
         /* Refresh the cached lists so the library card rail reflects the new
          * heart immediately (host is the source of truth, call is local). */
         load();
+        /* 口味事件也进历史统计（不喜欢卡）→ 通知历史服务刷新 */
+        if (typeof onTasteChange === 'function') { try { onTasteChange(); } catch { /* best-effort */ } }
         return res || {};
       }
       async function setDislike(item, disliked) {
@@ -2596,6 +2682,8 @@ window.__ModuleLoader__.load({
         else delete dislikes[key];
         store.set({ keys, dislikes });
         load();
+        /* 口味事件也进历史统计（不喜欢卡）→ 通知历史服务刷新 */
+        if (typeof onTasteChange === 'function') { try { onTasteChange(); } catch { /* best-effort */ } }
         return res || {};
       }
       function isLiked(item) {
@@ -2947,7 +3035,7 @@ window.__ModuleLoader__.load({
     /* ================================================================
      * 7. Player engine — singleton audio, survives panel navigation
      * ================================================================ */
-    function createPlayer(t, api) {
+    function createPlayer(t, api, onHistoryEvent) {
       const prefs = readPrefs();
       const store = createStore({
         track: null,
@@ -2997,6 +3085,11 @@ window.__ModuleLoader__.load({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ trackId: track.id, completion, skipped }),
+          }).then((res) => {
+            /* 事件已落库 → 通知历史服务即时刷新统计/排行（best-effort）。 */
+            if (res && res.ok && typeof onHistoryEvent === 'function') {
+              try { onHistoryEvent(); } catch { /* 刷新失败不影响播放 */ }
+            }
           }).catch(() => { /* best-effort */ });
         } catch { /* best-effort */ }
       }
@@ -3023,7 +3116,7 @@ window.__ModuleLoader__.load({
         if (!audio) return;
         set({ track, error: null, loading: true, position: 0, duration: track.duration || 0 });
         updateMediaSession(track);
-        audio.src = resolveUrl(track.audioUrl);
+        audio.src = resolveMediaUrl(track.audioUrl);
         audio.load();
         if (autoplay) {
           const p = audio.play();
@@ -3449,19 +3542,48 @@ window.__ModuleLoader__.load({
      *      - 老用户：右上角「设置」进来，改完「保存设置」；section 可让入口直接滚到某个区块。
      *      Logo 走主机 /dsh-music/icon.png（包内真实图标），取不到时退回内嵌 FishLogo。
      * ================================================================ */
-    function PluginLogo({ size = 160 }) {
+    /* 尺寸由内联 style 驱动（旧 CSS 写死 56px，size 参数对 img 无效）；
+     * drop-shadow 只给 ≥40px 的大图：侧栏/报头的小尺寸加阴影会糊掉轮廓。
+     * 落点：首启欢迎区、侧栏入口、面板报头、四个空状态/冷启动、迷你 FAB 无封面兜底。 */
+    function PluginLogo({ size = 160, alt = 'dsh-music' }) {
       const [failed, setFailed] = useState(false);
       if (failed) return h(FishLogo, { size });
       return h('img', {
         className: 'dshm-logo', src: resolveUrl('/dsh-music/icon.png'), width: size, height: size,
-        alt: 'dsh-music', draggable: false, decoding: 'async',
+        style: { width: size, height: size, filter: size >= 40 ? 'drop-shadow(0 4px 10px var(--dsw-alias-bg-mask-2))' : 'none' },
+        alt, draggable: false, decoding: 'async',
         onError: () => setFailed(true),
       });
     }
 
-    function SettingsView({ t, onboarding, useOnboarding, sync, useSync, likedSync, useLikedSync, section, onExit, onRoute, onViewLikes }) {
+    /* 面板 / 迷你条共用背景预设：默认小蓝鱼水印，其余四套简约底纹。
+     * 单一 ui.bg 存储 + prefs 持久化 → 面板、迷你条、悬浮球天然同步。 */
+    const BG_PRESETS = [
+      { id: 'logo', nameKey: 'bgLogo' },
+      { id: 'plain', nameKey: 'bgPlain' },
+      { id: 'mist', nameKey: 'bgMist' },
+      { id: 'dune', nameKey: 'bgDune' },
+      { id: 'vinyl', nameKey: 'bgVinyl' },
+    ];
+    const BG_IDS = BG_PRESETS.map((p) => p.id);
+
+    /* 背景层：绝对定位铺满容器、pointer-events:none，内容在其上（见 CSS z-index 提升）。
+     * kind 决定几何：panel 大鱼右下角 / mini 条内小鱼 / fab 只上底纹 / tile 设置页预览。 */
+    function BgLayer({ bg, kind }) {
+      const id = BG_IDS.includes(bg) ? bg : 'logo';
+      return h('div', { className: 'dshm-bg', 'data-dshm-bg': id, 'data-dshm-bg-kind': kind || 'panel', 'aria-hidden': true },
+        id === 'logo' && kind !== 'fab'
+          ? h('img', {
+              className: 'dshm-bg-logo', src: resolveUrl('/dsh-music/icon.png'), alt: '', draggable: false, decoding: 'async',
+              onError: (e) => { e.currentTarget.style.display = 'none'; },
+            })
+          : null);
+    }
+
+    function SettingsView({ t, onboarding, useOnboarding, sync, useSync, likedSync, useLikedSync, section, onExit, onRoute, onViewLikes, useUi, onBg }) {
       const snap = useOnboarding((st) => st) || {};
       const firstRun = snap.completed !== true;
+      const bg = useUi ? (useUi((s) => s.bg) || 'logo') : 'logo';
       const taste = snap.taste || {};
       const [genres, setGenres] = useState(() => (taste.genres || []).slice());
       const [langs, setLangs] = useState(() => (taste.languages || []).slice());
@@ -3611,6 +3733,17 @@ window.__ModuleLoader__.load({
               }),
               h('p', { className: 'dshm-whint' }, t('welcomePathHint'))));
 
+      /* ── ④ 面板背景（老用户）：五套预设，点选立即生效并与迷你条/悬浮球同步 ── */
+      const bgSection = !firstRun && useUi ? h('section', { className: 'dshm-set-section', 'aria-label': t('bgTitle') },
+        sectionHead(null, 'dshm-set-bg', IconDisc, t('bgTitle'), t('bgSub')),
+        h('div', { className: 'dshm-bg-tiles', role: 'radiogroup', 'aria-label': t('bgTitle') },
+          BG_PRESETS.map((p) => h('button', {
+            key: p.id, type: 'button', role: 'radio', 'aria-checked': bg === p.id,
+            className: 'dshm-bg-tilebtn', onClick: () => onBg && onBg(p.id),
+          },
+            h('span', { className: 'dshm-bg-tile' }, h(BgLayer, { bg: p.id, kind: 'tile' })),
+            t(p.nameKey))))) : null;
+
       /* ── 首启选 starter 后的进度面板（原欢迎流程第 4 步） ── */
       const starterPanel = h('div', { className: 'dshm-welcome-panel dshm-set-section' },
         h('h2', { className: 'dshm-wstep-title' }, t('welcomeStarterTitle')),
@@ -3686,7 +3819,8 @@ window.__ModuleLoader__.load({
           h('div', { className: 'dshm-set-sections' },
             likedSection,
             tasteSection,
-            libSection),
+            libSection,
+            bgSection),
           foot));
     }
 
@@ -3781,7 +3915,7 @@ window.__ModuleLoader__.load({
       }, h(IconThumbDown, { size, style: disliked ? { fill: 'currentColor' } : undefined }));
     }
 
-    function TrackRow({ track, index, isCurrent, playing, onPlay, onDelete, onReveal, onOpenArtist, likes, useLikes, t, muted, pending, onAdd }) {
+    function TrackRow({ track, index, isCurrent, playing, onPlay, onDelete, onReveal, onOpenArtist, likes, useLikes, t, muted, pending, onAdd, addSlot }) {
       return h('div', {
         className: cx('dshm-row', isCurrent && 'dshm-row-current', muted && 'dshm-row-off'),
         role: 'listitem',
@@ -3812,7 +3946,9 @@ window.__ModuleLoader__.load({
         likes ? h(LikeButton, { t, item: track, likes, useLikes }) : null,
         /* 「不喜欢」只属于推荐 / 正在播放 —— 曲库里想移除一首歌，取消 ♥ 或删除文件即可。 */
         (likes && !onDelete) ? h(DislikeButton, { t, item: track, likes, useLikes }) : null,
-        /* 十三期：后台扫描结果决定样式——found → 实心「可入库」药丸；none → 虚线淡色（点了会再找一次）；未扫描 → 普通图标 */
+        /* 十三期：后台扫描结果决定样式——found → 实心圆图标钮；none → 虚线淡色（点了会再找一次）；未扫描 → 普通图标。
+         * 只留图标、不带文字：三态都与行尾其它图标同占 32px，♥ / 👎 / 时长各列逐行垂直对齐；
+         * 已在曲库的行由 addSlot 留一个同宽空位，入库完成后列也不跳动。 */
         onAdd && track.inLibrary === false
           ? (() => {
             const addState = track.source ? (track.source.status === 'found' && track.source.hit ? 'ready' : 'none') : 'unknown';
@@ -3821,9 +3957,9 @@ window.__ModuleLoader__.load({
               label: t(addState === 'ready' ? 'addReady' : addState === 'none' ? 'addNone' : 'addMissing'),
               className: cx('dshm-row-add', addState === 'ready' && 'dshm-row-add-ready', addState === 'none' && 'dshm-row-add-none'),
               onClick: (e) => { e.stopPropagation(); onAdd(track); },
-            }, h(IconDownload, { size: addState === 'ready' ? 12 : 14 }), addState === 'ready' ? h('span', { className: 'dshm-row-add-text' }, t('addReadyShort')) : null);
+            }, h(IconDownload, { size: 14 }));
           })()
-          : null,
+          : (addSlot ? h('span', { key: 'add', className: 'dshm-row-add-slot', 'aria-hidden': true }) : null),
         onDelete ? h('span', { className: 'dshm-row-actions', onClick: (e) => e.stopPropagation() },
           h(IconButton, { label: t('revealTrack'), onClick: (e) => { e.stopPropagation(); onReveal(track); } }, h(IconFolder, { size: 15 })),
           h(IconButton, { label: t('deleteTrack'), className: 'dshm-iconbtn-danger', onClick: (e) => { e.stopPropagation(); onDelete(track); } }, h(IconTrash, { size: 15 }))) : null,
@@ -3911,7 +4047,7 @@ window.__ModuleLoader__.load({
         });
       }, [likeItems, tracks]);
       const likesScan = useLikes((st) => st.scan) || null;
-      /* 扫描进行中每 5 s 刷一次列表（本地读，便宜），让「可入库」按钮陆续亮起来 */
+      /* 扫描进行中每 5 s 刷一次列表（本地读，便宜），让实心入库图标陆续亮起来 */
       const scanTimer = useRef(null);
       const scanRunning = !!(likesScan && likesScan.running);
       useEffect(() => {
@@ -4182,7 +4318,9 @@ window.__ModuleLoader__.load({
                   key: tr.id || ('liked' + i), track: tr, index: i,
                   isCurrent: currentId === tr.id, playing, muted: tr.muted,
                   onPlay: playLiked, onOpenArtist: openArtistPage, likes, useLikes, t,
-                  /* 行尾「入库」只给「导入且不在曲库」的条目（有 audioUrl 的已在曲库） */
+                  /* 行尾「入库」只给「导入且不在曲库」的条目（有 audioUrl 的已在曲库）；
+                     已在曲库的行留同宽空位（addSlot），♥ / 👎 / 播放各列逐行对齐 */
+                  addSlot: true,
                   onAdd: download && !tr.inLibrary && !tr.audioUrl ? (tr2) => addMissing(tr2, { front: true }) : null,
                 })));
       } else if (status === 'loading' && tracks.length === 0) {
@@ -4195,7 +4333,7 @@ window.__ModuleLoader__.load({
         }, h('button', { type: 'button', className: 'dshm-chipbtn', onClick: () => library.load() }, t('retry')));
       } else if (status === 'ready' && tracks.length === 0) {
         content = h(EmptyState, {
-          icon: h(IconNote, { size: 30 }),
+          icon: h(PluginLogo, { size: 44, alt: '' }),
           title: t('emptyLibraryTitle'), body: t('emptyLibraryBody'),
         },
           h('div', { className: 'dshm-empty-ctas' },
@@ -4265,7 +4403,7 @@ window.__ModuleLoader__.load({
               likedMissing > 0
                 ? h('span', { className: 'dshm-missing-chip', title: t('addMissingHint'), role: 'status' }, fmt(t('likesMissingCount'), { n: likedMissing }))
                 : null,
-              /* 后台找音源进行中：进度 chip（done 已处理 / found 已找到；列表会自动刷新，找到的行会亮起「可入库」） */
+              /* 后台找音源进行中：进度 chip（done 已处理 / found 已找到；列表会自动刷新，找到的行会亮起实心入库图标） */
               scanRunning
                 ? h('span', { className: 'dshm-missing-chip dshm-scan-chip', title: t('scanHint'), role: 'status' },
                     h(IconRefresh, { size: 11, className: 'dshm-spin' }),
@@ -4391,7 +4529,7 @@ window.__ModuleLoader__.load({
 
       if (!track) {
         return h(EmptyState, {
-          icon: h(IconDisc, { size: 30 }),
+          icon: h(PluginLogo, { size: 44, alt: '' }),
           title: t('noTrackTitle'), body: t('noTrackBody'),
         }, h('button', { type: 'button', className: 'dshm-chipbtn dshm-chipbtn-primary', onClick: () => openView('library') }, h(IconNote, { size: 14 }), t('goLibrary')));
       }
@@ -4757,7 +4895,7 @@ window.__ModuleLoader__.load({
       if (!styleActive && s.status !== 'ready' && !s.sections) {
         return h('div', { className: 'dshm-reco-page' }, toolbar,
           h(EmptyState, {
-            icon: h(IconSparkles, { size: 30 }),
+            icon: h(PluginLogo, { size: 44, alt: '' }),
             title: coldStart ? t('recoColdTitle') : t('recoEmptyTitle'),
             body: coldStart ? t('recoColdBody') : t('recoEmptyBody'),
           }, h('button', { type: 'button', className: 'dshm-chipbtn dshm-chipbtn-primary', onClick: () => reco.generate() },
@@ -5355,7 +5493,13 @@ window.__ModuleLoader__.load({
       const s = useHistory((st) => st);
       const [notice, setNotice] = useState('');
       const tracks = useLibrary ? useLibrary((st) => st.tracks) : [];
-      useEffect(() => { history.load(50); }, []);
+      /* 进页即拉取；驻留期间 15s 低频轮询兜底（本机播放事件另由 report→refreshSoon 即时推送，
+       * 轮询只为覆盖其它窗口写入的事件；载荷不变时 store 不通知，无重渲染开销）。 */
+      useEffect(() => {
+        history.load(50);
+        const timer = setInterval(() => history.load(50), 15000);
+        return () => clearInterval(timer);
+      }, []);
       const stats = s.stats;
       const coverOf = (ev) => {
         const tr = ev.trackId && tracks.find((x) => x.id === ev.trackId);
@@ -5499,7 +5643,7 @@ window.__ModuleLoader__.load({
           title: t('historyError'), body: s.error || '',
         }, h('button', { type: 'button', className: 'dshm-chipbtn', onClick: () => history.load(50) }, t('lyricsRetry')));
       } else if (events.length === 0) {
-        list = h(EmptyState, { icon: h(IconQueue, { size: 30 }), title: t('historyEmpty') });
+        list = h(EmptyState, { icon: h(PluginLogo, { size: 44, alt: '' }), title: t('historyEmpty') });
       } else {
         const groups = [];
         let last = null;
@@ -5687,6 +5831,7 @@ window.__ModuleLoader__.load({
       const settingsSection = useUi((s) => s.settingsSection);
       const libTabWish = useUi((s) => s.libTabWish);
       const miniHidden = useUi((s) => s.miniHidden);
+      const bg = useUi((s) => s.bg) || 'logo';
       const hasTrack = usePlayer((s) => !!s.track);
       const status = useLibrary((s) => s.status);
       const count = useLibrary((s) => s.tracks.length);
@@ -5779,6 +5924,7 @@ window.__ModuleLoader__.load({
       if (view === 'settings') {
         return h(SettingsView, {
           t, onboarding, useOnboarding, sync, useSync, likedSync, useLikedSync,
+          useUi, onBg: (id) => { ui.set({ bg: id }); writePrefs({ bg: id }); },
           section: settingsSection,
           /* 导入结果里的「查看我喜欢」：回曲库并直接打开「我喜欢」子页 */
           onViewLikes: () => { ui.set({ view: 'library', settingsSection: null, libTabWish: 'likes', navStack: [] }); },
@@ -5814,9 +5960,11 @@ window.__ModuleLoader__.load({
 
       return h(React.Fragment, null,
         h('div', { className: 'dshm-panel' },
+          h(BgLayer, { bg, kind: 'panel' }),
           h('header', { className: 'dshm-header' },
             h('div', { className: 'dshm-header-inner' },
               h('div', { className: 'dshm-title-row' },
+                h('span', { className: 'dshm-title-logo', 'aria-hidden': true }, h(PluginLogo, { size: 22, alt: '' })),
                 h('h1', { className: 'dshm-title' }, t('panel')),
                 h('span', { className: 'dshm-count' }, count > 0 ? count + ' ' + t('tracksUnit') : ''),
                 h('div', { className: 'dshm-header-actions' },
@@ -5864,10 +6012,13 @@ window.__ModuleLoader__.load({
      * 13. Sidebar panel icon (sidebar.panellist owner props)
      * ================================================================ */
     function PanelIcon({ size, active }) {
-      return h(IconNote, {
-        size: size || 18,
-        style: { color: active ? 'var(--dsw-alias-brand-text)' : 'currentColor', display: 'block' },
-      });
+      /* 侧栏入口是跨页面常驻的唯一品牌位：用真实 logo（透明底 PNG）。
+       * active 不改图色（PNG 是固定色），给外层加圆角底色；取不到图时 PluginLogo 自行退回 FishLogo。 */
+      const s = size || 18;
+      return h('span', {
+        className: cx('dshm-panel-icon', active && 'dshm-panel-icon-on'),
+        style: { width: s, height: s }, 'aria-hidden': true,
+      }, h(PluginLogo, { size: s, alt: '' }));
     }
 
     /* ================================================================
@@ -5881,6 +6032,7 @@ window.__ModuleLoader__.load({
       const error = usePlayer((s) => s.error);
       const hidden = useUi((s) => s.miniHidden);
       const collapsed = useUi((s) => s.miniCollapsed);
+      const bg = useUi((s) => s.bg) || 'logo';
       const shuffle = usePlayer((s) => s.shuffle);
       const repeat = usePlayer((s) => s.repeat);
       const mode = modeMeta(t, shuffle, repeat);
@@ -6036,7 +6188,11 @@ window.__ModuleLoader__.load({
           onPointerUp: onFabUp, onPointerCancel: onFabUp,
           onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); expandFromFab(); setMiniCollapsed(false); } },
         },
-          h(Thumb, { src: track.coverUrl, size: 48, round: true, glyph: IconNote }),
+          h(BgLayer, { bg, kind: 'fab' }),
+          /* 有封面时封面是内容不是品牌，保持原样；无封面才露出小蓝鱼 */
+          track.coverUrl
+            ? h(Thumb, { src: track.coverUrl, size: 48, round: true, glyph: IconNote })
+            : h('span', { className: 'dshm-mini-fab-logo', 'aria-hidden': true }, h(PluginLogo, { size: 34, alt: '' })),
           h('span', { className: 'dshm-mini-fab-badge', 'aria-hidden': true },
             h(playing ? IconPause : IconPlay, { size: 11 }))));
       }
@@ -6135,6 +6291,7 @@ const DRAG_THRESHOLD = 4;
         onPointerDown: barDown, onPointerMove: barMove,
         onPointerUp: barUp, onPointerCancel: (e) => barUp(e, true),
       },
+        h(BgLayer, { bg, kind: 'mini' }),
         h('div', {
           className: 'dshm-mini-grip', role: 'button', tabIndex: 0,
           title: t('miniDrag'), 'aria-label': t('miniDrag'),
@@ -6355,10 +6512,11 @@ const DRAG_THRESHOLD = 4;
       });
       const syncService = createSyncService(api);
       const historyService = createHistoryService(api);
-      const player = createPlayer(t, api);
+      /* 播放事件落库 → 即时刷新历史统计/排行（无需切页） */
+      const player = createPlayer(t, api, () => historyService.refreshSoon());
       const previewService = createPreviewService(api);
       const warmService = createWarmService(previewService, player);
-      const likesService = createLikesService(api, () => downloadService.warm());
+      const likesService = createLikesService(api, () => downloadService.warm(), () => historyService.refreshSoon());
       /* 曲目入库完成（单曲落盘或整批结束）→ 同步刷新曲库与「我喜欢」，无需切页即可直接播放 */
       syncAfterDownload = () => {
         library.load();
@@ -6371,6 +6529,7 @@ const DRAG_THRESHOLD = 4;
         syncService.dispose();
         previewService.dispose();
         likedSyncService.dispose();
+        historyService.dispose();
       }, 'dsh-music: s3 poll timers');
       likedSyncService.load();
       downloadService.warm();
@@ -6394,6 +6553,8 @@ const DRAG_THRESHOLD = 4;
         artistName: null,
         settingsSection: null,
         libTabWish: null,
+        /* 面板/迷你条共用背景预设（prefs 持久化，默认小蓝鱼水印） */
+        bg: BG_IDS.includes(savedPrefs.bg) ? savedPrefs.bg : 'logo',
         downloadFloat: null,
         miniRect: null,
         /* 导航历史栈：返回 = 回到刚才的地方（不再写死「返回推荐」/「返回曲库」） */
