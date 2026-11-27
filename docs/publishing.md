@@ -2,7 +2,7 @@
 
 本文件说明 dsh-music 如何从仓库发到 GitHub、npm 与 DSH 插件目录（market / awesome-dsh-plugin）。**发布动作只在用户提供凭据后执行**，仓库内不保存任何 token。
 
-版本：`0.8.3`（2026-11-27）。发布前请先读「发布前检查」。
+版本：`0.8.4`（2026-11-27）。发布前请先读「发布前检查」。
 
 ## 包名约定（批5 改名）
 
@@ -255,3 +255,17 @@ Release 说明至少写：七期变更（悬浮标/应用内顶层与跨应用�
 | GitHub Release | ✅ | 资产 `vicyangorg-dsh-music-0.8.3.tgz`（524952B，活体 HTTP 200，shasum `d1780aae8ad36fbfd29df5b9cd5b8d1e1403d7a1`） |
 | npm | ✅ | `npm publish --access public` → `+ @vicyangorg/dsh-music@0.8.3`（shasum `d1780aae8ad36fbfd29df5b9cd5b8d1e1403d7a1`，与本地 dist tgz 一致） |
 | 目录 PR | ✅ 已更新 | 原未合并 PR https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/19325 已更新至 `Update dsh-music to 0.8.3`（fork 分支 `bump-dsh-music-0.8.2`，commit `2d48247`，仅 tarball → `v0.8.3`），OPEN / MERGEABLE，候维护者审核 |
+
+## 16. v0.8.4 实际发布记录（2026-11-27）
+
+| 通道 | 状态 | 说明 |
+|---|---|---|
+| main 提交 | ✅ | 功能提交 `7b13665`（晨雾 / 暖沙 / 唱片三套背景预设重画：色彩浓度 40–60% + 宿主 `body[data-ds-dark-theme]` 暗色单独提档；删除点阵版「素净」预设；设置页改渲染在 `.dshm-panel` 壳内并挂同一个 `BgLayer`，点选预设本页即时生效；历史页统计卡 / 常听卡 / 不喜欢卡只留描边、日期 sticky 头 46% + 12px 磨砂；client-render-smoke 244/244；README 0.8.4 节 + bundle README / DETAIL 同步）→ 发版提交 `2b7ed78` |
+| 发布前门禁 | ✅ | `packaging-check` 14/14、`import-smoke` 34 模块、`client-render-smoke` 244/244（新增：每个重做预设都有暗色变体 / 设置页根节点为 `.dshm-panel[data-dshm-view=settings]` 且首子节点为 panel 级 BgLayer / 切换预设后设置页背景立即重渲染 / 四个 radio 顺序 logo,mist,dune,vinyl / 点阵预设彻底移除）、`liked-sync-test` 31/31、`liked-sync-client-test` 21/21、`download-queue-test` / `source-scan-test` 7/7 / `icon-route-test` 4/4 / `v6b4-test` / `v8-taste-test` 全绿、`cold-install-smoke` 20/20（对真实 tgz 解包目录，65 文件，526.6 kB）；tgz 内容核对无测试产物、版本 0.8.4 |
+| GitHub tag | ✅ | `v0.8.4` 指向 `2b7ed78`（`https://github.com/vicyangworld/dsh-music/releases/tag/v0.8.4`） |
+| GitHub Release | ✅ | 资产 `vicyangorg-dsh-music-0.8.4.tgz`（526635B，活体 HTTP 200，shasum `27209ccc0bcf41a4e139fd7c55dfcefb1268b8b4`）；说明含新功能 / 移除 / 安装命令 / 数据位置 / 已知限制 |
+| npm | ✅ | `npm publish --access public` → 202 异步处理 → `+ @vicyangorg/dsh-music@0.8.4`（shasum `27209ccc0bcf41a4e139fd7c55dfcefb1268b8b4`，与本地 dist tgz 一致）；registry packument 直查 `dist-tags.latest=0.8.4`，tarball https://registry.npmjs.org/@vicyangorg/dsh-music/-/dsh-music-0.8.4.tgz 活体 200（526635B） |
+| 目录 PR | ✅ 已更新 | 原未合并 PR https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/19325 已更新至 `Update dsh-music to 0.8.4`（fork 分支 `bump-dsh-music-0.8.2`，commit `a757fab`，tarball → `v0.8.4`，中英描述补四套面板背景 / 透明历史卡），OPEN / MERGEABLE，候维护者审核 |
+
+- 视觉验证：`visual-check/bg-presets/harness.mjs`（用 dsh-client-ui-theme 真实亮暗 token，暗色板根节点挂 `data-ds-dark-theme`）出图 `bg-presets.png` / `bg-presets-dark.png`，五容器（面板 / 迷你条 / 悬浮球 / 设置页 / 历史页）× 四预设逐一目检；该目录含 mock 截图，不进公开仓库。
+- 注意：本机 profile 的 `@vicyangorg/dsh-music` 是 `link:` 到仓库 `bundle/` 的开发链接安装，发版不影响它；`install_bundle` 对同一 link 目标会返回 `already-installed`。
