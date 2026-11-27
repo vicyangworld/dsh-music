@@ -2,7 +2,7 @@
 
 本文件说明 dsh-music 如何从仓库发到 GitHub、npm 与 DSH 插件目录（market / awesome-dsh-plugin）。**发布动作只在用户提供凭据后执行**，仓库内不保存任何 token。
 
-版本：`0.8.2`（2026-11-27）。发布前请先读「发布前检查」。
+版本：`0.8.3`（2026-11-27）。发布前请先读「发布前检查」。
 
 ## 包名约定（批5 改名）
 
@@ -244,3 +244,14 @@ Release 说明至少写：七期变更（悬浮标/应用内顶层与跨应用�
 | GitHub Release | ✅ | 资产 `vicyangorg-dsh-music-0.8.2.tgz`（524179B，活体 HTTP 200） |
 | npm | ✅ | `@vicyangorg/dsh-music@0.8.2` 已入库上线（`latest`，shasum `374a4223337a51fdcc2ee5aff219cb304a54cfc6`，与本地 dist tgz 一致） |
 | 目录 PR | ✅ 新开 | 原 PR #18923 已 MERGED；本次新开 https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/19325 `Update dsh-music to 0.8.2`（fork 分支 `bump-dsh-music-0.8.2`，commit `08a3f2d`，仅 tarball → `v0.8.2`），OPEN / MERGEABLE，候维护者审核 |
+
+## 15. v0.8.3 实际发布记录（2026-11-27）
+
+| 通道 | 状态 | 说明 |
+|---|---|---|
+| main 提交 | ✅ | 修复提交 `64ed6bd`（QQ 扫码内存 cookie 罐改为 RFC 6265 `(name, domain, path)` 隔离存储与过期删除，修复 `check_sig` / `ptqrlogin` 同响应跨域清旧值误删 `.graph.qq.com` 有效登录态 `p_uin`/`p_skey`/`pt4_token`/`ptcz`；补域归属/路径匹配与回归测试）→ 发版提交 `98fe01a` |
+| 发布前门禁 | ✅ | `packaging-check` 14/14、`import-smoke` 34 模块、`client-render-smoke` 239/239、`liked-sync-test` 31/31、`liked-sync-client-test` 21/21、`download-queue-test` / `source-scan-test` 7/7 / `icon-route-test` 4/4 / `v6b4-test` / `v8-taste-test` 全绿、`cold-install-smoke` 20/20（65 文件，525.0 kB） |
+| GitHub tag | ✅ | `v0.8.3` 指向 `98fe01a`（`https://github.com/vicyangworld/dsh-music/releases/tag/v0.8.3`） |
+| GitHub Release | ✅ | 资产 `vicyangorg-dsh-music-0.8.3.tgz`（524952B，活体 HTTP 200，shasum `d1780aae8ad36fbfd29df5b9cd5b8d1e1403d7a1`） |
+| npm | ✅ | `npm publish --access public` → `+ @vicyangorg/dsh-music@0.8.3`（shasum `d1780aae8ad36fbfd29df5b9cd5b8d1e1403d7a1`，与本地 dist tgz 一致） |
+| 目录 PR | ✅ 已更新 | 原未合并 PR https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/19325 已更新至 `Update dsh-music to 0.8.3`（fork 分支 `bump-dsh-music-0.8.2`，commit `2d48247`，仅 tarball → `v0.8.3`），OPEN / MERGEABLE，候维护者审核 |
