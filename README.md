@@ -13,10 +13,10 @@ DeepSeek Harness Desktop 的音乐插件：播放本地曲库、同步歌词与�
 | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/library-shelf.webp" width="280" alt="曲库卡片架"> | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/reco-columns.webp" width="280" alt="推荐三栏"> | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/artist-page.webp" width="280" alt="歌手页"> |
 | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/liked-full.webp" width="280" alt="我喜欢完整列表"> | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/shelf-synced.webp" width="280" alt="跨页喜欢同步"> | <img src="https://raw.githubusercontent.com/vicyangworld/dsh-music/main/bundle/docs/assets/library-toolbar.webp" width="280" alt="曲库工具栏"> |
 
-- npm 包名：`@vicyangorg/dsh-music`（v0.8.2）；品牌名与 GitHub 仓库仍为 `dsh-music`（原名 `dsh-music` 在 npm 被占位包占用，故用 scoped 名，见 `docs/publishing.md`）
+- npm 包名：`@vicyangorg/dsh-music`（v0.8.4）；品牌名与 GitHub 仓库仍为 `dsh-music`（原名 `dsh-music` 在 npm 被占位包占用，故用 scoped 名，见 `docs/publishing.md`）
 - 形态：DSH bundle（Host 服务 + Web 客户端面板）
-- 验证状态：一期～十四期均已验收通过（验收证据为内部文档，含本机数据，不随公开仓库发布）；`v0.8.2` 的面板背景预设、历史实时刷新与桌面歌词跳转修复均通过全套自动化测试（歌词跳转经真实桌面端复验），详见 `docs/publishing.md` §12–§14
-- 分发状态：`@vicyangorg/dsh-music@0.8.2` 已发布 GitHub Release + npm（MIT/engines.dsh/8 语 meta/DETAIL+截图/README，打包守门+冷装冒烟通过）
+- 验证状态：一期～十四期均已验收通过（验收证据为内部文档，含本机数据，不随公开仓库发布）；`v0.8.4` 的背景预设重做 / 设置页即时背景 / 历史页透明卡片与 `v0.8.2` 的历史实时刷新、桌面歌词跳转修复均通过全套自动化测试（歌词跳转经真实桌面端复验），详见 `docs/publishing.md` §12–§16
+- 分发状态：`@vicyangorg/dsh-music@0.8.4` 已发布 GitHub Release + npm（MIT/engines.dsh/8 语 meta/DETAIL+截图/README，打包守门+冷装冒烟通过）
 
 ## 功能
 | 模块 | 说明 |
@@ -174,7 +174,7 @@ DeepSeek Harness Desktop 的音乐插件：播放本地曲库、同步歌词与�
 ## 安装
 插件以 bundle 形式安装在 desktop profile，**只用 `plugin_manager install_bundle`**（不手写 profile 配置）：
 ```
-plugin_manager install_bundle  target=@vicyangorg/dsh-music@0.8.2
+plugin_manager install_bundle  target=@vicyangorg/dsh-music@0.8.4
 # 或本地源码：target=<项目>/bundle
 ```
 以返回 `application: applied` 为准。安装后刷新现有 GUI 页面，左侧栏出现「音乐」面板。

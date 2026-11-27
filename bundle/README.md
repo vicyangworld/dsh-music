@@ -25,9 +25,9 @@
 
 1. 安装插件包：在 DSH 插件市场安装，或用 `plugin_manager` 安装本包（目录、`.tgz` 或 `link:` 源码目录）。
    ```text
-   plugin_manager(install_bundle, target: "@vicyangorg/dsh-music@0.8.3")
+   plugin_manager(install_bundle, target: "@vicyangorg/dsh-music@0.8.4")
    ```
-   也支持本地 tgz：`target: "/path/to/vicyangorg-dsh-music-0.8.3.tgz"`。
+   也支持本地 tgz：`target: "/path/to/vicyangorg-dsh-music-0.8.4.tgz"`。
 2. 刷新 DSH 页面，左侧栏出现「音乐」面板图标，点开即用。
 3. 可选：安装 `yt-dlp` 与 `ffmpeg`（macOS: `brew install yt-dlp ffmpeg`），用于在线试听与「喜欢才入库」；不装也能播放本地曲库。
 
