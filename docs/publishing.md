@@ -233,3 +233,14 @@ Release 说明至少写：七期变更（悬浮标/应用内顶层与跨应用�
 | GitHub Release | ✅ | 资产 `vicyangorg-dsh-music-0.8.1.tgz`（517893B，活体 HTTP 200） |
 | npm | ✅ | `@vicyangorg/dsh-music@0.8.1` 已入库上线（`latest`，shasum `023b09cf067335b5126c23d4edf61686596cdfdb`） |
 | 目录 PR | ✅ 已更新 | 原未合并 PR https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/18923 已更新至 `Update dsh-music to 0.8.1`（commit `16ccc92`，tarball → `v0.8.1`），OPEN / MERGEABLE，候维护者审核 |
+
+## 14. v0.8.2 实际发布记录（2026-11-27）
+
+| 通道 | 状态 | 说明 |
+|---|---|---|
+| main 提交 | ✅ | 功能提交 `d500d87`（面板背景五预设 + 历史统计/排行实时刷新 + 桌面歌词跳转修复 `resolveMediaUrl` + 历史页自滚动容器 + 「我喜欢」入库纯图标对齐）→ 发版提交 `f5f1d63` |
+| 发布前门禁 | ✅ | `packaging-check` 14/14、`import-smoke` 34 模块、`client-render-smoke` 239/239（含歌词点击 seek / 桌面媒体 URL 对照 / 历史实时刷新回归）、`download-queue-test` / `liked-sync-client-test` 21/21 / `source-scan-test` 7/7 / `icon-route-test` 4/4 / `liked-sync-test` 30/30 / `v8-taste-test` / `s3-test` 全绿、`cold-install-smoke` 20/20（65 文件，511.9 kB） |
+| GitHub tag | ✅ | `v0.8.2` 指向 `f5f1d63`（`https://github.com/vicyangworld/dsh-music/releases/tag/v0.8.2`） |
+| GitHub Release | ✅ | 资产 `vicyangorg-dsh-music-0.8.2.tgz`（524179B，活体 HTTP 200） |
+| npm | ✅ | `@vicyangorg/dsh-music@0.8.2` 已入库上线（`latest`，shasum `374a4223337a51fdcc2ee5aff219cb304a54cfc6`，与本地 dist tgz 一致） |
+| 目录 PR | ✅ 新开 | 原 PR #18923 已 MERGED；本次新开 https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/19325 `Update dsh-music to 0.8.2`（fork 分支 `bump-dsh-music-0.8.2`，commit `08a3f2d`，仅 tarball → `v0.8.2`），OPEN / MERGEABLE，候维护者审核 |
