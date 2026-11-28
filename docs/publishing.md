@@ -269,3 +269,18 @@ Release 说明至少写：七期变更（悬浮标/应用内顶层与跨应用�
 
 - 视觉验证：`visual-check/bg-presets/harness.mjs`（用 dsh-client-ui-theme 真实亮暗 token，暗色板根节点挂 `data-ds-dark-theme`）出图 `bg-presets.png` / `bg-presets-dark.png`，五容器（面板 / 迷你条 / 悬浮球 / 设置页 / 历史页）× 四预设逐一目检；该目录含 mock 截图，不进公开仓库。
 - 注意：本机 profile 的 `@vicyangorg/dsh-music` 是 `link:` 到仓库 `bundle/` 的开发链接安装，发版不影响它；`install_bundle` 对同一 link 目标会返回 `already-installed`。
+
+## 17. v0.8.5 实际发布记录（2026-11-28）
+
+| 通道 | 状态 | 说明 |
+|---|---|---|
+| main 提交 | ✅ | 功能提交 `695d8e9`（老用户设置页改两列清单：132px 标签列 + 控件列、发丝线分隔、三张平台卡并成一个容器、顶栏粘顶为返回箭头 + 标题 + 保存状态；去掉「保存设置」按钮改为自动落盘：口味 400ms 防抖、曲库单选即存、目录失焦 / 回车存，保存中只记 dirty 落地后补发；音乐库改「本地曲库 / 默认曲库」单选；口味标签与背景格子统一为宿主 brand-primary 选中态并加对勾角标；对比度：已就绪 2.20→5.82:1、已保存 2.20→5.72:1、账号名 / 占位符 3.34→5.80:1；client-render-smoke 244→255；README 0.8.5 节 + bundle README / DETAIL 同步）→ 发版提交 `b26487f` |
+| 发布前门禁 | ✅ | `packaging-check` 14/14、`import-smoke` 34 模块、`client-render-smoke` 255/255（重写为断言新 DOM 与自动保存路径：防抖 / 立即落盘 / 保存中合并、首启向导不变、CSS 规则存在；抓到并修掉 `payloadRef.current()(over)` 一处调用错误——该错误在改冒烟前被旧 mock 掩盖，未进入任何已发布版本）、`liked-sync-test` 31/31、`liked-sync-client-test` 21/21、`download-queue-test` / `source-scan-test` 7/7 / `icon-route-test` 4/4 / `v6b4-test` / `v8-taste-test`、真实 tgz `cold-install-smoke` 20/20 |
+| GitHub tag | ✅ | `v0.8.5` 指向 `b26487f`（附注标签 `d2edd9c`，`https://github.com/vicyangworld/dsh-music/releases/tag/v0.8.5`） |
+| GitHub Release | ✅ | 资产 `vicyangorg-dsh-music-0.8.5.tgz`（528708B，活体 HTTP 200，shasum `c17f7f6f9e5acd95712f1507459ff54318187dcc`，`gh release download` 回算一致）；说明含新功能 / 改进 / 修复 / 安装命令 / 数据位置 / 已知限制 |
+| npm | ✅ | `npm publish --access public` → 202 异步处理 → `+ @vicyangorg/dsh-music@0.8.5`；`npm view` 直查 `dist-tags.latest=0.8.5`、shasum `c17f7f6f…` 与本地 dist tgz 一致、65 文件 / 解包 1130118B；`npm pack @vicyangorg/dsh-music@0.8.5` 回下 528708B 同 shasum。本机网络下直接 `curl registry.npmjs.org` 会挂起 / 空响应（GitHub 资产 `curl -sL` 也空），packument 核验一律用 `npm view` / `npm pack`，GitHub 资产用 `gh release download` |
+| 目录 PR | ✅ 已提交 | 上一条 #19325 已被维护者合并（0.8.4），0.8.5 需新开 PR：https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/19511 「Update dsh-music to 0.8.5」（fork 分支 `bump-dsh-music-0.8.5` 自 upstream/main 切出，commit `d224b67`，只改 `data/plugins/vicyangworld__dsh-music--bundle.yml`：tarball → `v0.8.5`，中英描述各补一句设置页两列清单 / 自动保存），OPEN / MERGEABLE，CI `check` 跑中，候维护者审核 |
+
+- 视觉验证：`visual-check/settings-audit/harness.mjs`（`before|after|first` 三相，从 index.js 抽真实 CSS，亮暗各一张）+ `shoot.sh`（无头 Chrome 按 scrollHeight 出图）→ `before.png`（1316px）/ `after.png`（830px）/ `first.png`（1218px，首启向导回归）与 `compare.png` / `compare-dark.png` 并排图；对比度用 PIL 取文字区域最深像素算。该目录含 mock 截图，不进公开仓库。
+- `before` 相必须在改动前的 index.js 上出图，发版后再跑 `before` 会得到新 CSS（本次 before 图是改代码前留的）。
+- 注意：本机 profile 的 `@vicyangorg/dsh-music` 是 `link:` 到仓库 `bundle/` 的开发链接安装，发版不影响它；`install_bundle` 对同一 link 目标会返回 `already-installed`。
