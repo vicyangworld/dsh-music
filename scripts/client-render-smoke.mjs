@@ -401,9 +401,21 @@ check('Spotify row offers the sync action inside settings', !!spotBtn && !(spotB
 check('no standalone import/Spotify buttons outside the settings page', !has(firstTree, (n) => cls(n) === 'dshm-toolbar'));
 check('taste chips + library pick cards render', has(firstTree, (n) => cls(n) === 'dshm-wchip')
   && walk(firstTree).filter((n) => /^dshm-wcard( |$)/.test(cls(n))).length === 2);
-/* finish() / save() 真实函数体：参数全部 mock，统计调用 */
+/* finish() / persist() 真实函数体：参数全部 mock，统计调用（0.8.5 起老用户设置页没有 save()：
+ * 自动保存 = persistRef.current，保存中再改动只记一笔 dirty，落地后补发一次） */
 const finishBody2 = (src.match(/async function finish\(\) \{\n([\s\S]*?)\n      \}\n/) || [])[1];
-const saveBody = (src.match(/async function save\(\) \{\n([\s\S]*?)\n      \}\n/) || [])[1];
+const persistBody = (src.match(/persistRef\.current = async \(over\) => \{\n([\s\S]*?)\n      \};\n/) || [])[1];
+function makePersist(impl, opts = {}) {
+  const calls = { complete: 0, failed: 0, saved: 0 };
+  const onboarding = !impl ? null : { complete: impl.fail ? async () => { calls.complete++; throw new Error('boom'); }
+    : async (payload) => { calls.complete++; calls.payload = payload; if (opts.slow) await new Promise((r) => setTimeout(r, 30)); } };
+  const savingRef = { current: false }, dirtyRef = { current: false }, persistRef = { current: null };
+  const payloadRef = { current: (over) => ({ taste: { genres: [], languages: [] }, libraryMode: (over && over.mode) || 'local' }) };
+  const names = ['onboarding', 'savingRef', 'dirtyRef', 'persistRef', 'payloadRef', 'setFailed', 'setSavedAt'];
+  const values = [onboarding, savingRef, dirtyRef, persistRef, payloadRef, (v) => { if (v) calls.failed++; }, () => { calls.saved++; }];
+  persistRef.current = new Function(...names, 'return async function persist(over) {' + persistBody + '\n};')(...values);
+  return { calls, fn: persistRef.current, savingRef, dirtyRef };
+}
 async function runSettings(fnBody, args, impl) {
   const calls = { complete: 0, route: 0, phase: 0, failed: 0, saved: 0 };
   const onboarding = { complete: impl && impl.fail ? async () => { calls.complete++; throw new Error('boom'); } : async (payload) => { calls.complete++; calls.payload = payload; } };
@@ -424,10 +436,25 @@ const finFail = await runSettings(finishBody2, { mode: 'local' }, { fail: true }
 check('first-run finish failure: no route, failed flag set', finFail.complete === 1 && finFail.route === 0 && finFail.failed === 1);
 const finReady = await runSettings(finishBody2, { mode: 'starter', starterStatus: 'ready' });
 check('first-run finish when starter already ready: routes instead of re-downloading', finReady.complete === 1 && finReady.route === 1 && finReady.phase === 0);
-const saveOk = await runSettings(saveBody, { mode: 'starter' });
-check('returning save: one POST then saved flag', !!saveBody && saveOk.complete === 1 && saveOk.saved === 1 && saveOk.failed === 0 && saveOk.route === 0);
-const saveFail = await runSettings(saveBody, { mode: 'local' }, { fail: true });
-check('returning save failure: failed flag, no saved flag', saveFail.failed === 1 && saveFail.saved === 0);
+check('returning settings has no save() and no save-button copy (auto-save replaced it)', !/async function save\(\)/.test(src) && !/settingsSave(?!d)/.test(src));
+const pOk = makePersist({});
+await pOk.fn({ mode: 'starter' });
+check('auto-save persist: one POST with the override payload, then saved flag', !!persistBody && pOk.calls.complete === 1 && pOk.calls.saved === 1
+  && pOk.calls.failed === 0 && pOk.calls.payload.libraryMode === 'starter');
+const pFail = makePersist({ fail: true });
+await pFail.fn();
+check('auto-save failure: failed flag, no saved flag', pFail.calls.failed === 1 && pFail.calls.saved === 0 && pFail.calls.complete === 1);
+const pBusy = makePersist({}, { slow: true });
+const inflight = pBusy.fn();
+await pBusy.fn();
+check('a change during an in-flight save is not POSTed twice in parallel (dirty flag only)', pBusy.calls.complete === 1 && pBusy.dirtyRef.current === true);
+await inflight;
+await new Promise((r) => setTimeout(r, 60));
+check('the dirty change is re-sent exactly once after the in-flight save lands', pBusy.calls.complete === 2 && pBusy.dirtyRef.current === false && pBusy.savingRef.current === false,
+  'complete=' + pBusy.calls.complete);
+const pNone = makePersist(null);
+await pNone.fn();
+check('persist is a no-op without the onboarding service', pNone.calls.complete === 0 && pNone.calls.saved === 0);
 state.view = 'library';
 const backTree = expand(music(baseProps));
 const gearBtn = walk(backTree).find((n) => /dshm-chipbtn-icon/.test(String(cls(n) || '')) && (n.props || {})['aria-label'] === 'settingsTitle');
@@ -708,6 +735,14 @@ check('floating badge hides the bar controls', !has(collapsedTree, (n) => cls(n)
   check('settings page sits inside the panel shell above its own background layer',
     /\.dshm-panel > \.dshm-settings\{flex:1 1 0;min-height:0;height:auto;z-index:1;\}/.test(src)
     && /if \(view === 'settings'\) \{[\s\S]{0,400}return h\('div', \{ className: 'dshm-panel', 'data-dshm-view': 'settings' \},\s*h\(BgLayer, \{ bg, kind: 'panel' \}\),\s*h\(SettingsView,/.test(src));
+  check('0.8.5 settings: returning mode = 132px label column grid + hairline separators; one selection colour (brand) for chips and tiles; status/placeholder contrast tokens',
+    /\.dshm-settings-returning \.dshm-set-section\{display:grid;grid-template-columns:132px minmax\(0,1fr\);column-gap:24px;padding:22px 0;border-bottom:1px solid var\(--dsw-alias-border-l1\);scroll-margin-top:64px;\}/.test(src)
+    && /\.dshm-wchip-on,\.dshm-wchip-on:hover\{background:color-mix\(in srgb,var\(--dsw-alias-brand-primary\) 9%,var\(--dsw-alias-bg-layer-1\)\);color:var\(--dsw-alias-label-primary\);/.test(src)
+    && /\.dshm-bg-tilebtn\[aria-checked="true"\]\{border-color:var\(--dsw-alias-brand-primary\);[^}]*box-shadow:0 0 0 1px var\(--dsw-alias-brand-primary\);\}/.test(src)
+    && /\.dshm-prv-state\{[^}]*color:var\(--dsw-alias-label-secondary\);/.test(src)
+    && /\.dshm-winput::placeholder\{[^}]*color:var\(--dsw-alias-label-secondary\);/.test(src)
+    && /\.dshm-prv-head:hover\{background:var\(--dsw-alias-interactive-bg-hover\);\}/.test(src)
+    && !/dshm-set-top-title|dshm-set-head-icon/.test(src));
 }
 
 state.miniHidden = true;
@@ -805,10 +840,26 @@ check('artist page back label names the page you came from', (() => {
   return okNav;
 })());
 const realSettingsTree = expand(music(realProps));
-check('returning settings view renders the title row (no first-run hero) + three cards', has(realSettingsTree, (n) => cls(n) === 'dshm-set-top' && has(n, (x) => (x.children || []).includes('settingsTitle')))
-  && !has(realSettingsTree, (n) => cls(n) === 'dshm-logo') && walk(realSettingsTree).filter(isCard).length === 3);
-const backBtn = walk(realSettingsTree).find((n) => cls(n) === 'dshm-wbtn' && (n.children || []).includes('settingsBack'));
-check('returning foot has back + save', !!backBtn && has(realSettingsTree, (n) => cls(n) === 'dshm-wbtn dshm-wbtn-primary' && (n.children || []).includes('settingsSave')));
+check('returning settings view renders a compact title row (back arrow + title; no first-run hero, no gear/hint)', has(realSettingsTree, (n) => cls(n) === 'dshm-set-top'
+    && has(n, (x) => cls(x) === 'dshm-set-title' && (x.children || []).includes('settingsTitle')))
+  && !has(realSettingsTree, (n) => cls(n) === 'dshm-logo') && walk(realSettingsTree).filter(isCard).length === 3
+  && !has(realSettingsTree, (n) => /dshm-count|dshm-set-head-icon/.test(cls(n))));
+const retLabels = walk(realSettingsTree).filter((n) => cls(n) === 'dshm-set-label').map((n) => (n.children || []).join(','));
+const retSections = walk(realSettingsTree).filter((n) => cls(n) === 'dshm-set-section');
+check('returning settings is a two-column list: 4 labelled sections (liked / taste / library / background), each = label + body, no subs', JSON.stringify(retLabels) === JSON.stringify(['setLikedTitle', 'setTasteTitle', 'setLibTitle', 'bgTitle'])
+  && retSections.length === 4 && retSections.every((s) => { const k = s.children || []; return cls(k[0]) === 'dshm-set-label' && cls(k[1]) === 'dshm-set-body'; })
+  && !has(realSettingsTree, (n) => cls(n) === 'dshm-wstep-sub') && has(realSettingsTree, (n) => cls(n) === 'dshm-settings dshm-settings-returning'),
+  JSON.stringify(retLabels));
+check('first-run wizard keeps the card/foot layout and only loses the icon chips', !/dshm-set-head-icon/.test(src)
+  && /\.dshm-settings-first \.dshm-set-body\{display:contents;\}/.test(src));
+const backBtn = walk(realSettingsTree).find((n) => cls(n) === 'dshm-set-back');
+check('returning settings has a back arrow in the title row and NO footer / save button', !!backBtn && (backBtn.props || {})['aria-label'] === 'settingsBack'
+  && !has(realSettingsTree, (n) => /dshm-set-foot/.test(cls(n))) && !has(realSettingsTree, (n) => /dshm-wbtn/.test(cls(n)) && (n.children || []).includes('settingsSave')));
+const tileChecks = walk(realSettingsTree).filter((n) => cls(n) === 'dshm-bg-tilecheck');
+check('every background tile carries a check badge node (shown only on the checked tile, not colour alone)', tileChecks.length === 4
+  && tileChecks.every((n) => (n.props || {})['aria-hidden'] === true && has(n, (x) => x.type === 'svg'))
+  && /\.dshm-bg-tilebtn\[aria-checked="true"\] \.dshm-bg-tilecheck\{display:inline-flex;\}/.test(src),
+  'badges=' + tileChecks.length);
 
 /* 5a3b) 设置页背景选择：四个 radio（小蓝鱼/晨雾/暖沙/唱片，点阵版已删），点选立即写 ui store + prefs（面板/迷你条同步） */
 {
@@ -829,7 +880,7 @@ check('returning foot has back + save', !!backBtn && has(realSettingsTree, (n) =
   check('settings page is wrapped in the panel shell with its own panel-kind background layer (live)',
     !!root && cls(root) === 'dshm-panel' && root.props['data-dshm-view'] === 'settings'
     && kids.length === 2 && cls(kids[0]) === 'dshm-bg' && kids[0].props['data-dshm-bg'] === 'dune' && kids[0].props['data-dshm-bg-kind'] === 'panel'
-    && cls(kids[1]) === 'dshm-settings',
+    && cls(kids[1]).split(' ')[0] === 'dshm-settings',
     'root=' + (root && cls(root)) + ' kids=' + kids.map((k) => (k && typeof k === 'object' ? cls(k) + ':' + ((k.props || {})['data-dshm-bg'] || '') : typeof k)).join('|'));
   const mistState = { ...uiStore.getSnapshot(), bg: 'mist' };
   uiStore.set({ bg: 'mist' });
@@ -842,11 +893,26 @@ check('returning foot has back + save', !!backBtn && has(realSettingsTree, (n) =
 if (backBtn) backBtn.props.onClick();
 const afterBack = uiStore.getSnapshot();
 check('back returns to the library view', afterBack.view === 'library' && afterBack.settingsSection === null, 'view=' + afterBack.view);
-const saveBtn = walk(realSettingsTree).find((n) => cls(n) === 'dshm-wbtn dshm-wbtn-primary' && (n.children || []).includes('settingsSave'));
-saveBtn.props.onClick();
-await new Promise((r) => setTimeout(r, 50));
-check('save POSTs the taste payload to onboarding/complete', fetchBodies.some((x) => x.url.includes('/onboarding/complete') && /"genres"/.test(x.body)),
-  JSON.stringify(fetchBodies.filter((x) => x.url.includes('/onboarding'))));
+/* 0.8.5 自动保存：曲库单选点一下立即落盘；口味标签 400ms 防抖落盘；页面上没有任何保存按钮 */
+const obBefore = fetchBodies.length;
+const modeChips = walk(realSettingsTree).filter((n) => cls(n).split(' ').includes('dshm-wchip') && (n.props || {}).role === 'radio');
+check('library mode is a two-option radio chip row (local / starter) with exactly one checked', modeChips.length === 2
+  && modeChips.map((n) => (n.children || []).join(',')).join('|') === 'setLibLocalShort|setLibStarterShort'
+  && modeChips.filter((n) => n.props['aria-checked'] === true).length === 1
+  && has(realSettingsTree, (n) => cls(n) === 'dshm-wchips' && (n.props || {}).role === 'radiogroup' && (n.props || {})['aria-label'] === 'setLibTitle')
+  && !has(realSettingsTree, (n) => /^dshm-wcard( |$)/.test(cls(n))),
+  modeChips.map((n) => (n.children || []).join(',') + '=' + n.props['aria-checked']).join('|'));
+modeChips.find((n) => n.props['aria-checked'] === false).props.onClick();
+await new Promise((r) => setTimeout(r, 30));
+check('picking the other library mode saves immediately (no save button)', fetchBodies.slice(obBefore).some((x) => x.url.includes('/onboarding/complete') && /"libraryMode":"(starter|local)"/.test(x.body)),
+  JSON.stringify(fetchBodies.slice(obBefore).filter((x) => x.url.includes('/onboarding'))));
+const tasteBefore = fetchBodies.length;
+const offChip = walk(realSettingsTree).find((n) => cls(n) === 'dshm-wchip' && (n.props || {})['aria-pressed'] === false);
+offChip.props.onClick();
+check('taste chip toggle does NOT POST synchronously (debounced)', !fetchBodies.slice(tasteBefore).some((x) => x.url.includes('/onboarding/complete')));
+await new Promise((r) => setTimeout(r, 480));
+check('taste chip toggle auto-saves after the 400ms debounce with the genres payload', fetchBodies.slice(tasteBefore).some((x) => x.url.includes('/onboarding/complete') && /"genres"/.test(x.body)),
+  JSON.stringify(fetchBodies.slice(tasteBefore).filter((x) => x.url.includes('/onboarding'))));
 
 /* 5x) v8 taste plumbing + v9 card rail / background loads */
 check('library renders the liked card rail', has(realHeader, (n) => cls(n) === 'dshm-favs'));
@@ -924,7 +990,8 @@ check('netease step renders the QR as a crisp SVG with a 4-module quiet zone', !
   && /^-4 -4 /.test((qrSvg.props || {}).viewBox || ''), 'viewBox=' + ((qrSvg && qrSvg.props.viewBox) || ''));
 check('step 1 shows the waiting status + regenerate button', has(setTree, (n) => cls(n) === 'dshm-imp-step' && (n.children || []).includes('importQrWaiting'))
   && has(setTree, (n) => cls(n) === 'dshm-chipbtn' && (n.children || []).includes('importQrRegenerate')));
-check('read-only contract is stated under the section title', has(setTree, (n) => cls(n) === 'dshm-wstep-sub' && (n.children || []).includes('setLikedSub')));
+check('read-only contract is stated under the section title in the first-run wizard only (returning settings drops the subs)', has(firstTree, (n) => cls(n) === 'dshm-wstep-sub' && (n.children || []).includes('setLikedSub'))
+  && !has(setTree, (n) => cls(n) === 'dshm-wstep-sub'));
 
 /* QQ：未连接 → 默认「手机 QQ 扫码」两步；微信账号可切到 Cookie 三步（登录 → 复制命令 → 粘贴即连接并自动导入） */
 qqConnected = false;

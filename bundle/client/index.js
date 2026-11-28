@@ -51,19 +51,19 @@ window.__ModuleLoader__.load({
       settingsTitle: '设置',
       settingsHint: '喜欢列表同步 · 推荐口味 · 音乐库',
       settingsBack: '返回界面',
-      settingsSave: '保存设置',
       settingsSaved: '已保存',
       settingsFirstRunNote: '第一次来？先把下面三项过一遍，之后随时能回来改。',
       setLikedTitle: '喜欢列表同步',
       setTasteTitle: '推荐口味',
       setLibTitle: '音乐库',
       bgTitle: '面板背景',
-      bgSub: '点选立即生效，迷你播放条与悬浮球同步更新',
       bgLogo: '小蓝鱼',
       bgMist: '晨雾',
       bgDune: '暖沙',
       bgVinyl: '唱片',
-      setLibSubReturning: '已经配置好了；要换目录或改用 starter 曲库就在这里改，保存后生效。',
+      setLibLocalShort: '本地曲库',
+      setLibStarterShort: '默认曲库',
+      setPathHint: '留空则沿用已扫描的曲库。',
       settingsFinishHint: '完成后随时能从右上角「设置」回来修改',
       welcomeSkip: '先随便看看',
       welcomePoint1: '播放本地曲库，歌词与歌手资料齐全',
@@ -448,19 +448,19 @@ window.__ModuleLoader__.load({
       settingsTitle: 'Settings',
       settingsHint: 'Liked-list sync · taste · library',
       settingsBack: 'Back to the app',
-      settingsSave: 'Save settings',
       settingsSaved: 'Saved',
       settingsFirstRunNote: 'First time here? Walk through the three sections below — you can change everything later.',
       setLikedTitle: 'Liked-list sync',
       setTasteTitle: 'Taste',
       setLibTitle: 'Library',
       bgTitle: 'Panel background',
-      bgSub: 'Applies instantly; mini bar and floating ball stay in sync',
       bgLogo: 'Blue fish',
       bgMist: 'Mist',
       bgDune: 'Dune',
       bgVinyl: 'Vinyl',
-      setLibSubReturning: 'Already set up. Change the folder or switch to the starter library here; takes effect after saving.',
+      setLibLocalShort: 'My music',
+      setLibStarterShort: 'Starter library',
+      setPathHint: 'Leave empty to keep the library already scanned.',
       settingsFinishHint: 'You can come back any time via “Settings” in the top-right corner',
       welcomeSkip: 'Just browse',
       welcomePoint1: 'Play your local library with lyrics and artist profiles',
@@ -1236,6 +1236,7 @@ window.__ModuleLoader__.load({
     const IconClose = makeIcon([['path', { d: 'M6 6l12 12M18 6 6 18' }]]);
     const IconChevronDown = makeIcon([['path', { d: 'M6 9.5l6 6 6-6' }]]);
     const IconChevronUp = makeIcon([['path', { d: 'M6 14.5l6-6 6 6' }]]);
+    const IconChevronLeft = makeIcon([['path', { d: 'M14.5 6l-6 6 6 6' }]]);
     const IconGrip = makeIcon([
       ['path', { d: 'M9 7.2h.1M15 7.2h.1M9 12h.1M15 12h.1M9 16.8h.1M15 16.8h.1', strokeWidth: 2.6 }],
     ]);
@@ -1329,7 +1330,8 @@ window.__ModuleLoader__.load({
 .dshm-wchips{display:flex;flex-wrap:wrap;gap:7px;}
 .dshm-wchip{appearance:none;font:inherit;font-size:12px;padding:6px 13px;border-radius:999px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);cursor:pointer;transition:background .15s,border-color .15s,color .15s;}
 .dshm-wchip:hover{background:var(--dsw-alias-interactive-bg-hover);}
-.dshm-wchip-on{background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-label-primary-inverted);border-color:transparent;}
+.dshm-wchip-on,.dshm-wchip-on:hover{background:color-mix(in srgb,var(--dsw-alias-brand-primary) 9%,var(--dsw-alias-bg-layer-1));color:var(--dsw-alias-label-primary);border-color:color-mix(in srgb,var(--dsw-alias-brand-primary) 55%,transparent);}
+.dshm-wchip-on:hover{background:color-mix(in srgb,var(--dsw-alias-brand-primary) 15%,var(--dsw-alias-bg-layer-1));}
 .dshm-wcards{display:flex;flex-direction:column;gap:10px;text-align:left;}
 .dshm-wcard{appearance:none;font:inherit;display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:12px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);cursor:pointer;text-align:left;transition:background .15s,border-color .15s,box-shadow .15s;}
 .dshm-wcard:hover{background:var(--dsw-alias-interactive-bg-hover);}
@@ -1342,7 +1344,7 @@ window.__ModuleLoader__.load({
 .dshm-wpath{text-align:left;margin-top:14px;}
 .dshm-winput{width:100%;box-sizing:border-box;font:inherit;font-size:12.5px;padding:9px 11px;border-radius:9px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);outline:none;transition:border-color .15s;}
 .dshm-winput:focus{border-color:var(--dsw-alias-brand-primary);}
-.dshm-winput::placeholder{color:var(--dsw-alias-label-tertiary);}
+.dshm-winput::placeholder{color:var(--dsw-alias-label-secondary);}
 .dshm-whint-err{color:var(--dsw-alias-state-error-primary);}
 .dshm-wdots{display:flex;gap:6px;justify-content:center;margin-top:22px;}
 .dshm-wdot{width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-border-l2);transition:all .2s;}
@@ -1660,15 +1662,15 @@ window.__ModuleLoader__.load({
 .dshm-prv:hover{border-color:var(--dsw-alias-border-l2);}
 .dshm-prv-open,.dshm-prv-open:hover{border-color:var(--dsw-alias-border-l3);}
 .dshm-prv-head{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;background:transparent;border:0;color:var(--dsw-alias-label-primary);text-align:left;cursor:pointer;font:inherit;min-width:0;}
-.dshm-prv-head:hover{background:var(--dsw-alias-bg-layer-2);}
+.dshm-prv-head:hover{background:var(--dsw-alias-interactive-bg-hover);}
 .dshm-prv-head:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px;}
 .dshm-prv-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;flex:none;color:var(--dsw-alias-brand-primary);background:color-mix(in srgb,var(--dsw-alias-brand-primary) 12%,transparent);}
 .dshm-prv-netease .dshm-prv-icon{color:var(--dsw-alias-state-error-primary);background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 12%,transparent);}
 .dshm-prv-spotify .dshm-prv-icon{color:var(--dsw-alias-state-success-primary);background:color-mix(in srgb,var(--dsw-alias-state-success-primary) 12%,transparent);}
 .dshm-prv-name{font-size:13.5px;font-weight:600;flex:none;}
-.dshm-prv-state{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--dsw-alias-label-tertiary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.dshm-prv-state{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--dsw-alias-label-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
 .dshm-prv-state::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;flex:none;}
-.dshm-prv-state-ok{color:var(--dsw-alias-state-success-primary);}
+.dshm-prv-state-ok{color:color-mix(in srgb,var(--dsw-alias-state-success-primary) 55%,var(--dsw-alias-label-primary));}
 .dshm-prv-state-busy{color:var(--dsw-alias-brand-primary);}
 .dshm-prv-state-off::before{opacity:.45;}
 .dshm-prv-chev{flex:none;color:var(--dsw-alias-label-tertiary);transition:transform .18s ease;}
@@ -1740,24 +1742,49 @@ window.__ModuleLoader__.load({
 [data-ds-dark-theme] .dshm-bg[data-dshm-bg="vinyl"]{background-image:radial-gradient(45% 32% at 94% 112%,color-mix(in srgb,#a78bfa 48%,transparent) 0%,color-mix(in srgb,#a78bfa 16%,transparent) 55%,transparent 100%),repeating-radial-gradient(circle at 94% 112%,transparent 0 51px,color-mix(in srgb,var(--dsw-alias-label-primary) 18%,transparent) 51px 52px),repeating-radial-gradient(circle at 94% 112%,color-mix(in srgb,var(--dsw-alias-label-primary) 24%,transparent) 0 1px,transparent 1px 12px);}
 .dshm-bg-tiles{display:flex;gap:10px;flex-wrap:wrap;}
 .dshm-bg-tilebtn{appearance:none;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);border-radius:12px;padding:8px 8px 7px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:var(--dsw-alias-label-secondary);font-size:12px;}
-.dshm-bg-tilebtn[aria-checked="true"]{border-color:var(--dshm-brand);color:var(--dsw-alias-label-primary);box-shadow:0 0 0 1px var(--dshm-brand);}
+.dshm-bg-tilebtn[aria-checked="true"]{border-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-label-primary);box-shadow:0 0 0 1px var(--dsw-alias-brand-primary);}
+.dshm-bg-tilecheck{display:none;position:absolute;top:5px;right:5px;width:16px;height:16px;border-radius:50%;background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-label-primary-inverted);align-items:center;justify-content:center;pointer-events:none;}
+.dshm-bg-tilebtn[aria-checked="true"] .dshm-bg-tilecheck{display:inline-flex;}
 .dshm-bg-tile{position:relative;width:76px;height:46px;border-radius:8px;overflow:hidden;background:var(--dsw-alias-bg-base);border:1px solid var(--dsw-alias-border-l1);}
 .dshm-set-first-note{margin:4px 0 0;font-size:12.5px;line-height:1.7;color:var(--dsw-alias-label-tertiary);text-align:left;}
 .dshm-set-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--dsw-alias-border-l1);}
-.dshm-set-top-title{display:flex;align-items:center;gap:8px;color:var(--dsw-alias-label-primary);}
-.dshm-set-top-title h1{margin:0;font-size:18px;}
-.dshm-set-top .dshm-count{margin-left:auto;}
 .dshm-set-sections{display:flex;flex-direction:column;gap:28px;}
 .dshm-set-section{display:flex;flex-direction:column;gap:12px;scroll-margin-top:12px;}
-.dshm-set-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;color:var(--dsw-alias-label-primary);}
-.dshm-set-head-icon{display:inline-flex;width:26px;height:26px;border-radius:8px;align-items:center;justify-content:center;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-brand-primary);flex:none;}
+.dshm-set-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;color:var(--dsw-alias-label-primary);}
 .dshm-set-head .dshm-wstep-title{margin:0;font-size:15px;}
-.dshm-set-head .dshm-wstep-sub{flex-basis:100%;margin:0;max-width:none;padding-left:34px;line-height:1.55;}
+.dshm-set-head .dshm-wstep-sub{flex-basis:100%;margin:0;max-width:none;line-height:1.55;}
+.dshm-set-label{margin:0;font-size:13px;font-weight:600;line-height:1.5;color:var(--dsw-alias-label-secondary);}
+.dshm-set-body{min-width:0;}
+.dshm-settings-first .dshm-set-body{display:contents;}
+.dshm-set-back{appearance:none;border:0;margin:0 0 0 -14px;padding:0;width:28px;height:28px;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,color .15s;}
+.dshm-set-back:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary);}
+.dshm-set-back:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px;}
+/* ── 老用户设置页：两列扁平清单。左列只放标签，右列放控件；分组靠对齐和发丝线，不再靠 1.07:1 的卡片。 ── */
+.dshm-settings-returning .dshm-settings-inner{padding:0 24px 40px;gap:0;}
+.dshm-settings-returning .dshm-set-top{position:sticky;top:0;z-index:2;gap:10px;margin:0 -24px;padding:16px 24px 14px;background:color-mix(in srgb,var(--dsw-alias-bg-base) 84%,transparent);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);}
+.dshm-settings-returning .dshm-set-title{margin:0;font-size:20px;font-weight:650;letter-spacing:-.2px;line-height:1.25;}
+.dshm-settings-returning .dshm-set-saved,.dshm-settings-returning .dshm-set-top .dshm-whint{margin:0 0 0 auto;}
+.dshm-settings-returning .dshm-set-sections{gap:0;}
+.dshm-settings-returning .dshm-set-section{display:grid;grid-template-columns:132px minmax(0,1fr);column-gap:24px;padding:22px 0;border-bottom:1px solid var(--dsw-alias-border-l1);scroll-margin-top:64px;}
+.dshm-settings-returning .dshm-set-section:last-child{border-bottom:0;padding-bottom:8px;}
+.dshm-settings-returning .dshm-set-label{grid-column:1;padding-top:2px;}
+.dshm-settings-returning .dshm-set-body{grid-column:2;display:flex;flex-direction:column;gap:12px;}
+.dshm-settings-returning .dshm-set-body .dshm-wgroup,.dshm-settings-returning .dshm-set-body .dshm-whint{margin:0;}
+.dshm-settings-returning .dshm-set-body .dshm-wpath{margin-top:0;}
+.dshm-settings-returning .dshm-prvs{gap:0;border:1px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-layer-1);overflow:hidden;}
+.dshm-settings-returning .dshm-prv{border:0;border-radius:0;background:transparent;}
+.dshm-settings-returning .dshm-prv + .dshm-prv{border-top:1px solid var(--dsw-alias-border-l1);}
+.dshm-settings-returning .dshm-prv:hover,.dshm-settings-returning .dshm-prv-open,.dshm-settings-returning .dshm-prv-open:hover{border-color:var(--dsw-alias-border-l1);}
+.dshm-settings-returning .dshm-prv-head{padding:10px 14px;}
+.dshm-settings-returning .dshm-bg-tiles{gap:12px;}
+.dshm-settings-returning .dshm-bg-tile{width:96px;height:58px;}
+.dshm-settings-returning .dshm-bg[data-dshm-bg-kind="tile"] .dshm-bg-logo{width:44px;}
+@media (max-width:560px){.dshm-settings-returning .dshm-set-section{grid-template-columns:1fr;row-gap:10px;padding:18px 0;}.dshm-settings-returning .dshm-set-label,.dshm-settings-returning .dshm-set-body{grid-column:1;}}
 .dshm-imp-logged{display:flex;flex-direction:column;gap:10px;min-width:0;}
 .dshm-imp-account{max-width:100%;}
 .dshm-set-foot{position:sticky;bottom:0;z-index:2;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px -24px -150px;padding:14px 24px 28px;background:var(--dsw-alias-bg-base);border-top:1px solid var(--dsw-alias-border-l1);}
 .dshm-set-foot-hint{font-size:12px;color:var(--dsw-alias-label-tertiary);margin-left:auto;}
-.dshm-set-saved{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--dsw-alias-state-success-primary);}
+.dshm-set-saved{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:color-mix(in srgb,var(--dsw-alias-state-success-primary) 55%,var(--dsw-alias-label-primary));}
 @media (max-width:520px){.dshm-imp-qr{flex-direction:column;align-items:center;}.dshm-settings-inner{padding:20px 16px 88px;}.dshm-set-foot{margin:4px -16px -88px;padding:10px 16px 18px;}}
 .dshm-hrow{display:flex;align-items:center;gap:12px;padding:7px 10px;border-radius:10px;}
 .dshm-hrow-play{appearance:none;border:0;background:transparent;padding:0;margin:0;cursor:pointer;flex:none;border-radius:8px;display:inline-flex;}
@@ -3647,9 +3674,10 @@ window.__ModuleLoader__.load({
       const starterStatus = starter ? starter.status : 'idle';
       const starterPct = starterTotal > 0 ? Math.min(100, Math.round((starterDone / starterTotal) * 100)) : (starterStatus === 'ready' ? 100 : 0);
 
-      function payloadFor() {
-        const payload = { taste: { genres, languages: langs }, libraryMode: mode };
-        if (mode === 'starter') payload.useStarter = true;
+      function payloadFor(over) {
+        const m = (over && over.mode) || mode;
+        const payload = { taste: { genres, languages: langs }, libraryMode: m };
+        if (m === 'starter') payload.useStarter = true;
         else if (dirPath.trim()) payload.libraryPath = dirPath.trim();
         return payload;
       }
@@ -3669,19 +3697,45 @@ window.__ModuleLoader__.load({
         if (mode === 'starter' && starterStatus !== 'ready') setStarterPhase(true);
         else onRoute('library');
       }
-      /* 老用户「保存设置」：口味 / 目录改动落盘（主机对已就绪的 starter 不会重复下载） */
-      async function save() {
-        if (busy) return;
-        setBusy(true);
-        setFailed(false);
+      /* 老用户不再有「保存」按钮：口味 / 曲库改动 400ms 防抖自动落盘（主机对已就绪的 starter 不会重复下载）。
+         保存中再改动 → 记一笔 dirty，上一笔完成后立刻补上；卸载时把还没落盘的那笔冲掉。 */
+      const saveTimer = useRef(null);
+      const savingRef = useRef(false);
+      const dirtyRef = useRef(false);
+      const payloadRef = useRef(payloadFor);
+      payloadRef.current = payloadFor;
+      const persistRef = useRef(null);
+      persistRef.current = async (over) => {
+        if (!onboarding) return;
+        if (savingRef.current) { dirtyRef.current = true; return; }
+        savingRef.current = true;
         try {
-          await onboarding.complete(payloadFor());
+          await onboarding.complete(payloadRef.current(over));
+          setFailed(false);
           setSavedAt(Date.now());
         } catch (err) {
           setFailed(true);
         }
-        setBusy(false);
-      }
+        savingRef.current = false;
+        if (dirtyRef.current) { dirtyRef.current = false; persistRef.current(); }
+      };
+      const scheduleSave = () => {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = setTimeout(() => { saveTimer.current = null; persistRef.current(); }, 400);
+      };
+      const saveNow = (over) => {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+        persistRef.current(over);
+      };
+      useEffect(() => () => {
+        if (saveTimer.current) { clearTimeout(saveTimer.current); persistRef.current(); }
+      }, []);
+      useEffect(() => {
+        if (!savedAt) return undefined;
+        const id = setTimeout(() => setSavedAt(0), 2400);
+        return () => clearTimeout(id);
+      }, [savedAt]);
       function skipAll() {
         onRoute('reco');
       }
@@ -3690,7 +3744,7 @@ window.__ModuleLoader__.load({
         key: value, type: 'button',
         className: cx('dshm-wchip', list.indexOf(value) >= 0 && 'dshm-wchip-on'),
         'aria-pressed': list.indexOf(value) >= 0,
-        onClick: () => toggle(list, setList, value),
+        onClick: () => { toggle(list, setList, value); if (!firstRun) scheduleSave(); },
       }, label);
 
       const pickCard = (value, icon, title, body) => h('button', {
@@ -3704,55 +3758,72 @@ window.__ModuleLoader__.load({
           h('span', { className: 'dshm-wcard-title' }, title),
           h('span', { className: 'dshm-wcard-body' }, body)));
 
-      const sectionHead = (ref, id, icon, title, sub, extra) => h('div', { className: 'dshm-set-head' },
-        h('span', { className: 'dshm-set-head-icon' }, h(icon, { size: 16 })),
-        h('h2', { className: 'dshm-wstep-title', id }, title),
-        extra || null,
-        sub ? h('p', { className: 'dshm-wstep-sub' }, sub) : null);
+      /* 区块头：首启 = 小标题 + 一句引导（新用户需要解释）；老用户 = 左列一个安静的标签，解释全部撤走 */
+      const sectionHead = (id, title, sub) => firstRun
+        ? h('div', { className: 'dshm-set-head' },
+            h('h2', { className: 'dshm-wstep-title', id }, title),
+            sub ? h('p', { className: 'dshm-wstep-sub' }, sub) : null)
+        : h('h2', { className: 'dshm-set-label', id }, title);
 
       /* ── ① 喜欢列表同步：网易云 / QQ 音乐 / Spotify 各一行手风琴（新用户分步引导） ── */
       const likedSection = h('section', { className: 'dshm-set-section', ref: likedRef, 'aria-label': t('setLikedTitle') },
-        sectionHead(null, 'dshm-set-liked', IconHeart, t('setLikedTitle'), t('setLikedSub')),
-        h(LikedProviders, { t, sync, useSync, likedSync, useLikedSync, firstRun, onViewLikes }));
+        sectionHead('dshm-set-liked', t('setLikedTitle'), t('setLikedSub')),
+        h('div', { className: 'dshm-set-body' }, h(LikedProviders, { t, sync, useSync, likedSync, useLikedSync, firstRun, onViewLikes })));
 
       /* ── ② 推荐口味 ── */
       const tasteSection = h('section', { className: 'dshm-set-section', ref: tasteRef, 'aria-label': t('setTasteTitle') },
-        sectionHead(null, 'dshm-set-taste', IconSparkles, t('setTasteTitle'), t('welcomeTasteSub')),
-        h('div', { className: 'dshm-wgroup' },
-          h('div', { className: 'dshm-wlabel' }, t('welcomeGenres')),
-          h('div', { className: 'dshm-wchips' }, genreOptions.map((g) => tasteChip(g, t(genreLabel(g)), genres, setGenres)))),
-        h('div', { className: 'dshm-wgroup' },
-          h('div', { className: 'dshm-wlabel' }, t('welcomeLanguages')),
-          h('div', { className: 'dshm-wchips' }, langOptions.map((o) => tasteChip(o.value, t(o.key), langs, setLangs)))),
-        h('p', { className: 'dshm-whint' }, t('welcomeTasteNote')));
+        sectionHead('dshm-set-taste', t('setTasteTitle'), t('welcomeTasteSub')),
+        h('div', { className: 'dshm-set-body' },
+          h('div', { className: 'dshm-wgroup' },
+            h('div', { className: 'dshm-wlabel' }, t('welcomeGenres')),
+            h('div', { className: 'dshm-wchips' }, genreOptions.map((g) => tasteChip(g, t(genreLabel(g)), genres, setGenres)))),
+          h('div', { className: 'dshm-wgroup' },
+            h('div', { className: 'dshm-wlabel' }, t('welcomeLanguages')),
+            h('div', { className: 'dshm-wchips' }, langOptions.map((o) => tasteChip(o.value, t(o.key), langs, setLangs)))),
+          firstRun ? h('p', { className: 'dshm-whint' }, t('welcomeTasteNote')) : null));
 
-      /* ── ③ 音乐库 ── */
+      /* ── ③ 音乐库：首启两张说明卡（需要解释）；老用户一行单选标签 + 目录输入，改动即存 ── */
+      const modeChip = (value, label) => h('button', {
+        key: value, type: 'button', role: 'radio', 'aria-checked': mode === value,
+        className: cx('dshm-wchip', mode === value && 'dshm-wchip-on'),
+        onClick: () => { setMode(value); saveNow(payloadFor({ mode: value })); },
+      }, label);
+      const pathInput = h('div', { className: 'dshm-wpath' },
+        firstRun ? h('label', { className: 'dshm-wlabel', htmlFor: 'dshm-wpath' }, t('welcomePathLabel')) : null,
+        h('input', {
+          id: 'dshm-wpath', type: 'text', className: 'dshm-winput', 'aria-label': t('welcomePathLabel'),
+          placeholder: t('welcomePathPlaceholder'), value: dirPath,
+          onChange: (e) => setDirPath(e.target.value),
+          onBlur: () => { if (!firstRun) saveNow(); },
+          onKeyDown: (e) => { if (e.key === 'Enter') e.currentTarget.blur(); },
+        }),
+        h('p', { className: 'dshm-whint' }, t(firstRun ? 'welcomePathHint' : 'setPathHint')));
       const libSection = h('section', { className: 'dshm-set-section', ref: libRef, 'aria-label': t('setLibTitle') },
-        sectionHead(null, 'dshm-set-lib', IconFolder, t('setLibTitle'), firstRun ? t('welcomeLibSub') : t('setLibSubReturning')),
-        h('div', { className: 'dshm-wcards' },
-          pickCard('local', IconFolder, t('welcomeLocalTitle'), t('welcomeLocalBody')),
-          pickCard('starter', IconSparkles, t('welcomeStarterTitle'), t('welcomeStarterBody'))),
-        mode === 'starter'
-          ? h('p', { className: 'dshm-whint' }, t('welcomeStarterHint'))
-          : h('div', { className: 'dshm-wpath' },
-              h('label', { className: 'dshm-wlabel', htmlFor: 'dshm-wpath' }, t('welcomePathLabel')),
-              h('input', {
-                id: 'dshm-wpath', type: 'text', className: 'dshm-winput',
-                placeholder: t('welcomePathPlaceholder'), value: dirPath,
-                onChange: (e) => setDirPath(e.target.value),
-              }),
-              h('p', { className: 'dshm-whint' }, t('welcomePathHint'))));
+        sectionHead('dshm-set-lib', t('setLibTitle'), firstRun ? t('welcomeLibSub') : null),
+        h('div', { className: 'dshm-set-body' },
+          firstRun
+            ? h('div', { className: 'dshm-wcards' },
+                pickCard('local', IconFolder, t('welcomeLocalTitle'), t('welcomeLocalBody')),
+                pickCard('starter', IconSparkles, t('welcomeStarterTitle'), t('welcomeStarterBody')))
+            : h('div', { className: 'dshm-wchips', role: 'radiogroup', 'aria-label': t('setLibTitle') },
+                modeChip('local', t('setLibLocalShort')), modeChip('starter', t('setLibStarterShort'))),
+          mode === 'starter'
+            ? h('p', { className: 'dshm-whint' }, t(firstRun ? 'welcomeStarterHint' : 'welcomeStarterBody'))
+            : pathInput));
 
-      /* ── ④ 面板背景（老用户）：五套预设，点选立即生效并与迷你条/悬浮球同步 ── */
+      /* ── ④ 面板背景（老用户）：五套预设，点选立即生效并与迷你条/悬浮球同步；选中态 = 描边 + 角标，不只靠颜色 ── */
       const bgSection = !firstRun && useUi ? h('section', { className: 'dshm-set-section', 'aria-label': t('bgTitle') },
-        sectionHead(null, 'dshm-set-bg', IconDisc, t('bgTitle'), t('bgSub')),
-        h('div', { className: 'dshm-bg-tiles', role: 'radiogroup', 'aria-label': t('bgTitle') },
-          BG_PRESETS.map((p) => h('button', {
-            key: p.id, type: 'button', role: 'radio', 'aria-checked': bg === p.id,
-            className: 'dshm-bg-tilebtn', onClick: () => onBg && onBg(p.id),
-          },
-            h('span', { className: 'dshm-bg-tile' }, h(BgLayer, { bg: p.id, kind: 'tile' })),
-            t(p.nameKey))))) : null;
+        sectionHead('dshm-set-bg', t('bgTitle')),
+        h('div', { className: 'dshm-set-body' },
+          h('div', { className: 'dshm-bg-tiles', role: 'radiogroup', 'aria-label': t('bgTitle') },
+            BG_PRESETS.map((p) => h('button', {
+              key: p.id, type: 'button', role: 'radio', 'aria-checked': bg === p.id,
+              className: 'dshm-bg-tilebtn', onClick: () => onBg && onBg(p.id),
+            },
+              h('span', { className: 'dshm-bg-tile' },
+                h(BgLayer, { bg: p.id, kind: 'tile' }),
+                h('span', { className: 'dshm-bg-tilecheck', 'aria-hidden': true }, h(IconCheck, { size: 10 }))),
+              t(p.nameKey)))))) : null;
 
       /* ── 首启选 starter 后的进度面板（原欢迎流程第 4 步） ── */
       const starterPanel = h('div', { className: 'dshm-welcome-panel dshm-set-section' },
@@ -3800,10 +3871,11 @@ window.__ModuleLoader__.load({
 
       const statusLine = failed
         ? h('span', { className: 'dshm-whint dshm-whint-err', role: 'alert' }, t('welcomeSaveFail'))
-        : savedAt && Date.now() - savedAt < 4000
+        : savedAt
           ? h('span', { className: 'dshm-set-saved', role: 'status' }, h(IconCheck, { size: 13 }), t('settingsSaved'))
           : null;
 
+      /* 首启才有底部操作条（跳过 / 完成）；老用户自动保存，页脚整个撤掉 */
       const foot = firstRun
         ? h('div', { className: 'dshm-set-foot' },
             h('button', { type: 'button', className: 'dshm-wbtn', onClick: skipAll }, t('welcomeSkip')),
@@ -3812,20 +3884,21 @@ window.__ModuleLoader__.load({
               onClick: finish,
             }, h(IconCheck, { size: 15 }), t('welcomeFinish')),
             h('span', { className: 'dshm-set-foot-hint' }, t('settingsFinishHint')))
-        : h('div', { className: 'dshm-set-foot' },
-            h('button', { type: 'button', className: 'dshm-wbtn', onClick: onExit }, h(IconChevronUp, { size: 14, style: { transform: 'rotate(-90deg)' } }), t('settingsBack')),
-            statusLine,
-            h('button', {
-              type: 'button', className: 'dshm-wbtn dshm-wbtn-primary', disabled: busy,
-              onClick: save,
-            }, h(IconCheck, { size: 15 }), t('settingsSave')));
+        : null;
 
-      return h('div', { className: cx('dshm-settings', firstRun && 'dshm-settings-first') },
+      /* 老用户顶栏：返回 + 标题 + 保存状态；粘顶，这样无论滚到哪个区块，「已保存 / 保存失败」都在视线里 */
+      const top = firstRun ? null : h('header', { className: 'dshm-set-top' },
+        h('button', {
+          type: 'button', className: 'dshm-set-back', onClick: onExit,
+          'aria-label': t('settingsBack'), title: t('settingsBack'),
+        }, h(IconChevronLeft, { size: 16 })),
+        h('h1', { className: 'dshm-set-title' }, t('settingsTitle')),
+        statusLine);
+
+      return h('div', { className: cx('dshm-settings', firstRun ? 'dshm-settings-first' : 'dshm-settings-returning') },
         h('div', { className: 'dshm-settings-inner' },
           hero,
-          !firstRun ? h('div', { className: 'dshm-set-top' },
-            h('div', { className: 'dshm-set-top-title' }, h(IconGear, { size: 16 }), h('h1', { className: 'dshm-wstep-title' }, t('settingsTitle'))),
-            h('span', { className: 'dshm-count' }, t('settingsHint'))) : null,
+          top,
           h('div', { className: 'dshm-set-sections' },
             likedSection,
             tasteSection,
